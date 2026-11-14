@@ -1390,7 +1390,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
                               control: miniKeys))
         miniToggle.onChange = { on in MiniWindowController.opensExternalLinks = on }
         miniGroup.add(FormRow(title: String(localized: "Open links from other apps in Zigzag Mini", comment: "A setting in Settings › Zigzag Mini."),
-                              detail: String(localized: "Instead of in a new tab.", comment: "Explanation under “Open links from other apps in Zigzag Mini” in Settings › Zigzag Mini."),
                               control: miniToggle))
 
         // Privacy

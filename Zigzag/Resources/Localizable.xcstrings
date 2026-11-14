@@ -7675,17 +7675,6 @@
         }
       }
     },
-    "Instead of in a new tab." : {
-      "comment" : "Explanation under “Open links from other apps in Zigzag Mini” in Settings › Zigzag Mini.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "而不是在新标签页中打开。"
-          }
-        }
-      }
-    },
     "Intermediate" : {
       "comment" : "Beside a certificate between the site's and the root in the chain on the certificate page of the site panel.",
       "localizations" : {
