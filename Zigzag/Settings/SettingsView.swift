@@ -349,7 +349,7 @@ enum SettingsVersionRow {
         let toggle = Toggle(isOn: Updater.getsBetas)
         toggle.onChange = { on in Updater.getsBetas = on }
         let row = FormRow(title: String(localized: "Beta updates", comment: "A setting in Settings › General."),
-                          detail: String(localized: "Try new versions first, on your own tabs and data.", comment: "Explanation under “Beta updates” in Settings › General."),
+                          detail: String(localized: "A beta can break.", comment: "Explanation under “Beta updates” in Settings › General."),
                           control: toggle)
         row.keywords = String(localized: "beta channel prerelease", comment: "Words that find the Beta updates setting with Find a setting in Settings. Not shown.")
         return row
@@ -1072,7 +1072,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         versionGroup.add(SettingsVersionRow.betas())
         if let restore = SettingsVersionRow.restore() { versionGroup.add(restore) }
         let defaultRow = FormRow(title: String(localized: "Default browser", comment: "A setting in Settings › General."),
-                                 detail: String(localized: "Links from other apps open here.", comment: "Explanation under “Default browser” in Settings › General."),
                                  control: defaultControl)
         defaultRow.keywords = String(localized: "default app links open launch", comment: "Words that find the Default browser setting with Find a setting in Settings. Not shown.")
         generalGroup.add(defaultRow)
@@ -1083,8 +1082,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
             languagePicker.selectedIndex = AppLanguage.choices.firstIndex { $0.code == AppLanguage.chosen } ?? 0
             languagePicker.onSelect = { [weak self] index in self?.chooseLanguage(AppLanguage.choices[index].code) }
             generalGroup.add(FormRow(title: String(localized: "Language", comment: "A setting in Settings › General."),
-                                     detail: String(localized: "Zigzag follows your Mac’s language unless you pick one here.",
-                                                    comment: "Explanation under “Language” in Settings › General."),
                                      control: languagePicker))
         }
         downloadPlace.onSelect = { index in DownloadPlace.pick(index) }
@@ -1095,11 +1092,10 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let importButton = PillButton(title: String(localized: "Import…", comment: "Button in Settings › General that opens the Import window."))
         importButton.onClick = { _ in ImportWindowController.show() }
         generalGroup.add(FormRow(title: String(localized: "Import from another browser", comment: "A setting in Settings › General."),
-                                 detail: String(localized: "Passwords, bookmarks and history. The other browser isn’t changed.", comment: "Explanation under “Import from another browser” in Settings › General."),
+                                 detail: String(localized: "The other browser isn’t changed.", comment: "Explanation under “Import from another browser” in Settings › General."),
                                  control: importButton))
         quitToggle.onChange = { on in AppDelegate.asksBeforeQuitting = on }
         let quitRow = FormRow(title: String(localized: "Ask before quitting", comment: "A setting in Settings › General."),
-                              detail: String(localized: "So ⌘Q never closes everything by accident.", comment: "Explanation under “Ask before quitting” in Settings › General."),
                               control: quitToggle)
         // There's no startup setting: your tabs always come back. Quitting is the nearest, and where people look.
         quitRow.keywords = String(localized: "startup launch on start restore reopen session close quit", comment: "Words that find the Ask before quitting setting with Find a setting in Settings. Zigzag has no startup setting (tabs always come back), so words about starting up find this row. Not shown.")

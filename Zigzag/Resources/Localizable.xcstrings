@@ -1689,6 +1689,23 @@
         }
       }
     },
+    "A beta can break." : {
+      "comment" : "Explanation under “Beta updates” in Settings › General.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A beta can break."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试版可能不稳定。"
+          }
+        }
+      }
+    },
     "A blocker stopped this page" : {
       "comment" : "Title of the page Zigzag shows when a content blocker kept a page from loading.",
       "localizations" : {
@@ -8359,17 +8376,6 @@
         }
       }
     },
-    "Links from other apps open here." : {
-      "comment" : "Explanation under “Default browser” in Settings › General.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "来自其他 App 的链接会在这里打开。"
-          }
-        }
-      }
-    },
     "Loading…" : {
       "comment" : "In Settings › Privacy › Stored by Websites while the list of sites is read.",
       "localizations" : {
@@ -11189,17 +11195,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你在登录时存储的密码，或从其他浏览器导入的密码，会显示在这里。"
-          }
-        }
-      }
-    },
-    "Passwords, bookmarks and history. The other browser isn’t changed." : {
-      "comment" : "Explanation under “Import from another browser” in Settings › General.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "密码、书签和历史记录。另一个浏览器不会有任何改动。"
           }
         }
       }
@@ -14749,17 +14744,6 @@
         }
       }
     },
-    "So ⌘Q never closes everything by accident." : {
-      "comment" : "Explanation under “Ask before quitting” in Settings › General.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这样 ⌘Q 就不会意外关闭所有内容。"
-          }
-        }
-      }
-    },
     "Solid" : {
       "comment" : "VoiceOver, the See-through slider's value when nothing shows through.",
       "localizations" : {
@@ -15720,6 +15704,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这些是你在 %@ 中使用的扩展，每个都从 Chrome 网上应用店下载，并像你在这里亲自添加时一样经过检查。你可以随时在“设置 › 扩展”中关闭其中任何一个。"
+          }
+        }
+      }
+    },
+    "The other browser isn’t changed." : {
+      "comment" : "Explanation under “Import from another browser” in Settings › General.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The other browser isn’t changed."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不会改动另一个浏览器。"
           }
         }
       }
@@ -16721,17 +16722,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请稍后再试。"
-          }
-        }
-      }
-    },
-    "Try new versions first, on your own tabs and data." : {
-      "comment" : "Explanation under “Beta updates” in Settings › General.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在你自己的标签页和数据上抢先试用新版本。"
           }
         }
       }
@@ -18613,17 +18603,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zigzag 未能存储你的标签页和空间"
-          }
-        }
-      }
-    },
-    "Zigzag follows your Mac’s language unless you pick one here." : {
-      "comment" : "Explanation under “Language” in Settings › General.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zigzag 跟随你的 Mac 的语言，除非你在这里另选一种。"
           }
         }
       }
