@@ -6357,17 +6357,6 @@
         }
       }
     },
-    "Extensions come from Chrome and browsers built on it. Firefox and Safari get theirs from stores of their own." : {
-      "comment" : "Note under the choices in the Import window, when Extensions is chosen along with Firefox or Safari.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "扩展只能从 Chrome 及基于它的浏览器导入。Firefox 和 Safari 的扩展来自它们各自的商店。"
-          }
-        }
-      }
-    },
     "Extensions, sign-ins and history kept on this Mac" : {
       "comment" : "Under the title of a row in Settings › Profiles, for data left by a profile that's in no list.",
       "localizations" : {
@@ -6579,6 +6568,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "查找…"
+          }
+        }
+      }
+    },
+    "Firefox and Safari get theirs from stores of their own." : {
+      "comment" : "Note under the choices in the Import window, when Extensions is chosen along with Firefox or Safari.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Firefox and Safari get theirs from stores of their own."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Firefox 和 Safari 的扩展来自它们各自的商店。"
           }
         }
       }
@@ -11313,17 +11319,6 @@
         }
       }
     },
-    "Passwords, bookmarks, history and extensions, from any browser on this Mac." : {
-      "comment" : "Subtitle of the Import window.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "来自这台 Mac 上任何浏览器的密码、书签、历史记录和扩展。"
-          }
-        }
-      }
-    },
     "Passwords…" : {
       "comment" : "A row at the bottom of the fill-password menu: opens the Mac’s own list of passwords to pick one from, as Edit › AutoFill › Passwords… does in other apps.",
       "localizations" : {
@@ -14596,17 +14591,6 @@
         }
       }
     },
-    "Sign-ins keep you signed in to your sites, so you don’t have to sign in again. They come from this Mac and stay on it." : {
-      "comment" : "Note under the choices in the Import window, explaining Sign-ins.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "登录状态能让你在网站上保持登录，不必重新登录。它们来自这台 Mac，也只留在这台 Mac 上。"
-          }
-        }
-      }
-    },
     "Signing in with your account" : {
       "comment" : "Feature name in the list of things an extension uses that won’t work in Zigzag.",
       "localizations" : {
@@ -15992,6 +15976,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "没有可以运行它的标签页。"
+          }
+        }
+      }
+    },
+    "They come from this Mac and stay on it." : {
+      "comment" : "Note under the choices in the Import window, explaining Sign-ins.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "They come from this Mac and stay on it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "它们来自这台 Mac，也只留在这台 Mac 上。"
           }
         }
       }

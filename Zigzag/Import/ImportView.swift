@@ -51,13 +51,13 @@ final class ImportView: NSView {
     private let primary = PrimaryButton(title: String(localized: "Import", comment: "Main button in the Import window."))
     private let secondary = TextButton(title: String(localized: "Not Now", comment: "Button in the Import window: close it without importing."), font: Tokens.Font.body(.medium))
     /// What Sign-ins means, in a line, while it's offered.
-    private let signInsNote = NSTextField(wrappingLabelWithString: String(localized: "Sign-ins keep you signed in to your sites, so you don’t have to sign in again. They come from this Mac and stay on it.",
+    private let signInsNote = NSTextField(wrappingLabelWithString: String(localized: "They come from this Mac and stay on it.",
                                                                               comment: "Note under the choices in the Import window, explaining Sign-ins."))
     /// The note's lines: what Sign-ins are, and, with Firefox or Safari chosen too, that extensions come only from
     /// Chrome and its kin.
-    private static let signInsText = String(localized: "Sign-ins keep you signed in to your sites, so you don’t have to sign in again. They come from this Mac and stay on it.",
+    private static let signInsText = String(localized: "They come from this Mac and stay on it.",
                                             comment: "Note under the choices in the Import window, explaining Sign-ins.")
-    private static let extensionsText = String(localized: "Extensions come from Chrome and browsers built on it. Firefox and Safari get theirs from stores of their own.",
+    private static let extensionsText = String(localized: "Firefox and Safari get theirs from stores of their own.",
                                                comment: "Note under the choices in the Import window, when Extensions is chosen along with Firefox or Safari.")
     /// The extensions coming over, under the browsers, once there are any.
     private let extensionsRow = ImportExtensionsRow()
@@ -87,7 +87,6 @@ final class ImportView: NSView {
             banner.title = String(localized: "Bring your stuff over", comment: "Title of the Import window.")
             // Words only: the ribbon stays the app's icon, not a decoration on a form.
             banner.ribbonMark.isHidden = true
-            banner.subtitle = String(localized: "Passwords, bookmarks, history and extensions, from any browser on this Mac.", comment: "Subtitle of the Import window.")
             addSubview(banner)
         }
         subtitle.font = Tokens.Font.body()
