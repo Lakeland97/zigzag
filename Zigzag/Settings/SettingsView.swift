@@ -936,7 +936,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let buttons = NSStackView(views: [copy, reset])
         buttons.spacing = Tokens.Space.x2
         let row = FormRow(title: String(localized: "Key", comment: "A row in Settings › Automation, shown while AI apps may use Zigzag: the secret key an app sends."),
-                          detail: String(localized: "Apps send it in the Authorization header. A new key disconnects every app.",
+                          detail: String(localized: "A new key disconnects every app.",
                                          comment: "Explanation under “Key” in Settings › Automation."),
                           control: buttons)
         row.keywords = Self.aiAppsKeywords
@@ -950,7 +950,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
             copy?.flash(String(localized: "Copied", comment: "Shown on a Copy button for a moment after it copies."))
         }
         let row = FormRow(title: String(localized: "Setup", comment: "A row in Settings › Automation › Connect an App: the JSON setup to paste into an AI app."),
-                          detail: String(localized: "Paste it where the app adds MCP servers. Most apps take this form.",
+                          detail: String(localized: "Paste it where the app adds MCP servers.",
                                          comment: "Explanation under “Setup” in Settings › Automation › Connect an App."),
                           control: copy)
         row.keywords = Self.aiAppsKeywords + " json config"
@@ -1112,7 +1112,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
             self?.refreshAIApps()
         }
         let aiRow = FormRow(title: String(localized: "Let AI apps use Zigzag", comment: "A setting in Settings › Automation: turns on Zigzag's MCP server, for AI apps on this Mac."),
-                            detail: String(localized: "Apps you connect over MCP, on this Mac only, can open, read and use your tabs. Never private windows, passwords or Zigzag’s own pages.",
+                            detail: String(localized: "Never private windows, passwords or Zigzag’s own pages.",
                                            comment: "Explanation under “Let AI apps use Zigzag” in Settings › Automation."),
                             control: aiAppsToggle)
         aiRow.keywords = Self.aiAppsKeywords
@@ -1124,15 +1124,13 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let guide = PillButton(title: String(localized: "Learn More", comment: "Button in Settings › Automation: opens the guide to AI apps and MCP in a new tab."))
         guide.onClick = { [weak self] _ in self?.openAutomationGuide() }
         let guideRow = FormRow(title: String(localized: "How it works", comment: "A row in Settings › Automation, beside Learn More, which opens the guide."),
-                               detail: String(localized: "What apps can do, what they never touch, and what to try when one can’t connect.",
-                                              comment: "Explanation under “How it works” in Settings › Automation."),
                                control: guide)
         guideRow.keywords = Self.aiAppsKeywords + " help docs guide"
         connectGroup.add(guideRow)
         aiAppsToken = MCPService.changed.observe { [weak self] in self?.refreshAIApps() }
         scriptJavaScriptToggle.onChange = { on in Scripting.allowsJavaScript = on }
         let scriptRow = FormRow(title: String(localized: "Allow JavaScript from Apple Events", comment: "A setting in Settings › Automation, under Scripts, as Safari names it."),
-                                detail: String(localized: "Scripts and apps you allow in Privacy & Security › Automation can then read and change any page you have open, signed in or not. Never in private windows.",
+                                detail: String(localized: "Never in private windows.",
                                                comment: "Explanation under “Allow JavaScript from Apple Events” in Settings › Automation."),
                                 control: scriptJavaScriptToggle)
         scriptRow.keywords = String(localized: "applescript osascript shortcuts apple events", comment: "Words that find the Allow JavaScript from Apple Events setting with Find a setting in Settings. Not shown.")

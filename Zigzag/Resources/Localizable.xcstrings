@@ -1750,6 +1750,23 @@
         }
       }
     },
+    "A new key disconnects every app." : {
+      "comment" : "Explanation under “Key” in Settings › Automation.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "A new key disconnects every app."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新密钥会断开所有应用。"
+          }
+        }
+      }
+    },
     "A password can’t be empty." : {
       "comment" : "Toast when saving a login with its password cleared.",
       "localizations" : {
@@ -2666,28 +2683,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "外观"
-          }
-        }
-      }
-    },
-    "Apps send it in the Authorization header. A new key disconnects every app." : {
-      "comment" : "Explanation under “Key” in Settings › Automation.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用会在 Authorization 请求头中发送它。重设密钥后，所有已连接的应用都会断开。"
-          }
-        }
-      }
-    },
-    "Apps you connect over MCP, on this Mac only, can open, read and use your tabs. Never private windows, passwords or Zigzag’s own pages." : {
-      "comment" : "Explanation under “Let AI apps use Zigzag” in Settings › Automation.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你通过 MCP 连接的应用（仅限这台 Mac）可以打开、读取和操作你的标签页。不包括无痕浏览窗口、密码和 Zigzag 自己的页面。"
           }
         }
       }
@@ -9228,6 +9223,23 @@
         }
       }
     },
+    "Never in private windows." : {
+      "comment" : "Explanation under “Allow JavaScript from Apple Events” in Settings › Automation.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Never in private windows."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无痕浏览窗口中绝不生效。"
+          }
+        }
+      }
+    },
     "Never offer to save" : {
       "comment" : "Under a site in the Passwords window's Never Saved list.",
       "localizations" : {
@@ -9246,6 +9258,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "永不在 %@ 上提示存储"
+          }
+        }
+      }
+    },
+    "Never private windows, passwords or Zigzag’s own pages." : {
+      "comment" : "Explanation under “Let AI apps use Zigzag” in Settings › Automation.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Never private windows, passwords or Zigzag’s own pages."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "绝不涉及无痕浏览窗口、密码或 Zigzag 自己的页面。"
           }
         }
       }
@@ -11319,13 +11348,19 @@
         }
       }
     },
-    "Paste it where the app adds MCP servers. Most apps take this form." : {
+    "Paste it where the app adds MCP servers." : {
       "comment" : "Explanation under “Setup” in Settings › Automation › Connect an App.",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Paste it where the app adds MCP servers."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "粘贴到应用添加 MCP 服务器的地方。大多数应用都接受这种格式。"
+            "value" : "粘贴到应用添加 MCP 服务器的地方。"
           }
         }
       }
@@ -13541,17 +13576,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "脚本"
-          }
-        }
-      }
-    },
-    "Scripts and apps you allow in Privacy & Security › Automation can then read and change any page you have open, signed in or not. Never in private windows." : {
-      "comment" : "Explanation under “Allow JavaScript from Apple Events” in Settings › Automation.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开后，你在“隐私与安全性 › 自动化”中允许的脚本和应用可以读取和更改你打开的任何网页，无论是否已登录。无痕浏览窗口除外。"
           }
         }
       }
@@ -17869,17 +17893,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "欢迎使用 Zigzag"
-          }
-        }
-      }
-    },
-    "What apps can do, what they never touch, and what to try when one can’t connect." : {
-      "comment" : "Explanation under “How it works” in Settings › Automation.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用能做什么、绝不会碰什么，以及连接不上时可以试试什么。"
           }
         }
       }
