@@ -83,8 +83,8 @@ enum ProfileChoice {
     /// What being on a profile means, in a line under a space's choice of one: enough to choose without a trip to
     /// Settings. Spaces aren't Chrome's profiles: a sign-in in one space is there in the others on its profile (#201).
     static var spaceNote: String {
-        String(localized: "Spaces on the same profile share sign-ins, history and extensions. Use another profile to keep them apart.",
-               comment: "Note under the Profile row in a space's editor, which also opens for a new space: what being on the same profile means.")
+        String(localized: "Use another profile to keep them apart.",
+               comment: "Note under the Profile row in a space's editor, which also opens for a new space: the choice, if you want another profile's sign-ins and history kept apart.")
     }
 
     /// The item at the end of a space's Profile menu: a profile of its own for the space, named after it, in one step.
