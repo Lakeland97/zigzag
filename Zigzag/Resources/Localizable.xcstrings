@@ -3778,17 +3778,6 @@
         }
       }
     },
-    "Choices you make for one site, like allowing ads, a camera or notifications, show up here." : {
-      "comment" : "Explanation under “None yet” in Settings › Privacy.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你为单个网站所做的选择（例如允许广告、摄像头或通知）会显示在这里。"
-          }
-        }
-      }
-    },
     "Choose" : {
       "comment" : "Button of the panel that picks the downloads folder.",
       "localizations" : {
@@ -9261,6 +9250,23 @@
         }
       }
     },
+    "Never says yes." : {
+      "comment" : "Explanation under “Cookie banners” in Settings › Privacy.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Never says yes."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从不表示同意。"
+          }
+        }
+      }
+    },
     "New" : {
       "comment" : "Heading in What’s New: the new things in this version.",
       "localizations" : {
@@ -13495,17 +13501,6 @@
         }
       }
     },
-    "Says no to the cookies a site’s pop-up asks for, or hides a pop-up that only needs hiding. Never says yes." : {
-      "comment" : "Explanation under “Cookie banners” in Settings › Privacy.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "替你拒绝网站弹窗索要的 Cookie，只需隐藏的弹窗则直接隐藏。绝不替你同意。"
-          }
-        }
-      }
-    },
     "Screen Time or a content filter on this Mac doesn’t allow it." : {
       "comment" : "Message on the page Zigzag shows when Screen Time or a content filter blocks a site.",
       "localizations" : {
@@ -14667,13 +14662,19 @@
         }
       }
     },
-    "Sites you visit can keep cookies and files here, to keep you signed in and load faster." : {
+    "Sites you visit can keep cookies and files here." : {
       "comment" : "Explanation under “None yet” in Settings › Privacy.",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sites you visit can keep cookies and files here."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你访问的网站可以在这里保存 Cookie 和文件，让你保持登录，并加快载入速度。"
+            "value" : "你访问的网站可以把 Cookie 和文件保存在这里。"
           }
         }
       }
@@ -15686,17 +15687,6 @@
         }
       }
     },
-    "The cache makes pages load faster. Cookies keep you signed in." : {
-      "comment" : "Explanation under “Website data” in Settings › Privacy.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "缓存能让页面载入更快。Cookie 能让你保持登录。"
-          }
-        }
-      }
-    },
     "The connection dropped" : {
       "comment" : "Why a download failed, under its name in the downloads panel.",
       "localizations" : {
@@ -15787,17 +15777,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此页面属于一个已被移除或关闭的扩展。请在“设置 › 扩展”中重新打开它，或者关闭此标签页。"
-          }
-        }
-      }
-    },
-    "The pages you’ve visited, used for suggestions in the command bar." : {
-      "comment" : "Explanation under “History” in Settings › Privacy.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你访问过的页面，用于命令栏中的建议。"
           }
         }
       }
@@ -17432,6 +17411,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用你的麦克风"
+          }
+        }
+      }
+    },
+    "Used for suggestions in the command bar." : {
+      "comment" : "Explanation under “History” in Settings › Privacy.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Used for suggestions in the command bar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于命令栏中的建议。"
           }
         }
       }

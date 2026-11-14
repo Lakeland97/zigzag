@@ -119,7 +119,7 @@ final class SiteDataList: NSView, SettingsSizedRow, SettingsFilteredRow, Setting
         case .empty:
             message.isHidden = false
             message.update(title: String(localized: "None yet", comment: "A setting in Settings › Privacy."),
-                           detail: String(localized: "Sites you visit can keep cookies and files here, to keep you signed in and load faster.", comment: "Explanation under “None yet” in Settings › Privacy."),
+                           detail: String(localized: "Sites you visit can keep cookies and files here.", comment: "Explanation under “None yet” in Settings › Privacy."),
                            quiet: false)
         case .noMatch(let words):
             message.isHidden = false

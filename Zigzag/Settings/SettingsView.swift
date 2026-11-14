@@ -2132,7 +2132,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
                                   detail: detail, control: blockingToggle))
         // Autoconsent's license is in Acknowledgments; this is where people look for what answers the pop-ups.
         cookieBanners.selectedIndex = CookieBanners.Mode.allCases.firstIndex(of: CookieBanners.mode) ?? 0
-        let bannersDetail = Words.sentences(String(localized: "Says no to the cookies a site’s pop-up asks for, or hides a pop-up that only needs hiding. Never says yes.",
+        let bannersDetail = Words.sentences(String(localized: "Never says yes.",
                                                    comment: "Explanation under “Cookie banners” in Settings › Privacy."),
                                             String(localized: "Uses Autoconsent, by DuckDuckGo.", comment: "After the explanation under “Cookie banners” in Settings › Privacy. Autoconsent is the name of DuckDuckGo's open-source library: keep both names as they are."))
         let bannersRow = FormRow(title: String(localized: "Cookie banners", comment: "A setting in Settings › Privacy: what Zigzag does with a site's cookie consent pop-up."),
@@ -3004,7 +3004,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let historyButtons = NSStackView(views: [showHistory, history])
         historyButtons.spacing = Tokens.Space.x2
         privacyGroup.add(FormRow(title: String(localized: "History", comment: "A setting in Settings › Privacy."),
-                                 detail: String(localized: "The pages you’ve visited, used for suggestions in the command bar.", comment: "Explanation under “History” in Settings › Privacy."),
+                                 detail: String(localized: "Used for suggestions in the command bar.", comment: "Explanation under “History” in Settings › Privacy."),
                                  control: historyButtons))
 
         // What's cleared is the profile's shown here.
@@ -3037,7 +3037,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let data = NSStackView(views: [cache, cookies])
         data.spacing = Tokens.Space.x2
         privacyGroup.add(FormRow(title: String(localized: "Website data", comment: "A setting in Settings › Privacy."),
-                                 detail: String(localized: "The cache makes pages load faster. Cookies keep you signed in.", comment: "Explanation under “Website data” in Settings › Privacy."),
                                  control: data))
 
         // The choices made one site at a time, which otherwise have nowhere to be seen.
@@ -3065,7 +3064,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         }
         if nothingChosen {
             sitesGroup.add(FormRow(title: String(localized: "None yet", comment: "A setting in Settings › Privacy."),
-                                   detail: String(localized: "Choices you make for one site, like allowing ads, a camera or notifications, show up here.", comment: "Explanation under “None yet” in Settings › Privacy."),
                                    control: NSView()))
         }
 
