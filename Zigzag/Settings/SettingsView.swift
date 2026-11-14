@@ -2200,10 +2200,8 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         translateInto.selectedIndex = PageTranslator.chosenLanguage.flatMap { chosen in languages.firstIndex { $0.id == chosen }.map { $0 + 1 } } ?? 0
         translateOffer.isOn = PageTranslator.offers
         translationGroup.add(FormRow(title: String(localized: "Translate pages into", comment: "A setting in Settings › Translation."),
-                                     detail: String(localized: "The language you read.", comment: "Explanation under “Translate pages into” in Settings › Translation."),
                                      control: translateInto))
         translationGroup.add(FormRow(title: String(localized: "Offer to translate", comment: "A setting in Settings › Translation."),
-                                     detail: String(localized: "When a page is in another language, Zigzag asks once per site.", comment: "Explanation under “Offer to translate” in Settings › Translation."),
                                      control: translateOffer))
         let always = PageTranslator.alwaysLanguages.map { PageTranslator.name(of: Locale.Language(identifier: $0)) }.sorted()
         // Laid out like Sites in Privacy: a heading, Reset All beside it only when there's something to reset.
@@ -2219,7 +2217,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
                       detail: String(localized: "To always translate a language, choose it in a page’s site controls.", comment: "Under Always Translate in Settings › Translation."),
                       control: NSView())
             : FormRow(title: Words.list(always),
-                      detail: String(localized: "Pages in these languages are translated as soon as they open.", comment: "Under the list of languages in Settings › Translation."),
                       control: NSView()))
     }
 

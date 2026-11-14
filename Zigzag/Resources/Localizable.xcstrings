@@ -11060,17 +11060,6 @@
         }
       }
     },
-    "Pages in these languages are translated as soon as they open." : {
-      "comment" : "Under the list of languages in Settings › Translation.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这些语言的页面一打开就会被翻译。"
-          }
-        }
-      }
-    },
     "Pages load a little slower the first time you open them again. You stay signed in." : {
       "comment" : "Message of the sheet that asks before clearing every site's cache.\nMessage of the sheet that clears the cache.",
       "localizations" : {
@@ -15763,17 +15752,6 @@
         }
       }
     },
-    "The language you read." : {
-      "comment" : "Explanation under “Translate pages into” in Settings › Translation.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你阅读时使用的语言。"
-          }
-        }
-      }
-    },
     "The ones you use in %@, each downloaded from the Chrome Web Store and checked as if you added it here. You can turn any of them off in Settings › Extensions." : {
       "comment" : "Import window, when asking before adding the extensions found. The placeholder is a browser's name, like Chrome, or a list of them.",
       "localizations" : {
@@ -17994,17 +17972,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在你点按它时"
-          }
-        }
-      }
-    },
-    "When a page is in another language, Zigzag asks once per site." : {
-      "comment" : "Explanation under “Offer to translate” in Settings › Translation.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当页面是其他语言时，Zigzag 会在每个网站上询问一次。"
           }
         }
       }
