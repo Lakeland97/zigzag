@@ -2675,6 +2675,23 @@
         }
       }
     },
+    "And stays in view with the sidebar hidden." : {
+      "comment" : "Explanation under “Address bar above the page” in Settings › Appearance.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "And stays in view with the sidebar hidden."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "边栏隐藏时也依然可见。"
+          }
+        }
+      }
+    },
     "Another app is using the file" : {
       "comment" : "Why a file couldn't be saved, said after what failed, like “Couldn’t save the page. Not enough space on your Mac.”",
       "localizations" : {
@@ -3060,17 +3077,6 @@
         }
       }
     },
-    "Back, forward, reload and the address move from the sidebar to a bar above the page, and stay in view with the sidebar hidden." : {
-      "comment" : "Explanation under “Address bar above the page” in Settings › Appearance.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "后退、前进、重新载入和地址栏从边栏移到页面上方的一栏，隐藏边栏时也一直可见。"
-          }
-        }
-      }
-    },
     "Background audio and clipboard" : {
       "comment" : "Feature name in the list of things an extension uses that won’t work in Zigzag.",
       "localizations" : {
@@ -3100,6 +3106,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "黑色"
+          }
+        }
+      }
+    },
+    "Black, not dark gray." : {
+      "comment" : "Explanation under “Pure black backgrounds” in Settings › Appearance.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Black, not dark gray."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纯黑，而非深灰。"
           }
         }
       }
@@ -5442,17 +5465,6 @@
         }
       }
     },
-    "Darkened websites are black instead of dark gray." : {
-      "comment" : "Explanation under “Pure black backgrounds” in Settings › Appearance.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以深色显示的网站用纯黑代替深灰。"
-          }
-        }
-      }
-    },
     "Darkest" : {
       "comment" : "VoiceOver, the Shade slider's value at its deepest.",
       "localizations" : {
@@ -6442,6 +6454,23 @@
         }
       }
     },
+    "Fades stay." : {
+      "comment" : "Explanation under “Reduce motion” in Settings › Appearance.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Fades stay."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淡入淡出仍保留。"
+          }
+        }
+      }
+    },
     "Favorites per row" : {
       "comment" : "A setting in Settings › Appearance: how many favorites' tiles sit side by side in the sidebar.",
       "localizations" : {
@@ -7394,6 +7423,23 @@
         }
       }
     },
+    "Hold ⌥⌘ and drag anywhere on the page to move the window." : {
+      "comment" : "Explanation under “Borderless page” in Settings › Appearance. ⌥⌘ are the Option and Command keys.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Hold ⌥⌘ and drag anywhere on the page to move the window."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按住 ⌥⌘ 并在页面任意位置拖动即可移动窗口。"
+          }
+        }
+      }
+    },
     "How it works" : {
       "comment" : "A row in Settings › Automation, beside Learn More, which opens the guide.",
       "localizations" : {
@@ -8317,6 +8363,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不处理"
+          }
+        }
+      }
+    },
+    "Left" : {
+      "comment" : "A choice for “Sidebar position” in Settings › Appearance: the sidebar along the window's left edge, where it has always been.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Left"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左侧"
           }
         }
       }
@@ -11381,6 +11444,23 @@
         }
       }
     },
+    "Pictures and video stay as they are." : {
+      "comment" : "Explanation under “Dark pages” in Settings › Appearance.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Pictures and video stay as they are."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图片和视频保持原样。"
+          }
+        }
+      }
+    },
     "Pin %lld Tabs" : {
       "comment" : "Menu item for several picked tabs",
       "localizations" : {
@@ -13044,6 +13124,23 @@
         }
       }
     },
+    "Right" : {
+      "comment" : "A choice for “Sidebar position” in Settings › Appearance: the sidebar along the window's right edge.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Right"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右侧"
+          }
+        }
+      }
+    },
     "Right-click its tab, then Pin Tab" : {
       "comment" : "Under the pin step's title in the getting-started guide, a card in the window, when Pin Tab has no shortcut. Pin Tab is an item in a tab's menu in the sidebar.",
       "localizations" : {
@@ -14392,17 +14489,6 @@
         }
       }
     },
-    "Shows the space’s name large and light above its tabs. When off, it’s a plain heading." : {
-      "comment" : "Explanation under “Large space names” in Settings › Appearance.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在标签页上方以大号浅色字显示空间名称。关闭时，显示为普通标题。"
-          }
-        }
-      }
-    },
     "Side by Side" : {
       "comment" : "Menu bar item: lays the split view's two pages side by side.\nTooltip of a button in the strip on top of each page of a split view: lays the two pages side by side.",
       "localizations" : {
@@ -14425,13 +14511,19 @@
         }
       }
     },
-    "Sidebar on the right" : {
-      "comment" : "A setting in Settings › Appearance: puts the sidebar along the window's right edge.",
+    "Sidebar position" : {
+      "comment" : "A setting in Settings › Appearance: which edge of the window the sidebar sits along.",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sidebar position"
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "边栏放在右侧"
+            "value" : "边栏位置"
           }
         }
       }
@@ -15736,17 +15828,6 @@
         }
       }
     },
-    "The page meets the window’s edges instead of floating inside it. Hold ⌥⌘ and drag anywhere on the page to move the window." : {
-      "comment" : "Explanation under “Borderless page” in Settings › Appearance. ⌥⌘ are the Option and Command keys.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "页面直接贴合窗口边缘，而不是浮在窗口中。按住 ⌥⌘ 在网页任意位置拖动，即可移动窗口。"
-          }
-        }
-      }
-    },
     "The pages you’ve visited, used for suggestions in the command bar." : {
       "comment" : "Explanation under “History” in Settings › Privacy.",
       "localizations" : {
@@ -15798,17 +15879,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安全连接被切断了，通常是你所在的网络造成的。请再试一次，或换一个网络。"
-          }
-        }
-      }
-    },
-    "The sidebar sits along the window’s right edge, with the page on its left." : {
-      "comment" : "Explanation under “Sidebar on the right” in Settings › Appearance.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "边栏沿窗口右侧边缘放置，页面在它的左边。"
           }
         }
       }
@@ -15956,17 +16026,6 @@
         }
       }
     },
-    "The size of the tabs, folders, favorites and address. To make everything on your Mac larger, use Larger Text in System Settings › Displays." : {
-      "comment" : "Explanation under “Sidebar size” in Settings › Appearance. Larger Text and System Settings › Displays are macOS's own names.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "标签页、文件夹、收藏和地址栏的大小。若要放大 Mac 上的所有内容，请使用“系统设置 › 显示器”中的“更大字体”。"
-          }
-        }
-      }
-    },
     "Their pages load fresh next time." : {
       "comment" : "Message of the sheet that removes the data of the sites a search shows in Settings › Privacy, none of them with cookies.",
       "localizations" : {
@@ -16007,17 +16066,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这台 Mac 会忘掉它们。标签页、已固定标签页和密码会保留。"
-          }
-        }
-      }
-    },
-    "Things appear in place instead of sliding or growing. Fades stay." : {
-      "comment" : "Explanation under “Reduce motion” in Settings › Appearance.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "内容直接出现，而不是滑入或放大。淡入淡出效果保留。"
           }
         }
       }
@@ -16458,6 +16506,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要导入 Safari 的书签和历史记录，请从 Safari 导出（文件 › 将浏览数据导出到文件），然后在这里选择该文件。其他内容无需你的许可。"
+          }
+        }
+      }
+    },
+    "To make everything on your Mac larger, use Larger Text in System Settings › Displays." : {
+      "comment" : "Explanation under “Sidebar size” in Settings › Appearance. Larger Text and System Settings › Displays are macOS's own names.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "To make everything on your Mac larger, use Larger Text in System Settings › Displays."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "若要让 Mac 上的所有内容更大，请使用“系统设置”›“显示器”中的“更大文本”。"
           }
         }
       }
@@ -17794,17 +17859,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "网站"
-          }
-        }
-      }
-    },
-    "Websites without a dark look of their own are drawn dark. Pictures and video stay as they are." : {
-      "comment" : "Explanation under “Dark pages” in Settings › Appearance.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有自带深色外观的网站会以深色显示。图片和视频保持原样。"
           }
         }
       }
@@ -19822,7 +19876,7 @@
       }
     },
     "sidebar right left side position move" : {
-      "comment" : "Words that find the Sidebar on the right setting with Find a setting in Settings. Not shown.",
+      "comment" : "Words that find the Sidebar position setting with Find a setting in Settings. Not shown.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

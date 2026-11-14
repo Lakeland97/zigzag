@@ -881,7 +881,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     private let pureBlackToggle = Toggle()
     private lazy var pureBlackRow: FormRow = {
         let row = FormRow(title: String(localized: "Pure black backgrounds", comment: "A setting in Settings › Appearance, under Dark pages and shown while it's on: darkened websites are black instead of dark gray."),
-                          detail: String(localized: "Darkened websites are black instead of dark gray.", comment: "Explanation under “Pure black backgrounds” in Settings › Appearance."),
+                          detail: String(localized: "Black, not dark gray.", comment: "Explanation under “Pure black backgrounds” in Settings › Appearance."),
                           control: pureBlackToggle)
         row.keywords = String(localized: "black pure true black oled amoled dark mode", comment: "Words that find the Pure black backgrounds setting with Find a setting in Settings. Not shown.")
         return row
@@ -904,7 +904,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     private let suggestionsToggle = Toggle()
     private let borderlessToggle = Toggle()
     private let addressAboveToggle = Toggle()
-    private let sidebarRightToggle = Toggle()
+    private let sidebarPosition = DropdownButton()
     private var sideToken: NSObjectProtocol?
     private let largeNamesToggle = Toggle()
     private let quitToggle = Toggle()
@@ -1200,24 +1200,30 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         // Appearance
         borderlessToggle.onChange = { on in BrowserRootView.isBorderless = on }
         appearanceGroup.add(FormRow(title: String(localized: "Borderless page", comment: "A setting in Settings › Appearance."),
-                                    detail: String(localized: "The page meets the window’s edges instead of floating inside it. Hold ⌥⌘ and drag anywhere on the page to move the window.", comment: "Explanation under “Borderless page” in Settings › Appearance. ⌥⌘ are the Option and Command keys."),
+                                    detail: String(localized: "Hold ⌥⌘ and drag anywhere on the page to move the window.", comment: "Explanation under “Borderless page” in Settings › Appearance. ⌥⌘ are the Option and Command keys."),
                                     control: borderlessToggle))
         addressAboveToggle.onChange = { on in BrowserRootView.addressAbovePage = on }
         let addressRow = FormRow(title: String(localized: "Address bar above the page", comment: "A setting in Settings › Appearance."),
-                                 detail: String(localized: "Back, forward, reload and the address move from the sidebar to a bar above the page, and stay in view with the sidebar hidden.", comment: "Explanation under “Address bar above the page” in Settings › Appearance."),
+                                 detail: String(localized: "And stays in view with the sidebar hidden.", comment: "Explanation under “Address bar above the page” in Settings › Appearance."),
                                  control: addressAboveToggle)
         addressRow.keywords = String(localized: "toolbar top bar url location", comment: "Words that find the Address bar above the page setting with Find a setting in Settings. Not shown.")
         appearanceGroup.add(addressRow)
-        sidebarRightToggle.onChange = { on in BrowserRootView.sidebarOnRight = on }
-        let sideRow = FormRow(title: String(localized: "Sidebar on the right", comment: "A setting in Settings › Appearance: puts the sidebar along the window's right edge."),
-                              detail: String(localized: "The sidebar sits along the window’s right edge, with the page on its left.", comment: "Explanation under “Sidebar on the right” in Settings › Appearance."),
-                              control: sidebarRightToggle)
+        // A menu, not a switch: the row sits at the window's trailing edge, so "on the right" was implied and the
+        // choice between the two sides is what the row is for. Same two states, same default, same effect.
+        sidebarPosition.options = [
+            DropdownButton.Option(title: String(localized: "Left", comment: "A choice for “Sidebar position” in Settings › Appearance: the sidebar along the window's left edge, where it has always been.")),
+            DropdownButton.Option(title: String(localized: "Right", comment: "A choice for “Sidebar position” in Settings › Appearance: the sidebar along the window's right edge.")),
+        ]
+        sidebarPosition.selectedIndex = BrowserRootView.sidebarOnRight ? 1 : 0
+        sidebarPosition.onSelect = { index in BrowserRootView.sidebarOnRight = index == 1 }
+        let sideRow = FormRow(title: String(localized: "Sidebar position", comment: "A setting in Settings › Appearance: which edge of the window the sidebar sits along."),
+                              control: sidebarPosition)
         // 侧边栏 is what people type, though Zigzag says 边栏 (docs/i18n/glossary.md): found by it, never shown.
-        sideRow.keywords = String(localized: "sidebar right left side position move", comment: "Words that find the Sidebar on the right setting with Find a setting in Settings. Not shown.") + " 侧边栏"
+        sideRow.keywords = String(localized: "sidebar right left side position move", comment: "Words that find the Sidebar position setting with Find a setting in Settings. Not shown.") + " 侧边栏"
         appearanceGroup.add(sideRow)
         // The View menu moves it too, with Settings open.
         sideToken = NotificationCenter.default.addObserver(forName: BrowserRootView.sidebarSideChanged, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.sidebarRightToggle.isOn = BrowserRootView.sidebarOnRight }
+            MainActor.assumeIsolated { self?.sidebarPosition.selectedIndex = BrowserRootView.sidebarOnRight ? 1 : 0 }
         }
         // As macOS's System Settings › Appearance › Sidebar icon size: three sizes, Medium as Zigzag has always been.
         sidebarSize.options = Tokens.Sidebar.Size.allCases.map { size in
@@ -1230,7 +1236,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         }
         sidebarSize.onSelect = { index in Tokens.Sidebar.size = Tokens.Sidebar.Size.allCases[index] }
         let sizeRow = FormRow(title: String(localized: "Sidebar size", comment: "A setting in Settings › Appearance: how large the sidebar's tabs, folders, space names, favorites and address are, as macOS's Sidebar icon size."),
-                              detail: String(localized: "The size of the tabs, folders, favorites and address. To make everything on your Mac larger, use Larger Text in System Settings › Displays.",
+                              detail: String(localized: "To make everything on your Mac larger, use Larger Text in System Settings › Displays.",
                                              comment: "Explanation under “Sidebar size” in Settings › Appearance. Larger Text and System Settings › Displays are macOS's own names."),
                               control: sidebarSize)
         // 侧边栏 is what people type, though Zigzag says 边栏 (docs/i18n/glossary.md): found by it, never shown.
@@ -1238,7 +1244,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         appearanceGroup.add(sizeRow)
         largeNamesToggle.onChange = { on in SpaceHeaderView.isLarge = on }
         appearanceGroup.add(FormRow(title: String(localized: "Large space names", comment: "A setting in Settings › Appearance."),
-                                    detail: String(localized: "Shows the space’s name large and light above its tabs. When off, it’s a plain heading.", comment: "Explanation under “Large space names” in Settings › Appearance."),
                                     control: largeNamesToggle))
         favoritesPerRow.options = FavoritesView.perRowChoices.map { count in
             DropdownButton.Option(title: count == 0 ? String(localized: "Automatic", comment: "A choice for “Favorites per row” in Settings › Appearance: as many as fit the sidebar's width.") : count.formatted())
@@ -1261,7 +1266,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         }
         // Dark Reader's license asks for its notice, which is in Acknowledgments; this is where people look for what
         // draws pages dark.
-        let darkDetail = Words.sentences(String(localized: "Websites without a dark look of their own are drawn dark. Pictures and video stay as they are.",
+        let darkDetail = Words.sentences(String(localized: "Pictures and video stay as they are.",
                                                 comment: "Explanation under “Dark pages” in Settings › Appearance."),
                                          String(localized: "Uses Dark Reader, by Dark Reader Ltd.", comment: "After the explanation under “Dark pages” in Settings › Appearance. Dark Reader is the name of the open-source dark mode engine, Dark Reader Ltd. its maker: keep both as they are."))
         let darkRow = FormRow(title: String(localized: "Dark pages", comment: "A setting in Settings › Appearance: websites without a dark look of their own are drawn dark."),
@@ -1273,7 +1278,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         refreshPureBlack()
         motionToggle.onChange = { on in Tokens.Motion.reducesMotionHere = on }
         appearanceGroup.add(FormRow(title: String(localized: "Reduce motion", comment: "A setting in Settings › Appearance."),
-                                    detail: String(localized: "Things appear in place instead of sliding or growing. Fades stay.", comment: "Explanation under “Reduce motion” in Settings › Appearance."),
+                                    detail: String(localized: "Fades stay.", comment: "Explanation under “Reduce motion” in Settings › Appearance."),
                                     control: motionToggle))
 
         // Tabs
@@ -2865,7 +2870,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         suggestionsToggle.isOn = SuggestionFetcher.isOn
         borderlessToggle.isOn = BrowserRootView.isBorderless
         addressAboveToggle.isOn = BrowserRootView.addressAbovePage
-        sidebarRightToggle.isOn = BrowserRootView.sidebarOnRight
+        sidebarPosition.selectedIndex = BrowserRootView.sidebarOnRight ? 1 : 0
         largeNamesToggle.isOn = SpaceHeaderView.isLarge
         quitToggle.isOn = AppDelegate.asksBeforeQuitting
         scriptJavaScriptToggle.isOn = Scripting.allowsJavaScript
