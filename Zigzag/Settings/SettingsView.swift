@@ -1813,7 +1813,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
             let get = PillButton(title: String(localized: "Get Extensions", comment: "Button in Settings › Extensions: opens the Chrome Web Store."))
             get.onClick = { [weak self] _ in self?.getExtensions() }
             extensionsGroup.add(FormRow(title: String(localized: "No extensions yet", comment: "A setting in Settings › Extensions."),
-                                        detail: String(localized: "Find one in the Chrome Web Store and choose Add to Zigzag.", comment: "Explanation under “No extensions yet” in Settings › Extensions."),
                                         control: get))
         }
         for (id, ext) in installed { extensionsGroup.add(extensionRow(id: id, ext: ext)) }
@@ -2164,9 +2163,9 @@ final class SettingsView: NSView, NSTextFieldDelegate {
                    comment: "Under a password setting in Settings › Passwords, while a password manager extension (its name, like 1Password) is on.")
         }
         let saveNote = manager != nil && !saves ? managerNote!
-            : String(localized: "After you sign in. Kept in your Keychain, synced with iCloud.", comment: "Explanation under “Offer to save passwords” in Settings › Passwords.")
+            : String(localized: "Kept in your Keychain, synced with iCloud.", comment: "Explanation under “Offer to save passwords” in Settings › Passwords.")
         let fillNote = manager != nil && !fills ? managerNote!
-            : String(localized: "Under sign-in fields, only on the site each was saved for. Passwords… there opens the Passwords app and password manager apps.", comment: "Explanation under “Fill saved passwords” in Settings › Passwords. Passwords… is the row in the fill-password menu; the Passwords app is Apple’s, password manager apps are ones like 1Password.")
+            : String(localized: "Only on the site each was saved for.", comment: "Explanation under “Fill saved passwords” in Settings › Passwords.")
         passwordsGroup.add(FormRow(title: String(localized: "Offer to save passwords", comment: "A setting in Settings › Passwords."),
                                    detail: saveNote,
                                    control: saveToggle))
@@ -2177,13 +2176,12 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         cardToggle.onChange = { on in ContactCard.isOn = on }
         // Not a profile's: with more than one, it stands apart from the two that are.
         (hasManyProfiles ? cardGroup : passwordsGroup).add(FormRow(title: String(localized: "Fill forms from My Card", comment: "A setting in Settings › Passwords."),
-                                   detail: String(localized: "Your name, email, phone and address, from your own card in Contacts.", comment: "Explanation under “Fill forms from My Card” in Settings › Passwords."),
+                                   detail: String(localized: "From your own card in Contacts.", comment: "Explanation under “Fill forms from My Card” in Settings › Passwords."),
                                    control: cardToggle))
         let open = PillButton(title: String(localized: "Open Passwords", comment: "Button in Settings › Passwords that opens the Passwords window."))
         open.onClick = { _ in PasswordsWindowController.show() }
         // Importing is in General and in the Passwords window itself; once here would be a third time.
         passwordsWindowGroup.add(FormRow(title: String(localized: "Saved passwords", comment: "A setting in Settings › Passwords."),
-                                         detail: String(localized: "See, edit, import and export them.", comment: "Explanation under “Saved passwords” in Settings › Passwords."),
                                          control: open))
     }
 

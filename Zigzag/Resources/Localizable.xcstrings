@@ -2362,17 +2362,6 @@
         }
       }
     },
-    "After you sign in. Kept in your Keychain, synced with iCloud." : {
-      "comment" : "Explanation under “Offer to save passwords” in Settings › Passwords.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在你登录之后。存储在你的钥匙串中，并通过 iCloud 同步。"
-          }
-        }
-      }
-    },
     "All History…" : {
       "comment" : "Item in the Clear History menu on the History page.",
       "localizations" : {
@@ -6577,17 +6566,6 @@
         }
       }
     },
-    "Find one in the Chrome Web Store and choose Add to Zigzag." : {
-      "comment" : "Explanation under “No extensions yet” in Settings › Extensions.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 Chrome 网上应用店中找一个扩展，然后选择“添加到 Zigzag”。"
-          }
-        }
-      }
-    },
     "Find your extensions in site controls, by the address. You can bring more over anytime from Settings." : {
       "comment" : "Import window when the import is done and only extensions came over. Site controls is the panel by the address.",
       "localizations" : {
@@ -6870,6 +6848,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "来自你在“通讯录”中的名片"
+          }
+        }
+      }
+    },
+    "From your own card in Contacts." : {
+      "comment" : "Explanation under “Fill forms from My Card” in Settings › Passwords.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "From your own card in Contacts."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自你在“通讯录”中的名片。"
           }
         }
       }
@@ -8134,6 +8129,23 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Kept in your Keychain, synced with iCloud." : {
+      "comment" : "Explanation under “Offer to save passwords” in Settings › Passwords.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kept in your Keychain, synced with iCloud."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存储在你的钥匙串中，并通过 iCloud 同步。"
           }
         }
       }
@@ -10250,6 +10262,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "仅在 %@ 上"
+          }
+        }
+      }
+    },
+    "Only on the site each was saved for." : {
+      "comment" : "Explanation under “Fill saved passwords” in Settings › Passwords.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only on the site each was saved for."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只在每个密码所属的网站上。"
           }
         }
       }
@@ -13856,17 +13885,6 @@
         }
       }
     },
-    "See, edit, import and export them." : {
-      "comment" : "Explanation under “Saved passwords” in Settings › Passwords.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看、编辑、导入和导出密码。"
-          }
-        }
-      }
-    },
     "See-through" : {
       "comment" : "A slider in the space editor: how much of the desktop shows through the window.",
       "localizations" : {
@@ -16958,17 +16976,6 @@
         }
       }
     },
-    "Under sign-in fields, only on the site each was saved for. Passwords… there opens the Passwords app and password manager apps." : {
-      "comment" : "Explanation under “Fill saved passwords” in Settings › Passwords. Passwords… is the row in the fill-password menu; the Passwords app is Apple’s, password manager apps are ones like 1Password.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在登录栏下方，只在每个密码所属的网站上。其中的“密码…”会打开“密码”App 和密码管理器 App。"
-          }
-        }
-      }
-    },
     "Undo" : {
       "comment" : "Button in a toast: takes back what was just done.\nButton in a toast: undoes what the toast says happened.\nButton in the toast after History is cleared.\nButton in the toast after a login is deleted.\nEdit menu item.\nToast button",
       "localizations" : {
@@ -18241,17 +18248,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你的位置"
-          }
-        }
-      }
-    },
-    "Your name, email, phone and address, from your own card in Contacts." : {
-      "comment" : "Explanation under “Fill forms from My Card” in Settings › Passwords.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你的姓名、电子邮件、电话和地址，来自你在“通讯录”中的名片。"
           }
         }
       }
