@@ -1086,7 +1086,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         downloadPlace.onSelect = { index in DownloadPlace.pick(index) }
         downloadPlaceToken = DownloadPlace.changed.observe { [weak self] in self?.refreshDownloadPlace() }
         generalGroup.add(FormRow(title: String(localized: "Save downloads to", comment: "A setting in Settings › General."),
-                                 detail: String(localized: "Or have Zigzag ask where, each time.", comment: "Explanation under “Save downloads to” in Settings › General."),
                                  control: downloadPlace))
         let importButton = PillButton(title: String(localized: "Import…", comment: "Button in Settings › General that opens the Import window."))
         importButton.onClick = { _ in ImportWindowController.show() }

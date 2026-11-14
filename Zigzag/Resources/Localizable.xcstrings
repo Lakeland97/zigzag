@@ -10822,17 +10822,6 @@
         }
       }
     },
-    "Or have Zigzag ask where, each time." : {
-      "comment" : "Explanation under “Save downloads to” in Settings › General.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "也可以让 Zigzag 每次询问存储位置。"
-          }
-        }
-      }
-    },
     "Or paste this into the app’s chat, and it can set itself up." : {
       "comment" : "Explanation under “Prompt” in Settings › Automation › Connect an App.",
       "localizations" : {
