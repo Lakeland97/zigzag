@@ -246,7 +246,14 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
-        if navigationAction.shouldPerformDownload { return .download }
+        if navigationAction.shouldPerformDownload {
+            if let url = navigationAction.request.url,
+               await handOffIfWanted(url, request: navigationAction.request, appliesToLinks: false) { return .cancel }
+            return .download
+        }
+        // A link a rule wants opens in its app, never a popup page that would be blank.
+        if PopupNotice.isUserInitiated(navigationAction), let url = navigationAction.request.url,
+           await handOffIfWanted(url, request: navigationAction.request, appliesToLinks: true) { return .cancel }
         // Zigzag's own pages (History) open in its tabs, never in a page's pop-up.
         if navigationAction.request.url?.scheme?.lowercased() == HistoryPage.scheme { return .cancel }
         if let url = navigationAction.request.url, ExternalLinks.isExternal(url), url.scheme?.lowercased() != "file" {
@@ -286,7 +293,33 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
-        navigationResponse.canShowMIMEType ? .allow : .download
+        guard !navigationResponse.canShowMIMEType else { return .allow }
+        // A file a rule wants never reaches the downloads list.
+        if let url = navigationResponse.response.url {
+            let mime = (navigationResponse.response.mimeType ?? "").lowercased()
+            let disposition = ((navigationResponse.response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition") ?? "").lowercased()
+            let filename = Tab.filename(from: disposition) ?? DownloadTokens.filename(for: url, suggested: "")
+            if await handOffIfWanted(url, request: URLRequest(url: url), appliesToLinks: false, filename: filename, mime: mime) {
+                return .cancel
+            }
+        }
+        return .download
+    }
+
+    /// Runs the first rule that catches `url`. True means the popup's page should not load or download it.
+    private func handOffIfWanted(_ url: URL, request: URLRequest, appliesToLinks: Bool, filename: String? = nil, mime: String = "") async -> Bool {
+        // Zigzag's own pages and an extension's are never a rule's to take.
+        guard url.scheme?.lowercased() != HistoryPage.scheme, !Tab.isExtensionPage(url) else { return false }
+        guard let rule = DownloadHandoff.firstMatch(url, appliesToLinks: appliesToLinks) else { return false }
+        let referrer = request.value(forHTTPHeaderField: "Referer").flatMap { URL(string: $0) } ?? webView.url
+        let handoff = DownloadHandoff.Request(url: url, referrer: referrer,
+                                              filename: filename ?? DownloadTokens.filename(for: url, suggested: ""),
+                                              mime: mime, space: "",
+                                              dataStore: webView.configuration.websiteDataStore, isPrivate: isPrivate,
+                                              window: parentWindow)
+        let outcome = await DownloadHandoff.perform(rule, request: handoff)
+        if case .failed = outcome { DownloadHandoff.report(outcome, rule: rule, request: handoff) }
+        return true
     }
 
     func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
