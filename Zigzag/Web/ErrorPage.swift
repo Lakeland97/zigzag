@@ -185,19 +185,19 @@ enum ErrorPage {
                     String(localized: "The site only opens for Macs with a certificate it trusts, often one from work or school.", comment: "Message on the page Zigzag shows when a page can't load."))
         case .redirects:
             return (String(localized: "This page keeps redirecting", comment: "Title of the page Zigzag shows when a page can't load."),
-                    String(localized: "It sends Zigzag around in a loop. Clearing this site’s cookies often fixes it.", comment: "Message on the page Zigzag shows when a page can't load."))
+                    String(localized: "Clearing this site’s cookies often fixes it.", comment: "Message on the page Zigzag shows when a page can't load."))
         case .broken:
             return (String(localized: "This site sent a broken page", comment: "Title of the page Zigzag shows when a page can't load."),
-                    String(localized: "Something went wrong on the site’s side. Try again in a moment.", comment: "Message on the page Zigzag shows when a page can't load."))
+                    String(localized: "Try again in a moment.", comment: "Message on the page Zigzag shows when a page can't load."))
         case .badAddress:
             return (String(localized: "Zigzag can’t open this address", comment: "Title of the page Zigzag shows when a page can't load."),
                     String(localized: "Check the address for typos.", comment: "Message on the page Zigzag shows when a page can't load."))
         case .port:
             return (String(localized: "Zigzag won’t open this port", comment: "Title of the page Zigzag shows when a page can't load."),
-                    String(localized: "The address uses a port kept for other things, like email, so browsers don’t open it.", comment: "Message on the page Zigzag shows when a page can't load."))
+                    String(localized: "The address uses a port kept for other things, like email.", comment: "Message on the page Zigzag shows when a page can't load."))
         case .blocked:
             return (String(localized: "A blocker stopped this page", comment: "Title of the page Zigzag shows when a content blocker kept a page from loading."),
-                    String(localized: "A content blocker doesn’t let this page load. If you trust the site, allow it in the blocker, then try again.", comment: "Message on the page Zigzag shows when a content blocker kept a page from loading."))
+                    String(localized: "If you trust the site, allow it in the blocker, then try again.", comment: "Message on the page Zigzag shows when a content blocker kept a page from loading."))
         case .filtered:
             return (String(localized: "This site is blocked on this Mac", comment: "Title of the page Zigzag shows when Screen Time or a content filter blocks a site."),
                     String(localized: "Screen Time or a content filter on this Mac doesn’t allow it.", comment: "Message on the page Zigzag shows when Screen Time or a content filter blocks a site."))
@@ -218,7 +218,7 @@ enum ErrorPage {
                     String(localized: "It may need more memory than your Mac can spare right now. Close some tabs, then try again.", comment: "Message on the page Zigzag shows when a page can't load."))
         case .other:
             return (String(localized: "Can’t open this page", comment: "Title of the page Zigzag shows when a page can't load."),
-                    String(localized: "Something went wrong while loading it. Try again in a moment.", comment: "Message on the page Zigzag shows when a page can't load."))
+                    String(localized: "Try again in a moment.", comment: "Message on the page Zigzag shows when a page can't load."))
         }
     }
 

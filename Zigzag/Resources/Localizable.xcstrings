@@ -1717,17 +1717,6 @@
         }
       }
     },
-    "A content blocker doesn’t let this page load. If you trust the site, allow it in the blocker, then try again." : {
-      "comment" : "Message on the page Zigzag shows when a content blocker kept a page from loading.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "内容拦截器不允许载入此页面。如果你信任这个网站，请在拦截器中允许它，然后再试一次。"
-          }
-        }
-      }
-    },
     "A few of your sign-ins from %@ couldn’t come over, so some sites may ask you to sign in again." : {
       "comment" : "Problem in the Import window. The placeholder is a browser's name, like Chrome. Sign-ins are the sites a browser keeps you signed in to.",
       "localizations" : {
@@ -4127,6 +4116,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已清除"
+          }
+        }
+      }
+    },
+    "Clearing this site’s cookies often fixes it." : {
+      "comment" : "Message on the page Zigzag shows when a page can't load.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Clearing this site’s cookies often fixes it."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "清除此网站的 Cookie 通常可以解决。"
           }
         }
       }
@@ -7387,6 +7393,23 @@
         }
       }
     },
+    "If you trust the site, allow it in the blocker, then try again." : {
+      "comment" : "Message on the page Zigzag shows when a content blocker kept a page from loading.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "If you trust the site, allow it in the blocker, then try again."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你信任这个网站，请在拦截器中允许它，然后再试一次。"
+          }
+        }
+      }
+    },
     "Import" : {
       "comment" : "Main button in the Import window.\nTitle of the Import window.",
       "localizations" : {
@@ -7769,17 +7792,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "它会在这个页面旁边打开"
-          }
-        }
-      }
-    },
-    "It sends Zigzag around in a loop. Clearing this site’s cookies often fixes it." : {
-      "comment" : "Message on the page Zigzag shows when a page can't load.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "它让 Zigzag 陷入了循环跳转。清除此网站的 Cookie 通常可以解决。"
           }
         }
       }
@@ -14854,28 +14866,6 @@
         }
       }
     },
-    "Something went wrong on the site’s side. Try again in a moment." : {
-      "comment" : "Message on the page Zigzag shows when a page can't load.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "网站那边出了问题。请稍后再试。"
-          }
-        }
-      }
-    },
-    "Something went wrong while loading it. Try again in a moment." : {
-      "comment" : "Message on the page Zigzag shows when a page can't load.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "载入时出了问题。请稍后再试。"
-          }
-        }
-      }
-    },
     "Sort by Name" : {
       "comment" : "A choice for the order of the list in Settings › Privacy › Stored by Websites.",
       "localizations" : {
@@ -15675,13 +15665,19 @@
         }
       }
     },
-    "The address uses a port kept for other things, like email, so browsers don’t open it." : {
+    "The address uses a port kept for other things, like email." : {
       "comment" : "Message on the page Zigzag shows when a page can't load.",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "The address uses a port kept for other things, like email."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此地址使用的端口留作电子邮件等其他用途，所以浏览器不会打开它。"
+            "value" : "此地址使用的端口留作电子邮件等其他用途。"
           }
         }
       }
