@@ -1728,17 +1728,6 @@
         }
       }
     },
-    "A development site at localhost or 127.0.0.1 that uses its own certificate for https opens without the warning. Only for servers on this Mac, and only the certificate first shown." : {
-      "comment" : "Explanation under “Trust certificates of servers on this Mac” in Settings › Developer.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位于 localhost 或 127.0.0.1、使用自有证书提供 https 的开发网站，打开时不再显示警告。仅限这台 Mac 上的服务器，且只信任它最先出示的证书。"
-          }
-        }
-      }
-    },
     "A few of your sign-ins from %@ couldn’t come over, so some sites may ask you to sign in again." : {
       "comment" : "Problem in the Import window. The placeholder is a browser's name, like Chrome. Sign-ins are the sites a browser keeps you signed in to.",
       "localizations" : {
@@ -7569,17 +7558,6 @@
         }
       }
     },
-    "In the bar above a page in Developer Mode: its full address, the console, inspecting an element, the page’s look and size, and more. Off, they’re in the site’s controls." : {
-      "comment" : "Explanation under “Tools above the page” in Settings › Developer.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在开发者模式网页上方的栏里：完整地址、控制台、检查元素、网页的外观和大小等。关闭后，这些工具在网站设置里。"
-          }
-        }
-      }
-    },
     "Inspect" : {
       "comment" : "Under a tile in the site panel's Developer group: picks an element on the page to inspect.",
       "localizations" : {
@@ -10132,6 +10110,23 @@
         }
       }
     },
+    "Off, they’re in the site’s controls." : {
+      "comment" : "Explanation under “Tools above the page” in Settings › Developer.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Off, they’re in the site’s controls."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭后，这些工具在网站设置里。"
+          }
+        }
+      }
+    },
     "Offer %@ as your search engine" : {
       "comment" : "One thing an extension can do, listed in its install sheet and in Settings. The name is the search engine's, like ChatGPT.",
       "localizations" : {
@@ -10216,6 +10211,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "只会清除“%@”的历史记录，其他个人资料的不受影响。"
+          }
+        }
+      }
+    },
+    "Only for servers on this Mac, and only the certificate first shown." : {
+      "comment" : "Explanation under “Trust certificates of servers on this Mac” in Settings › Developer.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Only for servers on this Mac, and only the certificate first shown."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅限这台 Mac 上的服务器，且只信任它最先出示的证书。"
           }
         }
       }
@@ -14675,17 +14687,6 @@
         }
       }
     },
-    "Sites you turn Developer Mode on for show up here." : {
-      "comment" : "Explanation under “None yet” in Settings › Developer.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你开启了开发者模式的网站会显示在这里。"
-          }
-        }
-      }
-    },
     "Sites you visit can keep cookies and files here." : {
       "comment" : "Explanation under “None yet” in Settings › Privacy.",
       "localizations" : {
@@ -14699,17 +14700,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你访问的网站可以把 Cookie 和文件保存在这里。"
-          }
-        }
-      }
-    },
-    "Sizes you add show up here." : {
-      "comment" : "Explanation under “None yet” in Settings › Developer › Page Sizes.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你添加的尺寸会显示在这里。"
           }
         }
       }
@@ -16620,13 +16610,19 @@
         }
       }
     },
-    "Tools for building websites, on the sites in Developer Mode and nowhere else. Turn it on for any site in its Site Controls, in the command bar or with View › Developer. A tab in Developer Mode has a dashed outline in the sidebar." : {
+    "Tools for building websites, on the sites in Developer Mode and nowhere else. Turn it on for any site in its Site Controls, in the command bar or with View › Developer." : {
       "comment" : "Explanation under the Developer Mode switch in Settings › Developer.",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tools for building websites, on the sites in Developer Mode and nowhere else. Turn it on for any site in its Site Controls, in the command bar or with View › Developer."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于构建网站的工具，只在开发者模式中的网站上显示。可以在任一网站的“网站设置”、命令栏或“显示 › 开发者”中为它开⁠启。处于开发者模式的标签页在边栏中带有虚线边框。"
+            "value" : "用于构建网站的工具，只在开发者模式中的网站上显示。可以在任一网站的“网站设置”、命令栏或“显示 › 开发者”中为它开⁠启。"
           }
         }
       }

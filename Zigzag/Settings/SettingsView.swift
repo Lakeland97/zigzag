@@ -1139,18 +1139,18 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         // Developer
         developerToolsToggle.onChange = { on in DeveloperTools.isOn = on }
         let developerRow = FormRow(title: DeveloperTool.modeName,
-                                   detail: String(localized: "Tools for building websites, on the sites in Developer Mode and nowhere else. Turn it on for any site in its Site Controls, in the command bar or with View › Developer. A tab in Developer Mode has a dashed outline in the sidebar.",
+                                   detail: String(localized: "Tools for building websites, on the sites in Developer Mode and nowhere else. Turn it on for any site in its Site Controls, in the command bar or with View › Developer.",
                                                   comment: "Explanation under the Developer Mode switch in Settings › Developer."),
                                    control: developerToolsToggle)
         developerToolsGroup.add(developerRow)
         developerBarToggle.onChange = { on in DeveloperTools.showsInBar = on }
         developerToolsGroup.add(FormRow(title: String(localized: "Tools above the page", comment: "A setting in Settings › Developer: on a site in Developer Mode, the developer tools are in the bar above the page, with its full address."),
-                                        detail: String(localized: "In the bar above a page in Developer Mode: its full address, the console, inspecting an element, the page’s look and size, and more. Off, they’re in the site’s controls.",
+                                        detail: String(localized: "Off, they’re in the site’s controls.",
                                                        comment: "Explanation under “Tools above the page” in Settings › Developer."),
                                         control: developerBarToggle))
         developerTrustToggle.onChange = { on in DeveloperTools.trustsLocalServers = on }
         localServersGroup.add(FormRow(title: String(localized: "Trust certificates of servers on this Mac", comment: "A setting in Settings › Developer, under Local Servers: a development site served from this Mac over https with a certificate of its own opens without the warning."),
-                                      detail: String(localized: "A development site at localhost or 127.0.0.1 that uses its own certificate for https opens without the warning. Only for servers on this Mac, and only the certificate first shown.",
+                                      detail: String(localized: "Only for servers on this Mac, and only the certificate first shown.",
                                                      comment: "Explanation under “Trust certificates of servers on this Mac” in Settings › Developer."),
                                       control: developerTrustToggle))
         addSiteButton.onClick = { [weak self] _ in if let self { DevelopmentSiteSheet.add(in: self) } }
@@ -3187,7 +3187,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let sizes = PageSizes.all
         if sizes.isEmpty {
             pageSizesGroup.add(FormRow(title: String(localized: "None yet", comment: "A row in Settings › Developer, shown when no page size is listed."),
-                                       detail: String(localized: "Sizes you add show up here.", comment: "Explanation under “None yet” in Settings › Developer › Page Sizes."),
                                        control: NSView()))
         }
         for size in sizes {
@@ -3243,7 +3242,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let sites = DevelopmentSites.sites
         if sites.isEmpty {
             developmentSitesGroup.add(FormRow(title: String(localized: "None yet", comment: "A row in Settings › Developer, shown when no site is in Developer Mode."),
-                                              detail: String(localized: "Sites you turn Developer Mode on for show up here.", comment: "Explanation under “None yet” in Settings › Developer."),
                                               control: NSView()))
         }
         for site in sites {
