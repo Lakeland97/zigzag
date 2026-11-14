@@ -887,7 +887,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         return row
     }()
     private let newTabPlace = DropdownButton()
-    private var newTabRow: FormRow!
     private let pinOfferToggle = Toggle()
     private let nestToggle = Toggle()
     private let swipeToggle = Toggle()
@@ -1291,37 +1290,33 @@ final class SettingsView: NSView, NSTextFieldDelegate {
             }
             return DropdownButton.Option(title: title)
         }
-        newTabPlace.onSelect = { [weak self] index in
-            TabManager.newTabPlace = TabManager.NewTabPlace.allCases[index]
-            self?.refreshNewTabPlace()
-        }
-        newTabRow = FormRow(title: String(localized: "New tabs open", comment: "A setting in Settings › Tabs: where a new tab goes in the sidebar's list."),
-                            detail: nil, control: newTabPlace)
+        newTabPlace.onSelect = { index in TabManager.newTabPlace = TabManager.NewTabPlace.allCases[index] }
+        let newTabRow = FormRow(title: String(localized: "New tabs open", comment: "A setting in Settings › Tabs: where a new tab goes in the sidebar's list."),
+                                control: newTabPlace)
         // There's no homepage: a new tab opens the address bar. This is the setting nearest to one.
         newTabRow.keywords = String(localized: "new tab homepage home page start page position order same site domain group organize", comment: "Words that find the New tabs open setting with Find a setting in Settings. Zigzag has no homepage, so words about one find this row. Not shown.")
         tabsGroup.add(newTabRow)
-        refreshNewTabPlace()
         nestToggle.onChange = { on in TabManager.nestsOpenedLinks = on }
         let nestRow = FormRow(title: String(localized: "Open ⌘-clicked links under their tab", comment: "A setting in Settings › Tabs: a link opened in a new tab goes in the sidebar nested under the tab it came from. ⌘ is the Command key."),
-                              detail: String(localized: "A link you open in a new tab sits under the page it came from. Drag a tab out to make it a tab of its own.", comment: "Explanation under “Open ⌘-clicked links under their tab” in Settings › Tabs."),
+                              detail: String(localized: "Drag a tab out to make it a tab of its own.", comment: "Explanation under “Open ⌘-clicked links under their tab” in Settings › Tabs."),
                               control: nestToggle)
         nestRow.keywords = String(localized: "nested tree child command click", comment: "Words that find the Open ⌘-clicked links under their tab setting with Find a setting in Settings. Not shown.")
         tabsGroup.add(nestRow)
         archiveAfter.options = TabArchive.After.allCases.map { DropdownButton.Option(title: $0.title) }
         archiveAfter.onSelect = { index in TabArchive.after = TabArchive.After.allCases[index] }
         tabsGroup.add(FormRow(title: String(localized: "Archive tabs you haven’t used", comment: "A setting in Settings › Tabs."),
-                              detail: String(localized: "They leave the sidebar. Type a few letters in the address bar to bring one back.", comment: "Explanation under “Archive tabs you haven’t used” in Settings › Tabs."),
+                              detail: String(localized: "Type a few letters in the address bar to bring one back.", comment: "Explanation under “Archive tabs you haven’t used” in Settings › Tabs."),
                               control: archiveAfter))
         energyToggle.onChange = { on in EnergyWatch.sleepsBusyTabs = on }
         let energyRow = FormRow(title: String(localized: "Put busy background tabs to sleep", comment: "A setting in Settings › Tabs."),
-                                detail: String(localized: "A tab you’re not using that keeps working hard sleeps until you open it again. To keep a site’s tabs awake, turn on Keep tabs awake in its site controls.",
+                                detail: String(localized: "To keep a site’s tabs awake, turn on Keep tabs awake in its site controls.",
                                                comment: "Explanation under “Put busy background tabs to sleep” in Settings › Tabs. Keep tabs awake is the row in the site panel; site controls is the panel by the address."),
                                 control: energyToggle)
         energyRow.keywords = String(localized: "sleep asleep memory energy keep awake active exclude site", comment: "Words that find the Put busy background tabs to sleep setting with Find a setting in Settings. Not shown.")
         tabsGroup.add(energyRow)
         pipToggle.onChange = { on in PictureInPicture.followsTabs = on }
         let videoRow = FormRow(title: String(localized: "Show a mini player when you switch tabs", comment: "A setting in Settings › Tabs."),
-                               detail: String(localized: "A video you’re watching follows you in a small player over the page. Its right-click menu can turn this off too.", comment: "Explanation under “Show a mini player when you switch tabs” in Settings › Tabs."),
+                               detail: String(localized: "Its right-click menu can turn this off too.", comment: "Explanation under “Show a mini player when you switch tabs” in Settings › Tabs."),
                                control: pipToggle)
         videoRow.keywords = String(localized: "mini player picture in picture pip floating", comment: "Words that find the Show a mini player setting with Find a setting in Settings. Not shown.")
         tabsGroup.add(videoRow)
@@ -1334,14 +1329,14 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         }
         fullScreenFill.onSelect = { index in PageFullScreen.fill = PageFullScreen.Fill.allCases[index] }
         let fullScreenRow = FormRow(title: String(localized: "Full screen videos fill", comment: "A setting in Settings › Tabs: whether a video put in full screen covers the whole screen or only the page's area in the window. Followed by The Whole Screen or The Page."),
-                                    detail: String(localized: "With The Page, a video in full screen stays inside its tab, or its part of a split. Choose for a single site in its site controls.",
+                                    detail: String(localized: "Choose for a single site in its site controls.",
                                                    comment: "Explanation under “Full screen videos fill” in Settings › Tabs. Site controls is the panel by the address."),
                                     control: fullScreenFill)
         fullScreenRow.keywords = String(localized: "full screen fullscreen window tab pane video youtube in window", comment: "Words that find the Full screen videos fill setting with Find a setting in Settings. Not shown.")
         tabsGroup.add(fullScreenRow)
         swipeToggle.onChange = { on in SwipeNavigator.isOn = on }
         tabsGroup.add(FormRow(title: String(localized: "Swipe to go back and forward", comment: "A setting in Settings › Tabs: two fingers sideways on the trackpad go back or forward."),
-                              detail: String(localized: "Two fingers sideways on the trackpad. When off, websites get every swipe.", comment: "Explanation under “Swipe to go back and forward” in Settings › Tabs."),
+                              detail: String(localized: "Two fingers sideways on the trackpad.", comment: "Explanation under “Swipe to go back and forward” in Settings › Tabs."),
                               control: swipeToggle))
         pinOfferToggle.onChange = { on in BrowserWindowController.offersToPinWanderedPage = on }
         tabsGroup.add(FormRow(title: String(localized: "Offer to pin the page you moved to", comment: "A setting in Settings › Tabs."),
@@ -2813,18 +2808,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     }
 
     /// Pure black backgrounds shows only while dark pages are on.
-    /// Under “New tabs open”: with Next to Tabs from the Same Site, where a page from a site with no tabs open goes.
-    private func refreshNewTabPlace() {
-        guard let newTabRow else { return }
-        let general = String(localized: "Where ⌘T and links put a new tab in the sidebar.", comment: "Explanation under “New tabs open” in Settings › Tabs.")
-        guard TabManager.newTabPlace == .sameSite else { newTabRow.detailText = general; return }
-        newTabRow.detailText = switch TabManager.otherNewTabPlace {
-        case .top: String(localized: "A page from a site with no tabs open goes at the top.", comment: "Explanation under “New tabs open” in Settings › Tabs when Next to Tabs from the Same Site is chosen.")
-        case .bottom: String(localized: "A page from a site with no tabs open goes at the bottom.", comment: "Explanation under “New tabs open” in Settings › Tabs when Next to Tabs from the Same Site is chosen.")
-        case .next, .sameSite: String(localized: "A page from a site with no tabs open goes next to the current tab.", comment: "Explanation under “New tabs open” in Settings › Tabs when Next to Tabs from the Same Site is chosen.")
-        }
-    }
-
     private func refreshPureBlack() {
         let shown = DarkPages.mode != .off
         guard pureBlackRow.isAvailable != shown else { return }
@@ -2880,7 +2863,6 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         developerTrustToggle.isOn = DeveloperTools.trustsLocalServers
         refreshAIApps()
         newTabPlace.selectedIndex = TabManager.NewTabPlace.allCases.firstIndex(of: TabManager.newTabPlace) ?? 0
-        refreshNewTabPlace()
         pinOfferToggle.isOn = BrowserWindowController.offersToPinWanderedPage
         nestToggle.isOn = TabManager.nestsOpenedLinks
         swipeToggle.isOn = SwipeNavigator.isOn

@@ -1750,50 +1750,6 @@
         }
       }
     },
-    "A link you open in a new tab sits under the page it came from. Drag a tab out to make it a tab of its own." : {
-      "comment" : "Explanation under “Open ⌘-clicked links under their tab” in Settings › Tabs.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在新标签页中打开的链接会放在它来自的页面下面。把标签页拖出来，它就成为独立的标签页。"
-          }
-        }
-      }
-    },
-    "A page from a site with no tabs open goes at the bottom." : {
-      "comment" : "Explanation under “New tabs open” in Settings › Tabs when Next to Tabs from the Same Site is chosen.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有打开标签页的网站，新页面放在底部。"
-          }
-        }
-      }
-    },
-    "A page from a site with no tabs open goes at the top." : {
-      "comment" : "Explanation under “New tabs open” in Settings › Tabs when Next to Tabs from the Same Site is chosen.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有打开标签页的网站，新页面放在顶部。"
-          }
-        }
-      }
-    },
-    "A page from a site with no tabs open goes next to the current tab." : {
-      "comment" : "Explanation under “New tabs open” in Settings › Tabs when Next to Tabs from the Same Site is chosen.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有打开标签页的网站，新页面放在当前标签页旁边。"
-          }
-        }
-      }
-    },
     "A password can’t be empty." : {
       "comment" : "Toast when saving a login with its password cleared.",
       "localizations" : {
@@ -1884,28 +1840,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 上的一个标签页耗电较多，已让它休眠"
-          }
-        }
-      }
-    },
-    "A tab you’re not using that keeps working hard sleeps until you open it again. To keep a site’s tabs awake, turn on Keep tabs awake in its site controls." : {
-      "comment" : "Explanation under “Put busy background tabs to sleep” in Settings › Tabs. Keep tabs awake is the row in the site panel; site controls is the panel by the address.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没在用却一直占用大量资源的标签页会休眠，再次打开时唤醒。要让某个网站的标签页保持唤醒，请在它的网站设置中打开“标签页保持唤醒”。"
-          }
-        }
-      }
-    },
-    "A video you’re watching follows you in a small player over the page. Its right-click menu can turn this off too." : {
-      "comment" : "Explanation under “Show a mini player when you switch tabs” in Settings › Tabs.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你正在看的视频会在页面上方的小播放器里跟着你。也可以在小播放器的右键菜单里关闭。"
           }
         }
       }
@@ -3932,6 +3866,23 @@
         }
       }
     },
+    "Choose for a single site in its site controls." : {
+      "comment" : "Explanation under “Full screen videos fill” in Settings › Tabs. Site controls is the panel by the address.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Choose for a single site in its site controls."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在站点控制中为单个网站选择。"
+          }
+        }
+      }
+    },
     "Choose the folder that contains the extension’s manifest.json." : {
       "comment" : "Message of the panel that loads an unpacked extension. manifest.json is a file name.",
       "localizations" : {
@@ -5934,6 +5885,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把一个标签页拖到页面上"
+          }
+        }
+      }
+    },
+    "Drag a tab out to make it a tab of its own." : {
+      "comment" : "Explanation under “Open ⌘-clicked links under their tab” in Settings › Tabs.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Drag a tab out to make it a tab of its own."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把标签页拖出来，就会成为独立的一个标签页。"
           }
         }
       }
@@ -7987,6 +7955,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下次会重新载入它的页面。"
+          }
+        }
+      }
+    },
+    "Its right-click menu can turn this off too." : {
+      "comment" : "Explanation under “Show a mini player when you switch tabs” in Settings › Tabs.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Its right-click menu can turn this off too."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "它的右键菜单也能关掉。"
           }
         }
       }
@@ -16048,17 +16033,6 @@
         }
       }
     },
-    "They leave the sidebar. Type a few letters in the address bar to bring one back." : {
-      "comment" : "Explanation under “Archive tabs you haven’t used” in Settings › Tabs.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "它们会从边栏中移走。在地址栏中键入几个字母即可找回。"
-          }
-        }
-      }
-    },
     "They’re forgotten on this Mac. Tabs, pinned tabs and passwords stay." : {
       "comment" : "Message of the sheet that asks before removing pages a search found from History.",
       "localizations" : {
@@ -16510,6 +16484,23 @@
         }
       }
     },
+    "To keep a site’s tabs awake, turn on Keep tabs awake in its site controls." : {
+      "comment" : "Explanation under “Put busy background tabs to sleep” in Settings › Tabs. Keep tabs awake is the row in the site panel; site controls is the panel by the address.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "To keep a site’s tabs awake, turn on Keep tabs awake in its site controls."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想让某个网站的标签页保持唤醒，请在该网站的站点控制中打开“标签页保持唤醒”。"
+          }
+        }
+      }
+    },
     "To make everything on your Mac larger, use Larger Text in System Settings › Displays." : {
       "comment" : "Explanation under “Sidebar size” in Settings › Appearance. Larger Text and System Settings › Displays are macOS's own names.",
       "localizations" : {
@@ -16879,13 +16870,19 @@
         }
       }
     },
-    "Two fingers sideways on the trackpad. When off, websites get every swipe." : {
+    "Two fingers sideways on the trackpad." : {
       "comment" : "Explanation under “Swipe to go back and forward” in Settings › Tabs.",
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Two fingers sideways on the trackpad."
+          }
+        },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在触控板上用两指左右轻扫。关闭后，所有轻扫都交给网页。"
+            "value" : "在触控板上两指左右滑动。"
           }
         }
       }
@@ -16908,6 +16905,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入“%@”以确认"
+          }
+        }
+      }
+    },
+    "Type a few letters in the address bar to bring one back." : {
+      "comment" : "Explanation under “Archive tabs you haven’t used” in Settings › Tabs.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Type a few letters in the address bar to bring one back."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在地址栏输入几个字母即可找回。"
           }
         }
       }
@@ -18006,17 +18020,6 @@
         }
       }
     },
-    "Where ⌘T and links put a new tab in the sidebar." : {
-      "comment" : "Explanation under “New tabs open” in Settings › Tabs.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "⌘T 和链接打开的新标签页在边栏中的位置。"
-          }
-        }
-      }
-    },
     "White" : {
       "comment" : "Name of a curated space color, in the space editor.\nTooltip and accessibility label of a preset look in the space editor.",
       "localizations" : {
@@ -18057,17 +18060,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "窗口"
-          }
-        }
-      }
-    },
-    "With The Page, a video in full screen stays inside its tab, or its part of a split. Choose for a single site in its site controls." : {
-      "comment" : "Explanation under “Full screen videos fill” in Settings › Tabs. Site controls is the panel by the address.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择“网页”时，全屏幕视频会留在它的标签页里，或分屏浏览中它的那一块。也可以在网站设置里为单个网站选择。"
           }
         }
       }
