@@ -3455,7 +3455,6 @@ final class ShortcutRow: InteractiveView, SettingsSearchable {
         title = Label(text, font: Tokens.Font.row(), color: Tokens.Color.textPrimary)
         super.init(frame: NSRect(x: 0, y: 0, width: 492, height: Tokens.Page.groupRowHeight))
         setup(keys: Shortcuts.caps(item))
-        toolTip = String(localized: "Click to change", comment: "Tooltip of a shortcut in Settings › Shortcuts.")
         onClick = { [weak self] _ in self?.startRecording() }
         resetButton.onClick = { [weak self] _ in
             guard let self, let item = self.item else { return }
@@ -3510,6 +3509,11 @@ final class ShortcutRow: InteractiveView, SettingsSearchable {
         setAccessibilityLabel(keys.isEmpty
             ? String(localized: "\(name): no shortcut", comment: "Accessibility label of a command with no keys in Settings › Shortcuts.")
             : String(localized: "\(name): \(shortcut)", comment: "Accessibility label of a shortcut in Settings › Shortcuts: the command, then its keys."))
+        // The tooltip that said the row could be clicked is gone — the pane's own hint says it, and the row looks it.
+        // What choosing the row does is still said where a tooltip never reached: to VoiceOver, in its own words.
+        if item != nil {
+            setAccessibilityHelp(String(localized: "Type a shortcut", comment: "In Settings › Shortcuts while recording a new shortcut."))
+        }
         refresh()
     }
 
