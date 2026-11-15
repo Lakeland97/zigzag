@@ -14,6 +14,10 @@ final class FormSheet: NSView, NSTextFieldDelegate {
         var label: String?
         var view: NSView
         var height: CGFloat = Tokens.Metric.controlHeight
+        /// A row that isn't wanted right now: it takes no room and isn't laid out, and Tab skips it. The form is told
+        /// while it's up with `setHidden(_:forRow:)` — a choice that makes another row pointless (a folder for a
+        /// destination that saves nothing) takes it out rather than leaving it there greyed.
+        var isHidden = false
 
         /// A quiet line of words, wrapped to the form's width.
         static func note(_ text: String) -> Row {
@@ -23,6 +27,10 @@ final class FormSheet: NSView, NSTextFieldDelegate {
     }
 
     private let panel = FloatingPanelView()
+    private let scroll = NSScrollView()
+    /// The rows live in here, not on the panel: a form taller than the screen keeps its heading and its buttons in
+    /// place and scrolls what is between them, instead of running off both ends.
+    private let content = FlippedView()
     private let header: DialogHeader
     private let body: NSTextField?
     private var rows: [Row]
@@ -35,6 +43,13 @@ final class FormSheet: NSView, NSTextFieldDelegate {
     private var completion: (Bool) -> Void
     /// Hears that it closed without being confirmed, for whoever needs to know either way.
     var onCancel: (() -> Void)?
+    /// Hears the pointer over the main button, which may be greyed, so whoever made the form can mark the fields that
+    /// are holding it up: a button that can't be pressed then says which field it wants instead of sitting there dead.
+    var onConfirmHover: ((Bool) -> Void)?
+    /// What the main button should say for itself while it can't be pressed — asked each time the form is
+    /// revalidated, so the words stay true as the form is filled in. Shown only while the button is dead: the owner's
+    /// answer to "why not?", in words, so the reason is found without hunting through the form.
+    var heldUpNote: (() -> String?)? { didSet { refreshHeldUpNote() } }
     private var monitor: Any?
     private weak var previousResponder: NSResponder?
 
@@ -53,19 +68,29 @@ final class FormSheet: NSView, NSTextFieldDelegate {
         if let symbol { header.setSymbol(symbol, tint: destructive ? Tokens.Color.destructive : Tokens.Color.icon) }
         addSubview(panel)
         panel.addSubview(header)
+        scroll.drawsBackground = false
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .noBorder
+        scroll.documentView = content
+        panel.addSubview(scroll)
         if let body { panel.addSubview(body) }
         for row in rows {
             let label = row.label.map { Label($0, font: Tokens.Font.body(), color: Tokens.Color.textPrimary) }
             labels.append(label)
-            if let label { panel.addSubview(label) }
-            panel.addSubview(row.view)
-            // Typing in any of its fields can change whether it may be confirmed.
-            (row.view as? FilledField)?.field.delegate = self
+            if let label { content.addSubview(label) }
+            content.addSubview(row.view)
+            row.view.isHidden = row.isHidden
+            label?.isHidden = row.isHidden
+            // Typing in any of its fields can change whether it may be confirmed — whether the row is the field
+            // itself or holds it beside something else (a path with a Choose… button after it).
+            for field in row.view.selfAndDescendants(of: FilledField.self) { field.field.delegate = self }
         }
         panel.addSubview(buttons)
         buttons.trailing = [cancel, confirm]
         confirm.onClick = { [weak self] _ in self?.finish(true) }
         cancel.onClick = { [weak self] _ in self?.finish(false) }
+        confirm.hoverChanged = { [weak self] over in self?.onConfirmHover?(over) }
         panel.onLayout = { [weak self] in self?.layoutPanel() }
         setAccessibilityRole(.sheet)
         setAccessibilityLabel(title)
@@ -111,9 +136,28 @@ final class FormSheet: NSView, NSTextFieldDelegate {
     }
 
     /// The main button follows what's been filled in.
-    func revalidate() { confirm.isEnabled = canConfirm() }
+    func revalidate() {
+        confirm.isEnabled = canConfirm()
+        refreshHeldUpNote()
+    }
+
+    /// The button explains itself only while it can't be pressed: a live button has nothing to answer for.
+    private func refreshHeldUpNote() { confirm.toolTip = confirm.isEnabled ? nil : heldUpNote?() }
 
     func controlTextDidChange(_ obj: Notification) { revalidate() }
+
+    /// Takes a row out of the form, or puts it back, while the form is up: a choice that makes another row pointless
+    /// hides it, so the form says only what it is asking. The panel is the height the rows that are left need.
+    func setHidden(_ hidden: Bool, forRow index: Int) {
+        guard rows.indices.contains(index), rows[index].isHidden != hidden else { return }
+        rows[index].isHidden = hidden
+        rows[index].view.isHidden = hidden
+        labels[index]?.isHidden = hidden
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+        panel.needsLayout = true
+        panel.layoutSubtreeIfNeeded()
+    }
 
     /// What a key does while a form is up.
     enum KeyAction: Equatable {
@@ -165,7 +209,7 @@ final class FormSheet: NSView, NSTextFieldDelegate {
     /// Tab goes round the form's fields, then whichever of its controls and buttons take the keyboard (with Full
     /// Keyboard Access off, only the fields do), and never leaves it.
     private func moveFocus(backward: Bool, in window: NSWindow) {
-        let stops: [NSView] = rows.compactMap { row -> NSView? in
+        let stops: [NSView] = rows.filter { !$0.isHidden }.compactMap { row -> NSView? in
             if let filled = row.view as? FilledField { return filled.field }
             return row.view.canBecomeKeyView ? row.view : nil
         } + [cancel, confirm].filter(\.canBecomeKeyView)
@@ -242,18 +286,26 @@ final class FormSheet: NSView, NSTextFieldDelegate {
         return (row.view as? NSTextField)?.wrappedHeight(width) ?? Tokens.Metric.controlHeight
     }
 
+    /// What the rows themselves need, apart from the heading, the message and the buttons.
+    private func rowsHeight(width: CGFloat) -> CGFloat {
+        var height: CGFloat = 0
+        for row in rows where !row.isHidden { height += self.height(of: row, width: width) + rowGap }
+        return max(0, height - rowGap)
+    }
+
     private func height(for width: CGFloat) -> CGFloat {
         let pad = Tokens.Dialog.padding, inner = width - pad * 2
         var height = pad + header.height(for: inner)
         if let body { height += Tokens.Space.x2 + body.wrappedHeight(inner) }
         height += Tokens.Dialog.gap
-        for row in rows { height += self.height(of: row, width: inner) + rowGap }
-        return height - rowGap + Tokens.Dialog.gap + DialogButtons.height + pad
+        height += rowsHeight(width: inner)
+        return height + Tokens.Dialog.gap + DialogButtons.height + pad
     }
 
     override func layout() {
         super.layout()
-        let height = height(for: width)
+        // A form never grows past the window: what doesn't fit scrolls, so its heading and its buttons stay put.
+        let height = min(height(for: width), max(Tokens.Metric.controlHeight * 4, bounds.height - Tokens.Space.x6))
         panel.frame = NSRect(x: round((bounds.width - width) / 2), y: round((bounds.height - height) / 2.4), width: width, height: height)
     }
 
@@ -267,22 +319,39 @@ final class FormSheet: NSView, NSTextFieldDelegate {
             y = body.frame.maxY
         }
         y += Tokens.Dialog.gap
+        let buttonsTop = panel.bounds.height - pad - DialogButtons.height
+        let viewport = max(0, buttonsTop - Tokens.Dialog.gap - y)
+        let rowsHeight = self.rowsHeight(width: inner)
+        scroll.frame = NSRect(x: pad, y: y, width: inner, height: viewport)
+        content.frame = NSRect(x: 0, y: 0, width: inner, height: max(rowsHeight, viewport))
         // Labels share a column, so the controls after them line up.
         let labelWidth = labels.compactMap { $0?.intrinsicContentSize.width }.max().map { ceil($0) + Tokens.Space.x3 } ?? 0
+        var rowY: CGFloat = 0
         for (row, label) in zip(rows, labels) {
+            if row.isHidden { continue }
             let height = self.height(of: row, width: inner)
             if let label {
                 let lh = ceil(label.intrinsicContentSize.height)
-                label.frame = NSRect(x: pad, y: y + round((height - lh) / 2), width: labelWidth, height: lh)
+                label.frame = NSRect(x: 0, y: rowY + round((height - lh) / 2), width: labelWidth, height: lh)
                 // A control keeps its own width at the row's end, as Settings' rows do; anything else fills the row.
-                let fitting = (row.view as? DropdownButton)?.intrinsicContentSize.width
-                let width = min(fitting ?? inner - labelWidth, inner - labelWidth)
-                row.view.frame = NSRect(x: pad + inner - width, y: y, width: width, height: height)
+                // A switch is a control too: stretched across the row it would draw a switch as wide as the form.
+                let own = (row.view as? DropdownButton)?.intrinsicContentSize.width
+                    ?? (row.view is Toggle ? row.view.intrinsicContentSize.width : nil)
+                let width = min(own ?? inner - labelWidth, inner - labelWidth)
+                row.view.frame = NSRect(x: inner - width, y: rowY, width: width, height: height)
             } else {
-                row.view.frame = NSRect(x: pad, y: y, width: inner, height: height)
+                row.view.frame = NSRect(x: 0, y: rowY, width: inner, height: height)
             }
-            y += height + rowGap
+            rowY += height + rowGap
         }
-        buttons.frame = NSRect(x: pad, y: panel.bounds.height - pad - DialogButtons.height, width: inner, height: DialogButtons.height)
+        buttons.frame = NSRect(x: pad, y: buttonsTop, width: inner, height: DialogButtons.height)
+    }
+}
+
+private extension NSView {
+    /// This view and everything under it of `kind`, outermost first: a form's field is sometimes nested inside the
+    /// row around it (a path with a Choose… button beside it).
+    func selfAndDescendants<T: NSView>(of kind: T.Type) -> [T] {
+        ((self as? T).map { [$0] } ?? []) + subviews.flatMap { $0.selfAndDescendants(of: kind) }
     }
 }

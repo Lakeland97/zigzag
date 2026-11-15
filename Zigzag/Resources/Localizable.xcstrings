@@ -119,6 +119,40 @@
         }
       }
     },
+    "%@ are handed to %@" : {
+      "comment" : "A download rule in a sentence: what it catches, then the script it is given to. The placeholders are the two parts.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ are handed to %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@会交给 %2$@"
+          }
+        }
+      }
+    },
+    "%@ are saved to %@" : {
+      "comment" : "A download rule in a sentence: what it catches, then the folder it is saved into. The placeholders are the two parts, as in “Files of type pdf” and “Documents”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ are saved to %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@会保存到 %2$@"
+          }
+        }
+      }
+    },
     "%@ at %lld%%" : {
       "comment" : "Beside Page Size among the developer tools above the page, while a page larger than the window is shown smaller to fit: its size, then how large it's shown, like “1440 × 900 at 72%”.",
       "localizations" : {
@@ -180,6 +214,23 @@
         }
       }
     },
+    "%@ ending in %@" : {
+      "comment" : "Part of a download rule's sentence: what it catches. The first placeholder is “Files” or “Files and links”, the second the end of the address, such as .torrent.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ ending in %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以 %2$@ 结尾的%1$@"
+          }
+        }
+      }
+    },
     "%@ evening" : {
       "comment" : "Name of a History session that began in the last week. The placeholder is the weekday, like “Tuesday”.",
       "localizations" : {
@@ -221,6 +272,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@，来自 %2$@"
+          }
+        }
+      }
+    },
+    "%@ go to %@" : {
+      "comment" : "A download rule in a sentence: what it catches, then the service it sends it to. The placeholders are the two parts, as in “Files ending in .torrent” and “rTorrent”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ go to %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@会交给 %2$@"
           }
         }
       }
@@ -370,6 +438,23 @@
         }
       }
     },
+    "%@ matching %@" : {
+      "comment" : "Part of a download rule's sentence: what it catches by regular expression. The first placeholder is “Files” or “Files and links”, the second the expression.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ matching %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匹配 %2$@ 的%1$@"
+          }
+        }
+      }
+    },
     "%@ may have changed or moved. Open it once, then try again." : {
       "comment" : "Message of the notice when an extension that comes inside an app can't install. The placeholder is the app, like StopTheMadness Pro.",
       "localizations" : {
@@ -476,6 +561,23 @@
         }
       }
     },
+    "%@ of type %@" : {
+      "comment" : "Part of a download rule's sentence: what it catches by file extension. The first placeholder is “Files” or “Files and links”, the second the extensions, like “pdf, epub”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of type %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "类型为 %2$@ 的%1$@"
+          }
+        }
+      }
+    },
     "%@ on %@" : {
       "comment" : "Under an installed app in Settings › General with more than one profile: the site, then the profile it uses, like “github.com on Work”.",
       "localizations" : {
@@ -489,6 +591,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@，个人资料“%2$@”"
+          }
+        }
+      }
+    },
+    "%@ open in %@" : {
+      "comment" : "A download rule in a sentence: what it catches, then the app it opens in. The placeholders are the two parts.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ open in %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@在 %2$@ 中打开"
+          }
+        }
+      }
+    },
+    "%@ open in your Mac’s app" : {
+      "comment" : "A download rule in a sentence: what it catches, then that the Mac's own app for that type opens it. The placeholder is what it catches, like “Files of type pdf”.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 会用 Mac 上对应的 App 打开"
           }
         }
       }
@@ -537,6 +667,23 @@
         }
       }
     },
+    "%@ starting with %@" : {
+      "comment" : "Part of a download rule's sentence: what it catches. The first placeholder is “Files” or “Files and links”, the second the beginning of the address.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ starting with %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以 %2$@ 开头的%1$@"
+          }
+        }
+      }
+    },
     "%@ stays pinned to its own page" : {
       "comment" : "Toast after closing a pinned tab that had wandered to another page. The title is the pinned tab's.",
       "localizations" : {
@@ -572,6 +719,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 请求更多权限"
+          }
+        }
+      }
+    },
+    "%@ whose address contains %@" : {
+      "comment" : "Part of a download rule's sentence: what it catches. The first placeholder is “Files” or “Files and links”, the second the text looked for in the address.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ whose address contains %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "地址包含 %2$@ 的%1$@"
           }
         }
       }
@@ -1166,6 +1330,41 @@
         }
       }
     },
+    "%lld more questions waiting" : {
+      "comment" : "A line on a site's permission question when more than one question is waiting in the same window: how many are still behind the one on screen.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "1 more question waiting"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld more questions waiting"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans" : {
+          "variations" : {
+            "plural" : {
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "还有 %lld 个问题等待回答"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld more sites" : {
       "comment" : "Under the first 30 sites in Settings › Privacy, beside Show All.",
       "localizations" : {
@@ -1673,6 +1872,17 @@
         }
       }
     },
+    "%lld tabs need your answer" : {
+      "comment" : "Tooltip of the glow along the sidebar's edge when more than one page is waiting for an answer. The placeholder is how many.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个标签页等待你的回答"
+          }
+        }
+      }
+    },
     "1. In 1Password, open Settings › Browser.\n2. Click Add Browser and choose Zigzag.\n3. Come back and click 1Password again.\n\n1Password only works with browsers it trusts, so this is a one-time step." : {
       "comment" : "Steps in the note from the 1Password extension's button. Keep each step on its own line starting with its number and a period (1. 2. 3.); the line after the blank line is a note. Settings › Browser and Add Browser are names in 1Password.",
       "localizations" : {
@@ -1702,6 +1912,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1Password 正在它的 App 中等你。请解锁它；如果它询问，请允许 Zigzag。"
+          }
+        }
+      }
+    },
+    "A JSON array. Tokens are filled in." : {
+      "comment" : "Under the parameters of a JSON-RPC download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一个 JSON 数组。令牌会自动填入。"
           }
         }
       }
@@ -1794,6 +2015,17 @@
         }
       }
     },
+    "A page wants to open a new window" : {
+      "comment" : "A page's question before Zigzag opens the pop-up window it asked for.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网页想要打开新窗口"
+          }
+        }
+      }
+    },
     "A password can’t be empty." : {
       "comment" : "Toast when saving a login with its password cleared.",
       "localizations" : {
@@ -1827,6 +2059,39 @@
         }
       }
     },
+    "A rule that hasn’t been told asks the first time it fires, and keeps your answer." : {
+      "comment" : "Tooltip on the Open in choice of an Open URL download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没指定位置的规则会在第一次触发时询问，并记住你的选择。"
+          }
+        }
+      }
+    },
+    "A script can’t choose where a download is saved." : {
+      "comment" : "Why a download rule failed: the script's own output named a save destination, which is decided where the download is made, so nothing ran.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本不能决定下载的保存位置。"
+          }
+        }
+      }
+    },
+    "A script can’t name another script." : {
+      "comment" : "Why a download rule failed: the script's own output named another script to run, which a script may not name, so nothing ran.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本不能调用另一个脚本。"
+          }
+        }
+      }
+    },
     "A site covers every port and its subdomains: localhost is localhost:3000 and app.localhost too." : {
       "comment" : "Under the list in Settings › Developer.",
       "localizations" : {
@@ -1845,6 +2110,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用一个小窗口快速看一眼页面。按 Esc 关闭，按 ⌘O 移到浏览器窗口中留下。"
+          }
+        }
+      }
+    },
+    "A tab needs your answer" : {
+      "comment" : "Tooltip of the glow along the sidebar's edge when one page is waiting for an answer.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有标签页等待你的回答"
           }
         }
       }
@@ -1917,6 +2193,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你正在看的视频会在页面上方的小播放器里跟着你。也可以在小播放器的右键菜单里关闭。"
+          }
+        }
+      }
+    },
+    "A web address opens in Zigzag. Anything else opens in its own app." : {
+      "comment" : "Under the Open in choice of an Open URL download rule: only the web's own addresses are Zigzag's to open.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网页地址在 Zigzag 中打开，其它地址在各自的应用中打开。"
           }
         }
       }
@@ -2075,6 +2362,17 @@
         }
       }
     },
+    "Add Download Rule" : {
+      "comment" : "Title of the sheet that makes a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加下载规则"
+          }
+        }
+      }
+    },
     "Add Extension" : {
       "comment" : "Button that adds the extension, in the sheet that asks first.",
       "localizations" : {
@@ -2082,6 +2380,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加扩展"
+          }
+        }
+      }
+    },
+    "Add File Type…" : {
+      "comment" : "Button beside the file types in Settings › Downloads: opens the sheet that makes a per-extension destination.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加文件类型…"
+          }
+        }
+      }
+    },
+    "Add Rule…" : {
+      "comment" : "Button beside the download rules in Settings › Downloads: opens the menu of actions and presets a new rule can start from.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加规则…"
           }
         }
       }
@@ -2115,6 +2435,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加尺寸…"
+          }
+        }
+      }
+    },
+    "Add a File Type" : {
+      "comment" : "Title of the sheet that makes a per-extension destination in Settings › Downloads.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加文件类型"
           }
         }
       }
@@ -2543,6 +2874,17 @@
         }
       }
     },
+    "Allow Once" : {
+      "comment" : "Button in the notice saying a site’s download was blocked: asks the site for the file again and saves it.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许一次"
+          }
+        }
+      }
+    },
     "Allow Saving" : {
       "comment" : "Button for a Never Saved site in the Passwords window: offer to save its passwords again.",
       "localizations" : {
@@ -2576,6 +2918,17 @@
         }
       }
     },
+    "Allow downloads from this site" : {
+      "comment" : "A site's permission question, without its question mark. The site is sending a file.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许此网站下载文件"
+          }
+        }
+      }
+    },
     "Allow it only if it needs this for what you just asked it to do." : {
       "comment" : "Under the title of the sheet shown when an extension asks for more access.",
       "localizations" : {
@@ -2598,17 +2951,6 @@
         }
       }
     },
-    "Always Allow" : {
-      "comment" : "Button in the toast when Zigzag blocks a page's pop-up: allows the site's pop-ups from now on.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "始终允许"
-          }
-        }
-      }
-    },
     "Always Allow on This Site" : {
       "comment" : "Menu item of the address bar's camera button: the site may use the camera and microphone from now on without asking.",
       "localizations" : {
@@ -2616,17 +2958,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在此网站上始终允许"
-          }
-        }
-      }
-    },
-    "Always Open" : {
-      "comment" : "Button on a page's question to open an app: opens it, and the site may open this app without asking from now on.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "始终打开"
           }
         }
       }
@@ -2649,6 +2980,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "始终深色"
+          }
+        }
+      }
+    },
+    "Always for %@" : {
+      "comment" : "Duration choice on the download question: the answer is kept for this file type. The placeholder is the type, like PDF.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对 %@ 始终有效"
+          }
+        }
+      }
+    },
+    "Always for this rule" : {
+      "comment" : "Duration choice on a question a download rule asks: the answer is kept on the rule, for every site. The rule has no name.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "始终为此规则"
+          }
+        }
+      }
+    },
+    "Always for “%@”" : {
+      "comment" : "Duration choice on a question a download rule asks: the answer is kept on the rule, for every site. The placeholder is the rule's name.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "始终为“%@”"
+          }
+        }
+      }
+    },
+    "Always on this site" : {
+      "comment" : "Duration choice on a site's permission question: the answer is remembered for this site.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在此网站始终允许"
           }
         }
       }
@@ -2708,6 +3083,28 @@
         }
       }
     },
+    "Any address" : {
+      "comment" : "How a download rule matches an address: the catch-all, for every address.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "任意地址"
+          }
+        }
+      }
+    },
+    "App" : {
+      "comment" : "Label of the app field in a download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用"
+          }
+        }
+      }
+    },
     "App icon" : {
       "comment" : "VoiceOver name of the icon in the Install as App sheet.",
       "localizations" : {
@@ -2737,6 +3134,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "外观"
+          }
+        }
+      }
+    },
+    "Applies to" : {
+      "comment" : "Label of the choice of what a download rule catches, in its sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适用于"
           }
         }
       }
@@ -2792,6 +3200,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已从“%@”归档"
+          }
+        }
+      }
+    },
+    "Arguments" : {
+      "comment" : "Label of the arguments field in a download rule's sheet: one argument a line.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参数"
           }
         }
       }
@@ -3188,6 +3607,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "拦截页面上的内容"
+          }
+        }
+      }
+    },
+    "Blocked a download from this site" : {
+      "comment" : "Toast when a site is not allowed to save files and sends one anyway.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已阻止此网站的下载"
           }
         }
       }
@@ -3689,6 +4119,17 @@
         }
       }
     },
+    "Change File Type" : {
+      "comment" : "Tooltip of the button that changes a per-extension destination.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改文件类型"
+          }
+        }
+      }
+    },
     "Change Icon" : {
       "comment" : "Undo action name, shown in the Edit menu as Undo Change Icon.",
       "localizations" : {
@@ -3707,6 +4148,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更改图标…"
+          }
+        }
+      }
+    },
+    "Change Rule" : {
+      "comment" : "Tooltip of the button that changes a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改规则"
+          }
+        }
+      }
+    },
+    "Change This File Type" : {
+      "comment" : "Title of the sheet that changes a per-extension destination in Settings › Downloads.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改此文件类型"
           }
         }
       }
@@ -3833,7 +4296,7 @@
       }
     },
     "Choices in effect" : {
-      "comment" : "Spoken by VoiceOver after More Developer Tools while something chosen in its menu is in effect, like JavaScript off, another user agent, or a look the page was asked for while its button is in the menu.",
+      "comment" : "Spoken by VoiceOver after More Developer Tools while something chosen in its menu is in effect: JavaScript off, another user agent, or outlines.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -3909,6 +4372,28 @@
         }
       }
     },
+    "Choose a Script…" : {
+      "comment" : "Item in the menu beside a Run Script rule's script field: picks a script kept outside the scripts folder.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择脚本…"
+          }
+        }
+      }
+    },
+    "Choose a folder…" : {
+      "comment" : "Placeholder of the folder field in a per-extension destination's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择文件夹…"
+          }
+        }
+      }
+    },
     "Choose a password export (a .csv file) or Safari’s browsing data export (a .zip file)." : {
       "comment" : "Message of the open panel from the Import window's Choose File… button.",
       "localizations" : {
@@ -3931,6 +4416,50 @@
         }
       }
     },
+    "Choose a script…" : {
+      "comment" : "Placeholder of the script field in a download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择脚本…"
+          }
+        }
+      }
+    },
+    "Choose an App…" : {
+      "comment" : "Item in the menu beside an Open App rule's app field: picks an app kept outside the Applications folders.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择应用…"
+          }
+        }
+      }
+    },
+    "Choose an app…" : {
+      "comment" : "Placeholder of the app field in a download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择应用…"
+          }
+        }
+      }
+    },
+    "Choose the app this rule opens the link with." : {
+      "comment" : "Tooltip on the app field of a download rule whose action has no app yet, so its Add button is greyed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择这条规则用来打开链接的应用。"
+          }
+        }
+      }
+    },
     "Choose the folder that contains the extension’s manifest.json." : {
       "comment" : "Message of the panel that loads an unpacked extension. manifest.json is a file name.",
       "localizations" : {
@@ -3938,6 +4467,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选取包含该扩展 manifest.json 的文件夹。"
+          }
+        }
+      }
+    },
+    "Choose the folder these files are saved into." : {
+      "comment" : "Tooltip on the folder field of a per-extension destination that has no folder yet, so it can't be saved.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择这些文件保存到的文件夹。"
+          }
+        }
+      }
+    },
+    "Choose the script this rule runs." : {
+      "comment" : "Tooltip on the script field of a download rule whose action has no script yet, so its Add button is greyed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择这条规则运行的脚本。"
           }
         }
       }
@@ -3960,6 +4511,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "选择此页要在哪个空间中打开"
+          }
+        }
+      }
+    },
+    "Choose…" : {
+      "comment" : "Button beside a path in a download rule's sheet: opens the open panel.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择…"
           }
         }
       }
@@ -4848,6 +5410,17 @@
         }
       }
     },
+    "Contains" : {
+      "comment" : "How a download rule matches an address, in its editor.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "包含"
+          }
+        }
+      }
+    },
     "Contents" : {
       "comment" : "Switch in the PDF viewer's sidebar: shows the document's table of contents.",
       "localizations" : {
@@ -4932,6 +5505,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已清除 Cookie。你已在所有网站上退出登录。"
+          }
+        }
+      }
+    },
+    "Cookies leave this Mac" : {
+      "comment" : "Beside an icon, under the parameters of a JSON-RPC download rule whose endpoint isn't on this Mac: the site's cookies would go to another machine.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cookie 会离开这台 Mac"
+          }
+        }
+      }
+    },
+    "Cookies stay on this Mac" : {
+      "comment" : "Beside an icon, under the parameters of a JSON-RPC download rule whose endpoint is on this Mac: the site's cookies would go no further than it.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cookie 留在这台 Mac 上"
           }
         }
       }
@@ -5163,6 +5758,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "未能导出 PDF"
+          }
+        }
+      }
+    },
+    "Couldn’t hand off the link: %@" : {
+      "comment" : "Toast when a download rule's action fails. The placeholder is the reason, a few words.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能转交链接：%@"
           }
         }
       }
@@ -5420,6 +6026,17 @@
         }
       }
     },
+    "Custom…" : {
+      "comment" : "An item in the Add Rule menu of Settings › Downloads: the actions that aren't a ready-made rule — an app, a URL, a script or a JSON-RPC service.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自定义…"
+          }
+        }
+      }
+    },
     "Cut" : {
       "comment" : "Edit menu item.",
       "localizations" : {
@@ -5585,6 +6202,17 @@
         }
       }
     },
+    "Delete File Type" : {
+      "comment" : "Tooltip of the button that deletes a per-extension destination.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除文件类型"
+          }
+        }
+      }
+    },
     "Delete Profile" : {
       "comment" : "Button of the sheet that deletes a profile, and tooltip of the trash button on a profile's row in Settings › Profiles.",
       "localizations" : {
@@ -5592,6 +6220,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "删除个人资料"
+          }
+        }
+      }
+    },
+    "Delete Rule" : {
+      "comment" : "Tooltip of the button that deletes a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除规则"
           }
         }
       }
@@ -5614,6 +6253,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "删除空间…"
+          }
+        }
+      }
+    },
+    "Delete the %@ file type?" : {
+      "comment" : "Title of the sheet that deletes a per-extension destination. The placeholder is the extensions it names, like pdf, epub.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "删除 %@ 文件类型？"
           }
         }
       }
@@ -5658,6 +6308,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已删除“%@”"
+          }
+        }
+      }
+    },
+    "Destination" : {
+      "comment" : "Label of the choice in a per-extension destination's sheet: a folder of its own, or Zigzag showing the file itself.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目的地"
           }
         }
       }
@@ -5861,7 +6522,7 @@
       }
     },
     "Don’t Open" : {
-      "comment" : "Button on a page's question to open an app.",
+      "comment" : "Choice in an Open URL download rule's Open in dropdown: the rule does not open anything, for any site. It is the answer “Always for this rule” and Don’t Allow keeps.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -5970,6 +6631,17 @@
         }
       }
     },
+    "Downloads only" : {
+      "comment" : "Choice of what a download rule catches, in its editor.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅下载"
+          }
+        }
+      }
+    },
     "Drag a space to change its order." : {
       "comment" : "Hint under Your Spaces in Settings › Spaces.",
       "localizations" : {
@@ -5988,6 +6660,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "把一个标签页拖到页面上"
+          }
+        }
+      }
+    },
+    "Drag one to change its order." : {
+      "comment" : "Under the download rules in Settings › Downloads, when there is an order to change.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拖移即可更改顺序。"
           }
         }
       }
@@ -6054,6 +6737,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "编辑地址"
+          }
+        }
+      }
+    },
+    "Edit Download Rule" : {
+      "comment" : "Title of the sheet that changes a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "编辑下载规则"
           }
         }
       }
@@ -6229,6 +6923,28 @@
         }
       }
     },
+    "Endpoint" : {
+      "comment" : "Label of the endpoint field in a JSON-RPC download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "端点"
+          }
+        }
+      }
+    },
+    "Ends with" : {
+      "comment" : "How a download rule matches an address, in its editor.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "结尾是"
+          }
+        }
+      }
+    },
     "Enter Full Screen" : {
       "comment" : "View menu item.",
       "localizations" : {
@@ -6262,6 +6978,17 @@
         }
       }
     },
+    "Every download is saved to the folder above, whatever kind of file it is." : {
+      "comment" : "Under “No file types yet” in Settings › Downloads.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有下载都会保存到上方文件夹，无论文件是什么类型。"
+          }
+        }
+      }
+    },
     "Every flag you changed goes back to WebKit’s default, for pages you open or reload." : {
       "comment" : "Message of the sheet that puts every WebKit feature flag back to its default.",
       "localizations" : {
@@ -6269,6 +6996,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你更改过的每个功能标志都会恢复为 WebKit 的默认设置，对之后打开或重新载入的页面生效。"
+          }
+        }
+      }
+    },
+    "Every link and download goes to %@" : {
+      "comment" : "A download rule in a sentence: it catches every address. The placeholder is the rule's name — where the link goes.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有链接和下载都会交给 %@"
           }
         }
       }
@@ -6295,6 +7033,17 @@
         }
       }
     },
+    "Every site" : {
+      "comment" : "Under a download rule in Settings › Downloads: the answer beside it was given for every site, not just one.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有网站"
+          }
+        }
+      }
+    },
     "Every tab, at a glance" : {
       "comment" : "Said once a step is done in the getting-started guide, a card in the window.",
       "localizations" : {
@@ -6302,6 +7051,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "所有标签页，一目了然"
+          }
+        }
+      }
+    },
+    "Everything else is saved by Zigzag, as before." : {
+      "comment" : "Under “No rules yet” in Settings › Downloads.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他内容仍像以前一样由 Zigzag 存储。"
           }
         }
       }
@@ -6324,6 +7084,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "所有内容都已在这里。"
+          }
+        }
+      }
+    },
+    "Everything you download goes to %@" : {
+      "comment" : "A download rule in a sentence: it catches every address. The placeholder is the rule's name — where the link goes.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你下载的一切都会交给 %@"
           }
         }
       }
@@ -6548,6 +7319,72 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文件"
+          }
+        }
+      }
+    },
+    "File Extension" : {
+      "comment" : "How a download rule matches a file, in its editor: by the extensions of its own name, such as pdf or epub.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件扩展名"
+          }
+        }
+      }
+    },
+    "File Extensions" : {
+      "comment" : "Label of the extensions field in a per-extension destination's sheet, where the types of file are listed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件扩展名"
+          }
+        }
+      }
+    },
+    "Files" : {
+      "comment" : "The subject of a download rule's sentence, for a rule that catches downloads but not links.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件"
+          }
+        }
+      }
+    },
+    "Files and links" : {
+      "comment" : "The subject of a download rule's sentence, for a rule that catches links as well as downloads.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件和链接"
+          }
+        }
+      }
+    },
+    "Files of this type are saved to the folder above, or opened in your Mac’s app for them. The first file type that matches wins." : {
+      "comment" : "Under the fields of a per-extension destination's sheet: what it does, and that the first one that matches decides.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此类型的文件会保存到上面的文件夹，或用 Mac 上对应的 App 打开。最先匹配的文件类型生效。"
+          }
+        }
+      }
+    },
+    "Files of this type are saved to the folder downloads are saved to again, and nothing else changes." : {
+      "comment" : "Message of the sheet that deletes a per-extension destination.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此类型文件将重新保存到下载文件夹，其他内容不变。"
           }
         }
       }
@@ -6834,6 +7671,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "忘记"
+          }
+        }
+      }
+    },
+    "Forget %@" : {
+      "comment" : "Tooltip of the button that forgets one site's answer about a download rule. The placeholder is the site's name.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "忘记 %@"
+          }
+        }
+      }
+    },
+    "Forget the answer for every site" : {
+      "comment" : "Tooltip of the button that forgets a download rule's standing answer about handing off, which it was given for every site.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "忘记所有网站的答案"
           }
         }
       }
@@ -7141,6 +8000,17 @@
         }
       }
     },
+    "Give the rule a name." : {
+      "comment" : "Tooltip on the name field of a download rule being added without one, so its Add button can't be pressed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "给这条规则起个名字。"
+          }
+        }
+      }
+    },
     "Glass" : {
       "comment" : "A row in the space editor's Effects, for a see-through space: clear or frosted glass.\nTooltip and accessibility label of a preset look in the space editor. Clear, see-through glass.",
       "localizations" : {
@@ -7304,6 +8174,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分组名称"
+          }
+        }
+      }
+    },
+    "Hand Off" : {
+      "comment" : "Button that runs the named download rule for a link or download.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转交"
+          }
+        }
+      }
+    },
+    "Hand Off %@" : {
+      "comment" : "A page's question before a download rule handles a link or download. The placeholder is the rule's name.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转交 %@"
+          }
+        }
+      }
+    },
+    "Hand Off Downloads and Links" : {
+      "comment" : "A heading in Settings › Downloads, over the rules that send a download or a link to another app.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "转交下载和链接"
           }
         }
       }
@@ -7677,6 +8580,17 @@
         }
       }
     },
+    "In Zigzag" : {
+      "comment" : "A choice in the Notifications dropdown in Site Controls: the site's notifications show as a notice in Zigzag itself.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Zigzag 中"
+          }
+        }
+      }
+    },
     "In points, from %@ to %@." : {
       "comment" : "Note under the width and height fields in the sheet that asks for a page's size: the least and the most a side can be.",
       "localizations" : {
@@ -7991,6 +8905,17 @@
         }
       }
     },
+    "Its addresses are saved by Zigzag again, and nothing else changes." : {
+      "comment" : "Message of the sheet that deletes a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "它的地址会重新由 Zigzag 存储，其他都不会改变。"
+          }
+        }
+      }
+    },
     "Its certificate isn’t trusted. You chose to visit it anyway, until you quit Zigzag." : {
       "comment" : "Under the site's name at the top of the site panel, on a page whose certificate isn't trusted but you chose Visit this site anyway on the warning.",
       "localizations" : {
@@ -8145,6 +9070,17 @@
         }
       }
     },
+    "JSON-RPC" : {
+      "comment" : "An action a download rule can take, in its editor: send the link to a service such as aria2 or rTorrent.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JSON-RPC"
+          }
+        }
+      }
+    },
     "JavaScript Console" : {
       "comment" : "View › Developer menu item: opens the Web Inspector's console.",
       "localizations" : {
@@ -8275,6 +9211,17 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Kept in the Keychain" : {
+      "comment" : "Tooltip on the token field of a JSON-RPC download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存在钥匙串中"
           }
         }
       }
@@ -8499,6 +9446,17 @@
         }
       }
     },
+    "Links and downloads" : {
+      "comment" : "Choice of what a download rule catches, in its editor: links you click, and files pages send.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "链接和下载"
+          }
+        }
+      }
+    },
     "Links from Mail, Messages and other apps will open here." : {
       "comment" : "Line under the title of the welcome window’s last step. Mail and Messages are Apple’s apps.",
       "localizations" : {
@@ -8517,6 +9475,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "来自其他 App 的链接会在这里打开。"
+          }
+        }
+      }
+    },
+    "List the file extensions this rule catches, like pdf, epub." : {
+      "comment" : "Tooltip on the extensions field of a download rule with none yet, so its Add button can't be pressed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列出这条规则要匹配的文件扩展名，例如 pdf、epub。"
           }
         }
       }
@@ -8664,6 +9633,28 @@
         }
       }
     },
+    "Match" : {
+      "comment" : "Label of the choice of how a download rule matches an address, in its sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匹配"
+          }
+        }
+      }
+    },
+    "Match case" : {
+      "comment" : "Label of the case choice in a download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区分大小写"
+          }
+        }
+      }
+    },
     "Matcha" : {
       "comment" : "Tooltip and accessibility label of a preset look in the space editor. A pale green, after the tea.",
       "localizations" : {
@@ -8693,6 +9684,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "中"
+          }
+        }
+      }
+    },
+    "Method" : {
+      "comment" : "Label of the method field in a JSON-RPC download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "方法"
+          }
+        }
+      }
+    },
+    "Mini" : {
+      "comment" : "Button in the pop-up question: opens the pop-up's page in the small pop-up viewer window.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "迷你窗口"
           }
         }
       }
@@ -9056,7 +10069,7 @@
       }
     },
     "Move to Space" : {
-      "comment" : "Item in a group of tabs' context menu in the sidebar. Opens a list of spaces.\nItem in a pinned tab's context menu in the sidebar. Opens a list of spaces.\nItem in a tab's context menu in the sidebar. Opens a list of spaces.\nUndo action name, shown in Edit › Undo.\nUndo action name, shown in the Edit menu as Undo Move to Space.",
+      "comment" : "Item in a pinned tab's context menu in the sidebar. Opens a list of spaces.\nItem in a tab's context menu in the sidebar. Opens a list of spaces.\nUndo action name, shown in Edit › Undo.\nUndo action name, shown in the Edit menu as Undo Move to Space.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -9244,6 +10257,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "给它起个名字，再选一个颜色"
+          }
+        }
+      }
+    },
+    "Name the method to call on the service." : {
+      "comment" : "Tooltip on the method field of a JSON-RPC download rule that names no method, so its Add button is greyed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "填写要在该服务上调用的方法名。"
           }
         }
       }
@@ -9512,6 +10536,17 @@
         }
       }
     },
+    "New file types" : {
+      "comment" : "A setting in Settings › Downloads: what happens to a download of a type no rule covers.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新的文件类型"
+          }
+        }
+      }
+    },
     "New tabs open" : {
       "comment" : "A setting in Settings › Tabs: where a new tab goes in the sidebar's list.",
       "localizations" : {
@@ -9611,6 +10646,17 @@
         }
       }
     },
+    "No app opens that URL." : {
+      "comment" : "Why a download rule failed: nothing on this Mac handles the URL's scheme.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有应用能打开这个网址。"
+          }
+        }
+      }
+    },
     "No color" : {
       "comment" : "VoiceOver, in the space editor's color wheel: the knob sits in the middle, white.",
       "localizations" : {
@@ -9640,6 +10686,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "还没有扩展"
+          }
+        }
+      }
+    },
+    "No file types yet" : {
+      "comment" : "In Settings › Downloads, when no file type has a destination of its own.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚无文件类型"
           }
         }
       }
@@ -9706,6 +10763,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "没有重复使用的密码。每个网站都有自己的密码。"
+          }
+        }
+      }
+    },
+    "No rule matches, so Zigzag saves it in Downloads." : {
+      "comment" : "Under the test address in Settings › Downloads, when no rule takes it.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有规则匹配，Zigzag 会把它存储到下载文件夹。"
+          }
+        }
+      }
+    },
+    "No rules yet" : {
+      "comment" : "In Settings › Downloads, when no rule has been made.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "还没有规则"
           }
         }
       }
@@ -10211,7 +11290,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已为此网站关闭"
+            "value" : "在此网站上关闭"
           }
         }
       }
@@ -10299,7 +11378,29 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已为此网站打开"
+            "value" : "在此网站上打开"
+          }
+        }
+      }
+    },
+    "On the Mac" : {
+      "comment" : "A choice in the Notifications dropdown in Site Controls: the site's notifications show in the Mac's Notification Center.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Mac 上"
+          }
+        }
+      }
+    },
+    "One argument a line. The link and the cookies arrive in ZIGZAG_LINK and ZIGZAG_COOKIES." : {
+      "comment" : "Under the arguments of a Run Script download rule: one argument a line, and the names the link and the cookies arrive under.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每行一个参数。链接和 Cookie 通过 ZIGZAG_LINK 和 ZIGZAG_COOKIES 传入。"
           }
         }
       }
@@ -10388,6 +11489,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开 1Password"
+          }
+        }
+      }
+    },
+    "Open App" : {
+      "comment" : "An action a download rule can take, in its editor: hand the link to an app.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开应用"
           }
         }
       }
@@ -10634,6 +11746,17 @@
         }
       }
     },
+    "Open URL" : {
+      "comment" : "An action a download rule can take, in its editor: open a URL, which may point at another app.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开网址"
+          }
+        }
+      }
+    },
     "Open Video in New Tab" : {
       "comment" : "Item in a page's right-click menu.",
       "localizations" : {
@@ -10700,6 +11823,17 @@
         }
       }
     },
+    "Open in" : {
+      "comment" : "Label of the choice of where a web address opens, in an Open URL download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开位置"
+          }
+        }
+      }
+    },
     "Open in %@" : {
       "comment" : "The button in Zigzag Mini's top strip, and the File menu item in place of Open File… while it's in front: moves its page into a browser window as a tab, in this space. The placeholder is the space's name.",
       "localizations" : {
@@ -10711,8 +11845,19 @@
         }
       }
     },
+    "Open in Browser" : {
+      "comment" : "Button that lets a link or download stay in the browser instead of running a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在浏览器中打开"
+          }
+        }
+      }
+    },
     "Open in New Tab" : {
-      "comment" : "Button in the toast when Zigzag blocks a page's pop-up: opens it as a tab instead.\nItem in a page's right-click menu over selected text that's a web address, not a link: opens it in a new tab.",
+      "comment" : "Item in a page's right-click menu over selected text that's a web address, not a link: opens it in a new tab.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -10828,6 +11973,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开登录页面，并读取网站返回的内容"
+          }
+        }
+      }
+    },
+    "Open this %@" : {
+      "comment" : "The download question, without its question mark: whether this file opens in the Mac's app. The placeholder is the file's type, like PDF.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开这个 %@"
           }
         }
       }
@@ -11274,6 +12430,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "纸白"
+          }
+        }
+      }
+    },
+    "Parameters" : {
+      "comment" : "Label of the parameters field in a JSON-RPC download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参数"
           }
         }
       }
@@ -11792,17 +12959,6 @@
         }
       }
     },
-    "Pop-up blocked" : {
-      "comment" : "Toast when Zigzag blocks a page's pop-up window.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已阻止弹出式窗口"
-          }
-        }
-      }
-    },
     "Pop-ups" : {
       "comment" : "Row in the site panel's This Site group.",
       "localizations" : {
@@ -11810,17 +12966,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "弹出式窗口"
-          }
-        }
-      }
-    },
-    "Pop-ups allowed. Click the button again." : {
-      "comment" : "Toast after allowing a site's pop-ups.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已允许弹出式窗口。请再点按一次按钮。"
           }
         }
       }
@@ -11935,6 +13080,17 @@
         }
       }
     },
+    "Print one line to hand off again: {\"kind\":\"openApp\",\"appPath\":\"/Applications/mpv.app\"}, or the same with openURL or jsonRPC." : {
+      "comment" : "Under the arguments of a Run Script download rule: how the script's own output names one more action for Zigzag to do, written as the rule's own action JSON.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打印一行即可再次转交：{\"kind\":\"openApp\",\"appPath\":\"/Applications/mpv.app\"}，或将 openApp 换成 openURL 或 jsonRPC。"
+          }
+        }
+      }
+    },
     "Print…" : {
       "comment" : "File menu item.",
       "localizations" : {
@@ -11986,6 +13142,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无痕浏览"
+          }
+        }
+      }
+    },
+    "Private windows don’t remember answers." : {
+      "comment" : "Tooltip of the disabled duration dropdown on a permission question in a private window.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无痕浏览窗口不会记住任何选择。"
           }
         }
       }
@@ -12056,6 +13223,17 @@
         }
       }
     },
+    "Protocol" : {
+      "comment" : "Label of the protocol choice in a JSON-RPC download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "协议"
+          }
+        }
+      }
+    },
     "Proxy scripts (PAC)" : {
       "comment" : "Feature name in the list of things an extension uses that won’t work in Zigzag: proxy auto-config scripts, which choose a proxy for each site.",
       "localizations" : {
@@ -12107,6 +13285,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在搜索词所在的位置放上 %s。"
+          }
+        }
+      }
+    },
+    "Put This Away" : {
+      "comment" : "Tooltip of the × on a notice over the page, like a script's while it runs.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收起"
           }
         }
       }
@@ -12173,6 +13362,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要退出 Zigzag 吗？"
+          }
+        }
+      }
+    },
+    "Ran script: %@" : {
+      "comment" : "A notice over the page saying a download rule's script has finished and exited 0. The placeholder is the script's file name.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本运行完成：%@"
           }
         }
       }
@@ -12437,6 +13637,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "减弱动态效果"
+          }
+        }
+      }
+    },
+    "Regular Expression" : {
+      "comment" : "How a download rule matches an address, in its editor.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正则表达式"
           }
         }
       }
@@ -12904,7 +14115,7 @@
       }
     },
     "Rename" : {
-      "comment" : "Button that saves a favorite's new name.\nItem in a folder's context menu in the sidebar.\nItem in a group of tabs' context menu in the sidebar.\nItem in a pinned tab's context menu in the sidebar.\nItem in a tab's context menu in the sidebar.",
+      "comment" : "Button that saves a favorite's new name.\nItem in a folder's context menu in the sidebar.\nItem in a pinned tab's context menu in the sidebar.\nItem in a tab's context menu in the sidebar.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -13310,6 +14521,17 @@
         }
       }
     },
+    "Rules run from the top" : {
+      "comment" : "In Settings › Downloads, under the rules: the first match wins.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "规则从上往下运行"
+          }
+        }
+      }
+    },
     "Run" : {
       "comment" : "Action label at the right of the selected command bar result, saying what Return does: runs the command.",
       "localizations" : {
@@ -13321,6 +14543,28 @@
         }
       }
     },
+    "Run Script" : {
+      "comment" : "An action a download rule can take, in its editor: run an executable with the link as an argument.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "运行脚本"
+          }
+        }
+      }
+    },
+    "Run directly, never through a shell" : {
+      "comment" : "Beside an icon, under the arguments of a Run Script download rule: the arguments can never become part of a command line, since the script is run directly.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接运行，不经过 shell"
+          }
+        }
+      }
+    },
     "Run hidden pages of its own in the background" : {
       "comment" : "One thing an extension can do, listed in its install sheet and in Settings: the offscreen permission, for pages you never see that can play sound or use the clipboard.",
       "localizations" : {
@@ -13328,6 +14572,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在后台运行它自己的隐藏页面"
+          }
+        }
+      }
+    },
+    "Run in private windows" : {
+      "comment" : "Label of the switch in a download rule's sheet that lets the rule run in private windows.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在无痕浏览窗口中运行"
+          }
+        }
+      }
+    },
+    "Run in private windows: off, this rule is left out of private windows — nothing runs, and the link or download carries on as if no rule matched. A handoff can give another app a private window's address, and its cookies when the rule names them." : {
+      "comment" : "Explanation under the run-in-private-windows switch in a download rule's sheet: what off means, and why it is off.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在无痕浏览窗口中运行：关闭时，此规则不会在无痕浏览窗口中运行——什么都不执行，链接或下载会像没有匹配到规则一样继续。交出去的链接或下载可能会把无痕浏览窗口的地址，以及规则点名要用的 Cookie，交给另一个 App。"
           }
         }
       }
@@ -13350,6 +14616,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在它可访问的网站上运行你添加的脚本"
+          }
+        }
+      }
+    },
+    "Running script: %@" : {
+      "comment" : "A notice over the page while a download rule's script runs. The placeholder is the script's file name.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在运行脚本：%@"
           }
         }
       }
@@ -13471,6 +14748,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下载内容存储到"
+          }
+        }
+      }
+    },
+    "Save Downloads by Type" : {
+      "comment" : "A heading in Settings › Downloads, over the file types saved somewhere of their own instead of the folder above.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按类型保存下载"
           }
         }
       }
@@ -13652,7 +14940,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "替你拒绝网站弹窗要的 Cookie，只需隐藏的弹窗则直接隐藏。绝不替你同意。"
+            "value" : "替你拒绝网站弹窗要的 Cookie，只用隐藏的弹窗直接隐藏。绝不替你同意。"
           }
         }
       }
@@ -13664,6 +14952,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这台 Mac 上的“屏幕使用时间”或内容过滤器不允许访问它。"
+          }
+        }
+      }
+    },
+    "Screen sharing" : {
+      "comment" : "Row in the site panel's This Site group: whether the site may share the screen. macOS still asks which window or display.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "屏幕共享"
           }
         }
       }
@@ -13686,6 +14985,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已存储截图"
+          }
+        }
+      }
+    },
+    "Script" : {
+      "comment" : "Label of the script field in a download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本"
+          }
+        }
+      }
+    },
+    "Script failed: %@" : {
+      "comment" : "A notice over the page saying a download rule's script has failed. The placeholder is the script's file name, and the script's own last words are under it.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本运行失败：%@"
           }
         }
       }
@@ -13741,6 +15062,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "脚本不能在无痕浏览窗口中运行 JavaScript。"
+          }
+        }
+      }
+    },
+    "Scripts live in Documents/Zigzag/Scripts." : {
+      "comment" : "Under the script field of a Run Script download rule: where a script named by its file name is looked for.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本存放在 Documents/Zigzag/Scripts。"
           }
         }
       }
@@ -14009,6 +15341,17 @@
         }
       }
     },
+    "Send Anyway" : {
+      "comment" : "Button of the sheet that asks before saving a download rule that sends the site's cookies to another machine.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仍然发送"
+          }
+        }
+      }
+    },
     "Send Feedback" : {
       "comment" : "Title of the Send Feedback sheet.",
       "localizations" : {
@@ -14027,6 +15370,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "发送反馈…"
+          }
+        }
+      }
+    },
+    "Send the site’s cookies off this Mac?" : {
+      "comment" : "Title of the sheet that asks before saving a download rule which would send the site's cookies to another machine.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要把网站的 Cookie 发送到其他机器吗？"
           }
         }
       }
@@ -14104,6 +15458,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务器地址"
+          }
+        }
+      }
+    },
+    "Service" : {
+      "comment" : "Label of the service choice in the Torrents preset's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务"
           }
         }
       }
@@ -14350,6 +15715,17 @@
         }
       }
     },
+    "Show Applications Folder" : {
+      "comment" : "Item in the menu beside an Open App rule's app field: opens this Mac's Applications folder in Finder.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示应用文件夹"
+          }
+        }
+      }
+    },
     "Show Certificate" : {
       "comment" : "Tooltip of the line under the site's name in the site panel that says whether the connection is secure: opens the site's certificate.",
       "localizations" : {
@@ -14478,6 +15854,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示报告"
+          }
+        }
+      }
+    },
+    "Show Scripts Folder" : {
+      "comment" : "Item in the menu beside a Run Script rule's script field: opens the folder the scripts live in, in Finder.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示脚本文件夹"
           }
         }
       }
@@ -15252,6 +16639,17 @@
         }
       }
     },
+    "Starts with" : {
+      "comment" : "How a download rule matches an address, in its editor.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开头是"
+          }
+        }
+      }
+    },
     "Stay signed in to your sites" : {
       "comment" : "Row with a checkbox in the welcome window’s import step: bring over the sites you’re signed in to.",
       "localizations" : {
@@ -15309,6 +16707,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "停止朗读"
+          }
+        }
+      }
+    },
+    "Stop the page" : {
+      "comment" : "Label of the switch in a download rule's sheet that keeps the page from loading on after the rule has taken a link.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止页面"
+          }
+        }
+      }
+    },
+    "Stop the page: a link this rule takes goes no further — nothing else loads, and the page's own redirects don't run the rule again." : {
+      "comment" : "Explanation under the stop-the-page switch in a download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "停止页面：此规则接管的链接不会继续，其他内容不再加载，页面自身的重定向也不会再次触发规则。"
           }
         }
       }
@@ -15616,6 +17036,28 @@
         }
       }
     },
+    "Test a Rule" : {
+      "comment" : "A heading in Settings › Downloads, over the address field that shows which rule would take it.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试规则"
+          }
+        }
+      }
+    },
+    "Test an address" : {
+      "comment" : "A setting in Settings › Downloads: a field to type an address and see which rule takes it.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试地址"
+          }
+        }
+      }
+    },
     "Testable" : {
       "comment" : "A heading in Settings › Developer › Feature Flags, as Safari has it: WebKit features ready to test, not ready to ship.",
       "localizations" : {
@@ -15700,6 +17142,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这不是 %@ 的主密码。请检查后再试一次。"
+          }
+        }
+      }
+    },
+    "That isn’t a working regular expression. Zigzag saves nothing it can’t read." : {
+      "comment" : "Tooltip on the address field of a download rule whose regular expression doesn't compile.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这不是可用的正则表达式。Zigzag 不会存储自己读不了的内容。"
+          }
+        }
+      }
+    },
+    "That isn’t an address." : {
+      "comment" : "Under the test address in Settings › Downloads, when what was typed can't be a URL.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这不是有效的地址。"
           }
         }
       }
@@ -15798,6 +17262,17 @@
         }
       }
     },
+    "The URL isn’t valid." : {
+      "comment" : "Why a download rule failed: the URL it was told to open can't be made.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个网址无效。"
+          }
+        }
+      }
+    },
     "The Whole Screen" : {
       "comment" : "A choice for “Full screen videos fill” in Settings › Tabs: a video in full screen covers the whole screen, as usual.",
       "localizations" : {
@@ -15853,6 +17328,17 @@
         }
       }
     },
+    "The app is no longer there." : {
+      "comment" : "Why a download rule failed: the app it was told to open is gone.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该应用已不在了。"
+          }
+        }
+      }
+    },
     "The cache makes pages load faster. Cookies keep you signed in." : {
       "comment" : "Explanation under “Website data” in Settings › Privacy.",
       "localizations" : {
@@ -15904,6 +17390,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "该文件中的密码仍未受保护。将它移到废纸篓会更安全。"
+          }
+        }
+      }
+    },
+    "The first rule that matches wins." : {
+      "comment" : "Under the title of the sheet that makes a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第一个匹配的规则生效。"
           }
         }
       }
@@ -15974,6 +17471,17 @@
         }
       }
     },
+    "The parameters aren’t valid JSON." : {
+      "comment" : "Why a download rule failed: the JSON-RPC parameters don't parse.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参数不是有效的 JSON。"
+          }
+        }
+      }
+    },
     "The profile this was going into has been deleted. Choose another and import again." : {
       "comment" : "Problem in the Import window, when the profile chosen under Into was deleted before the import ran.",
       "localizations" : {
@@ -15996,6 +17504,17 @@
         }
       }
     },
+    "The request couldn’t be built." : {
+      "comment" : "Why a download rule failed: its JSON-RPC body can't be made.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法生成请求。"
+          }
+        }
+      }
+    },
     "The result can’t be given as text. For a promise, put await before it and return its value." : {
       "comment" : "Error a script gets when its JavaScript ends on a value like a promise or a page element.",
       "localizations" : {
@@ -16007,6 +17526,39 @@
         }
       }
     },
+    "The script exited with status %d." : {
+      "comment" : "Why a download rule failed: the script finished with an error code. The placeholder is a number, like 1.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本以状态 %d 退出。"
+          }
+        }
+      }
+    },
+    "The script failed: %@" : {
+      "comment" : "Why a download rule failed: the script exited with an error code and printed this. The placeholder is the script's own last line of error text.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脚本运行失败：%@"
+          }
+        }
+      }
+    },
+    "The script is no longer there." : {
+      "comment" : "Why a download rule failed: the script it was told to run is gone.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该脚本已不在了。"
+          }
+        }
+      }
+    },
     "The secure connection was cut off, often by the network you’re on. Try again, or try another network." : {
       "comment" : "Message on the page Zigzag shows when a page can't load.",
       "localizations" : {
@@ -16014,6 +17566,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安全连接被切断了，通常是你所在的网络造成的。请再试一次，或换一个网络。"
+          }
+        }
+      }
+    },
+    "The service answered %lld." : {
+      "comment" : "Why a download rule failed: the service's HTTP status. The placeholder is a number, like 401.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务返回了 %lld。"
+          }
+        }
+      }
+    },
+    "The service’s address isn’t valid." : {
+      "comment" : "Why a download rule failed: the JSON-RPC endpoint can't be made into a URL.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个服务的地址无效。"
           }
         }
       }
@@ -16260,6 +17834,28 @@
         }
       }
     },
+    "This Tab" : {
+      "comment" : "Button in the pop-up question: loads the pop-up's page in the tab you are in.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前标签页"
+          }
+        }
+      }
+    },
+    "This address needs a scheme, like “mpv://” or “https://”." : {
+      "comment" : "Tooltip on the address field of a download rule whose address has no scheme, so nothing could open it and its Add button is greyed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个地址需要有协议前缀，比如“mpv://”或“https://”。"
+          }
+        }
+      }
+    },
     "This afternoon" : {
       "comment" : "Name of a History session that began today.",
       "localizations" : {
@@ -16300,6 +17896,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此连接不是私密连接"
+          }
+        }
+      }
+    },
+    "This download" : {
+      "comment" : "Who asks on the download question when the file has no site, like a file on this Mac.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此下载"
           }
         }
       }
@@ -16447,6 +18054,17 @@
         }
       }
     },
+    "This page has no site to remember the answer for." : {
+      "comment" : "Tooltip of the disabled duration dropdown on a permission question asked by a page with no site, like a local file.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个页面没有可以记住答案的网站。"
+          }
+        }
+      }
+    },
     "This page is in %@" : {
       "comment" : "Toast offering to translate a page. The language is its name, like French.",
       "localizations" : {
@@ -16557,6 +18175,17 @@
         }
       }
     },
+    "This site can’t remember this answer." : {
+      "comment" : "Tooltip of the disabled duration dropdown on a permission question whose answer cannot be kept.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此网站无法记住这个选择。"
+          }
+        }
+      }
+    },
     "This site hasn’t asked for anything yet." : {
       "comment" : "On a site's Permissions page in the site panel when the site hasn't asked for the camera, location, notifications or anything else.",
       "localizations" : {
@@ -16630,6 +18259,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此网站的密码规则不接受强密码。请自己键入一个。"
+          }
+        }
+      }
+    },
+    "This time" : {
+      "comment" : "Duration choice on a site's permission question: the answer applies only to this page.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅此一次"
           }
         }
       }
@@ -16755,6 +18395,39 @@
         }
       }
     },
+    "Token" : {
+      "comment" : "Label of the token field in a JSON-RPC download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "令牌"
+          }
+        }
+      }
+    },
+    "Token, if the service asks for one" : {
+      "comment" : "Placeholder of the token field in a JSON-RPC download rule's sheet. It's kept in the Keychain.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务需要时填写的令牌"
+          }
+        }
+      }
+    },
+    "Tokens: {link}, {host}, {path}, {query}, {encoded_link}, {referrer}, {cookies}, {cookie_header}, {filename}, {mime}, {space}." : {
+      "comment" : "The tokens a download rule's fields may use, listed in its sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可用标记：{link}、{host}、{path}、{query}、{encoded_link}、{referrer}、{cookies}、{cookie_header}、{filename}、{mime}、{space}。"
+          }
+        }
+      }
+    },
     "Tonight" : {
       "comment" : "Name of a History session that began today.",
       "localizations" : {
@@ -16806,6 +18479,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用于构建网站的工具，只在开发者模式中的网站上显示。可以在任一网站的“网站设置”、命令栏或“显示 › 开发者”中为它开⁠启。处于开发者模式的标签页在边栏中带有虚线边框。"
+          }
+        }
+      }
+    },
+    "Torrents" : {
+      "comment" : "The rule name a Torrents preset starts with when its service is left to be filled in by hand.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "种子"
           }
         }
       }
@@ -16953,6 +18637,17 @@
         }
       }
     },
+    "Turn %@ on or off" : {
+      "comment" : "A download rule's switch for VoiceOver. The placeholder is the rule's name.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开或关闭 %@"
+          }
+        }
+      }
+    },
     "Turn Off" : {
       "comment" : "Item in an extension's menu: turns the extension off.",
       "localizations" : {
@@ -17096,6 +18791,39 @@
         }
       }
     },
+    "Type the address of the JSON-RPC service, like http://127.0.0.1:6800/jsonrpc." : {
+      "comment" : "Tooltip on the endpoint field of a JSON-RPC download rule that has none, or one that has a scheme missing or no address at all, so its Add button is greyed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "填写 JSON-RPC 服务的地址，例如 http://127.0.0.1:6800/jsonrpc。"
+          }
+        }
+      }
+    },
+    "Type the address this rule sends the link to." : {
+      "comment" : "Tooltip on the address field of a download rule whose action has no address yet, so its Add button is greyed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "填写这条规则把链接发送到的地址。"
+          }
+        }
+      }
+    },
+    "Type what this rule catches." : {
+      "comment" : "Tooltip on the address field of a download rule with no pattern yet, so its Add button can't be pressed.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "填写这条规则要匹配的内容。"
+          }
+        }
+      }
+    },
     "Type what to find, then Return" : {
       "comment" : "A hint in the middle of a step in the getting-started guide, a card in the window, while searching a site from the command bar. Return is the key.",
       "localizations" : {
@@ -17125,6 +18853,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "字体"
+          }
+        }
+      }
+    },
+    "URL" : {
+      "comment" : "Label of the URL field in a download rule's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "网址"
           }
         }
       }
@@ -17349,6 +19088,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不稳定"
+          }
+        }
+      }
+    },
+    "Untitled File Type" : {
+      "comment" : "A per-extension destination with no extensions yet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未命名文件类型"
+          }
+        }
+      }
+    },
+    "Untitled Rule" : {
+      "comment" : "A download rule with no name yet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未命名规则"
           }
         }
       }
@@ -18102,6 +19863,17 @@
         }
       }
     },
+    "What happens to files of this type." : {
+      "comment" : "Under the title of the sheet that makes a per-extension destination.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此类型的文件会怎么处理。"
+          }
+        }
+      }
+    },
     "What stopped it is below, with a way to fix it." : {
       "comment" : "Import window when nothing came over because of a problem.",
       "localizations" : {
@@ -18120,6 +19892,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下面列出了其余内容没有导入的原因，以及解决方法。"
+          }
+        }
+      }
+    },
+    "What to do with a download no file type decides." : {
+      "comment" : "Explanation under “New file types” in Settings › Downloads.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有文件类型规则决定的下载该怎么处理。"
           }
         }
       }
@@ -18186,6 +19969,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mac 为深色时"
+          }
+        }
+      }
+    },
+    "Where should this open" : {
+      "comment" : "A download rule's question the first time an Open URL rule fires on a web address: which of Zigzag's own places to open it in. The card adds the question mark.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要在哪里打开"
           }
         }
       }
@@ -18307,6 +20101,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在写入报告…"
+          }
+        }
+      }
+    },
+    "XML-RPC" : {
+      "comment" : "Choice of how a rule talks to a service, in its editor: the XML-RPC protocol, which rTorrent uses.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "XML-RPC"
           }
         }
       }
@@ -19107,6 +20912,17 @@
         }
       }
     },
+    "add rule aria2 motrix rtorrent mpv" : {
+      "comment" : "Words that find the empty download rules list with Find a setting. Not shown.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加 规则 aria2 motrix rtorrent mpv add rule"
+          }
+        }
+      }
+    },
     "address" : {
       "comment" : "What a card in Contacts can fill, in “Fills email, phone and address from Contacts”.",
       "localizations" : {
@@ -19147,6 +20963,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "applescript osascript shortcuts apple events 脚本 快捷指令 Apple 事件 苹果事件"
+          }
+        }
+      }
+    },
+    "aria2 motrix torrent rtorrent yt-dlp mpv iina rule handoff script download" : {
+      "comment" : "Words that find Settings › Downloads with Find a setting, separated by spaces. Add your language's words for them. Not shown.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aria2 motrix torrent rtorrent yt-dlp mpv iina 规则 转交 脚本 下载 种子"
           }
         }
       }
@@ -19202,6 +21029,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "检查更新 版本 check for updates"
+          }
+        }
+      }
+    },
+    "check preview rule test" : {
+      "comment" : "Words that find the download rule test with Find a setting. Not shown.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检查 预览 规则 测试 check preview rule test"
           }
         }
       }
@@ -19363,6 +21201,17 @@
         }
       }
     },
+    "download type open save ask" : {
+      "comment" : "Words that find the New file types setting with Find a setting. Not shown.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下载 类型 打开 保存 询问 download type open save ask"
+          }
+        }
+      }
+    },
     "email" : {
       "comment" : "What a card in Contacts can fill, in “Fills email, phone and address from Contacts”.",
       "localizations" : {
@@ -19374,6 +21223,17 @@
         }
       }
     },
+    "example.com/files/" : {
+      "comment" : "Placeholder of the pattern field in the sheet that makes a download rule.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "example.com/files/"
+          }
+        }
+      }
+    },
     "export your passwords" : {
       "comment" : "Why Touch ID is asked for, finishing the sentence macOS starts with “Zigzag is trying to”.",
       "localizations" : {
@@ -19381,6 +21241,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "导出你的密码"
+          }
+        }
+      }
+    },
+    "extension type pdf epub save destination" : {
+      "comment" : "Words that find the empty file types list with Find a setting. Not shown.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扩展名 类型 pdf epub 保存 目的地"
           }
         }
       }
@@ -19428,6 +21299,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更多功能标志"
+          }
+        }
+      }
+    },
+    "folder location downloads" : {
+      "comment" : "Words that find the Save downloads to setting with Find a setting. Not shown.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件夹 位置 下载 folder location downloads"
           }
         }
       }
@@ -19483,6 +21365,17 @@
         }
       }
     },
+    "handed this link to %@" : {
+      "comment" : "An automation's notice over the page: what a rule did with the link. The placeholder is the app's own name, like mpv.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将链接交给 %@"
+          }
+        }
+      }
+    },
     "history" : {
       "comment" : "Item in the short list of what a browser holds, in the Import window: its browsing history.",
       "localizations" : {
@@ -19508,6 +21401,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天凌晨"
+          }
+        }
+      }
+    },
+    "https://example.com/file.zip" : {
+      "comment" : "Placeholder of the test address in Settings › Downloads: an address to see which rule takes it.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "https://example.com/file.zip"
           }
         }
       }
@@ -19949,6 +21853,17 @@
         }
       }
     },
+    "needs your answer" : {
+      "comment" : "Spoken by VoiceOver after a tab row's name, and shown in its tooltip: a question is waiting for that page.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等待你的回答"
+          }
+        }
+      }
+    },
     "nested tree child command click" : {
       "comment" : "Words that find the Open ⌘-clicked links under their tab setting with Find a setting in Settings. Not shown.",
       "localizations" : {
@@ -20047,6 +21962,39 @@
         }
       }
     },
+    "opened this link in Mini" : {
+      "comment" : "An automation's notice over the page: the rule opened the link in Zigzag Mini.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在 Mini 中打开这个链接"
+          }
+        }
+      }
+    },
+    "opened this link in a new tab" : {
+      "comment" : "An automation's notice over the page: the rule opened the link in a tab of its own.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在新标签页中打开这个链接"
+          }
+        }
+      }
+    },
+    "opened this link in this tab" : {
+      "comment" : "An automation's notice over the page: the rule opened the link where you already are.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已在此标签页中打开这个链接"
+          }
+        }
+      }
+    },
     "opens %@" : {
       "comment" : "A choice made for a site in Settings › Privacy: its links of this kind open in an app, by name.",
       "localizations" : {
@@ -20112,6 +22060,17 @@
         }
       }
     },
+    "pdf, epub" : {
+      "comment" : "Placeholder of the file-extension field in the sheet that makes a per-extension destination: the extensions to list, like pdf, epub.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pdf, epub"
+          }
+        }
+      }
+    },
     "phone" : {
       "comment" : "What a card in Contacts can fill, in “Fills email, phone and address from Contacts”.",
       "localizations" : {
@@ -20163,6 +22122,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已选中"
+          }
+        }
+      }
+    },
+    "sent this link to %@" : {
+      "comment" : "An automation's notice over the page: what a rule did with the link. The placeholder names the service and the method, like aria2.addUri · 127.0.0.1.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将链接发送到 %@"
           }
         }
       }
@@ -20381,6 +22351,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "© %1$@ Zigao Wang. %2$@."
+          }
+        }
+      }
+    },
+    "“%@” sends them to %@." : {
+      "comment" : "Message of the sheet that asks before saving a download rule that sends the site's cookies to another machine. The placeholders are the rule's name and the machine its endpoint is on.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "“%1$@” sends them to %2$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@”会把它们发送到 %2$@。"
           }
         }
       }

@@ -82,6 +82,18 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
         return controller
     }
 
+    /// A page's pop-up opened later, from the question about it (or from its remembered destination): a small window
+    /// of its own showing `url`, on the page's own data store where one is given, so it is still signed in.
+    static func viewer(url: URL, configuration: WKWebViewConfiguration?, parent: NSWindow?) -> PopupWindowController {
+        let controller = PopupWindowController(configuration: configuration ?? WKWebViewConfiguration(),
+                                               pageSize: Tokens.Metric.popupDefaultSize, origin: nil, parent: parent)
+        Self.open.insert(controller)
+        controller.webView.load(URLRequest(url: url))
+        controller.showWindow(nil)
+        if #available(macOS 15.4, *), !controller.isPrivate { ExtensionCenter.popupOpened(controller) }
+        return controller
+    }
+
     private init(configuration: WKWebViewConfiguration, pageSize: NSSize, origin: NSPoint?, parent: NSWindow?, opener: Tab? = nil) {
         // Preferences of its own, never its opener's: its WebRTC switch is set for each page it goes to.
         WebKitSetup.separatePreferences(of: configuration)
@@ -246,8 +258,27 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
     }
 
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        guard PopupNotice.allows(navigationAction, from: webView.url, isPrivate: isPrivate),
-              Tab.mayOpenInNewWebView(navigationAction.request.url) else { return nil }
+        guard Tab.mayOpenInNewWebView(navigationAction.request.url) else { return nil }
+        // A pop-up a page inside this one opened on its own: only a remembered destination opens it, or it asks.
+        if !PopupNotice.isUserInitiated(navigationAction) {
+            // The window this pop-up came from, of any kind. A page inside Zigzag Mini or an installed app's window
+            // asks there too; with a browser window's controller alone, that lookup found nothing, so a pop-up a page
+            // inside one of them opened on its own was dropped with nothing said.
+            let parent = WindowManager.shared.promptHost(for: parentWindow)
+            if !isPrivate, let stored = PopupNotice.storedAction(origin: SiteOrigin.of(webView.url)) {
+                switch PopupNotice.destination(for: stored) {
+                case .deny:
+                    return nil
+                case .viewer:
+                    return PopupWindowController.open(configuration: configuration, features: windowFeatures, parent: window, opener: opener)
+                case .thisTab, .newTab:
+                    if let url = navigationAction.request.url, let parent { PopupNotice.open(url, action: stored, from: nil, in: parent) }
+                    return nil
+                }
+            }
+            PopupNotice.ask(navigationAction, from: webView.url, isPrivate: isPrivate, tab: nil, in: parent)
+            return nil
+        }
         // A plain link (a help page, the terms) opens as a tab in the browser window, brought forward, as a
         // browser would; only another sized window.open() is a popup of its own.
         let sized = windowFeatures.width != nil || windowFeatures.height != nil || windowFeatures.toolbarsVisibility?.boolValue == false
@@ -279,9 +310,22 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
         // Downloads as a tab's are: a stream of them nobody clicked for is refused.
         if let policy = downloads.decide(shouldDownload: navigationAction.shouldPerformDownload, clicked: PopupNotice.isUserInitiated(navigationAction),
                                          isMainFrame: navigationAction.targetFrame?.isMainFrame ?? true) {
-            if policy == .cancel { refusedDownload() }
+            // A rule for downloads may take it instead: then WebKit makes no download at all.
+            if policy == .download, let url = navigationAction.request.url,
+               await handOffIfWanted(url, request: navigationAction.request, appliesToLinks: false) { return .cancel }
+            // No rule took it: whether this site may save files at all is asked once, and remembered per site.
+            if policy == .download, let url = navigationAction.request.url, await !mayDownload(url) { return .cancel }
+            if policy == .cancel {
+                // The page started this one on its own. Allow Once asks again from the same page — the gesture the
+                // flow policy wanted — and a request that can't be asked for again leaves the notice as it was.
+                let origin = SiteOrigin.of(webView.url) ?? SiteOrigin.of(navigationAction.request.url)
+                refusedDownload(action: origin.flatMap { askAgain(origin: $0, request: navigationAction.request) })
+            }
             return policy
         }
+        // A link a rule wants opens in its app, never a popup page that would be blank.
+        if PopupNotice.isUserInitiated(navigationAction), let url = navigationAction.request.url,
+           await handOffIfWanted(url, request: navigationAction.request, appliesToLinks: true) { return .cancel }
         // Zigzag's own pages (History) open in its tabs, never in a page's pop-up.
         if navigationAction.request.url?.scheme?.lowercased() == HistoryPage.scheme { return .cancel }
         // WebRTC on or off for where it's going, before its page is made, as in a tab.
@@ -332,6 +376,17 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
         // Shown or saved as in a tab: a file sent as an attachment is saved, never shown as the site's page.
         let policy = downloads.decide(mimeType: response.mimeType, contentDisposition: (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition"),
                                       canShowMIMEType: navigationResponse.canShowMIMEType, isMainFrame: navigationResponse.isForMainFrame)
+        // A file a rule wants never reaches the downloads list.
+        if policy == .download, let url = response.url {
+            let mime = (response.mimeType ?? "").lowercased()
+            let disposition = ((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition") ?? "").lowercased()
+            let filename = Tab.filename(from: disposition) ?? DownloadTokens.filename(for: url, suggested: "")
+            if await handOffIfWanted(url, request: URLRequest(url: url), appliesToLinks: false, filename: filename, mime: mime) {
+                return .cancel
+            }
+            // A rule didn't take it, so whether this site may save files at all is what decides.
+            if await !mayDownload(url) { return .cancel }
+        }
         if policy == .cancel, navigationResponse.isForMainFrame { refusedDownload() }
         // WebRTC follows the page that's to show, where a redirect took it.
         if navigationResponse.isForMainFrame {
@@ -341,11 +396,64 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
     }
 
     /// A download the page started on its own, refused: said over the page, under the header, never silently.
-    private func refusedDownload() {
-        Diagnostics.note("Download refused", site: webView.url?.host(), "A page started another download without a click", isPrivate: isPrivate)
+    private func refusedDownload(text: String = DownloadPolicy.refusedText, note: String = "A page started another download without a click",
+                                 action: (title: String, run: () -> Void)? = nil) {
+        Diagnostics.note("Download refused", site: webView.url?.host(), note, isPrivate: isPrivate)
         guard let content = window?.contentView, window?.isVisible == true else { return }
         let area = NSRect(x: 0, y: Self.headerHeight, width: content.bounds.width, height: max(0, content.bounds.height - Self.headerHeight))
-        Toast.show(DownloadPolicy.refusedText, symbol: "arrow.down.circle", duration: 3, over: content, area: area)
+        // A notice with something to offer stays long enough to read and act on, and can be put away, as in a tab.
+        Toast.show(text, symbol: "arrow.down.circle", action: action, duration: action == nil ? 3 : 6,
+                   closes: action != nil, over: content, area: area)
+    }
+
+    /// What a refused download's notice offers, as in a tab: by then WebKit's "no" can't be taken back, so Allow Once
+    /// asks for it again through this page — the session the site expects — and keeps the answer for the page. What
+    /// comes back is tracked like any other download. Only a plain GET can be asked for again.
+    private func askAgain(origin: String, request: URLRequest?) -> (title: String, run: () -> Void)? {
+        guard let request, DownloadPolicy.canBeAskedAgain(request) else { return nil }
+        return (String(localized: "Allow Once", comment: "Button in the notice saying a site’s download was blocked: asks the site for the file again and saves it."),
+                { [weak webView, opener] in
+                    guard let webView else { return }
+                    SitePermissions.allowThisDownload(origin: origin, tab: opener)
+                    webView.startDownload(using: request) { download in
+                        DownloadManager.shared.track(download, window: webView.window)
+                    }
+                })
+    }
+
+    /// Whether this site may save a file, as in a tab: asked once, "This time" for this page and "Always" for the
+    /// site. False means it may not — said over the page — so the caller cancels the download.
+    private func mayDownload(_ url: URL) async -> Bool {
+        guard let origin = SiteOrigin.of(webView.url ?? url) else { return true }
+        let allowed = await SitePermissions.downloadsAllowed(origin: origin, window: parentWindow, isPrivate: isPrivate, tab: opener)
+        if !allowed { refusedDownload(text: DownloadPolicy.blockedText, note: "This site is not allowed to save files") }
+        return allowed
+    }
+
+    /// Runs the first rule that catches `url`. True means the popup's page should not load or download it.
+    private func handOffIfWanted(_ url: URL, request: URLRequest, appliesToLinks: Bool, filename: String? = nil, mime: String = "") async -> Bool {
+        // Zigzag's own pages and an extension's are never a rule's to take.
+        guard url.scheme?.lowercased() != HistoryPage.scheme, !Tab.isExtensionPage(url) else { return false }
+        guard let rule = DownloadHandoff.firstMatch(url, appliesToLinks: appliesToLinks, isPrivate: isPrivate) else { return false }
+        let referrer = request.value(forHTTPHeaderField: "Referer").flatMap { URL(string: $0) } ?? webView.url
+        let handoff = DownloadHandoff.Request(url: url, referrer: referrer, pageOrigin: SiteOrigin.of(webView.url),
+                                              filename: filename ?? DownloadTokens.filename(for: url, suggested: ""),
+                                              mime: mime, space: "",
+                                              dataStore: webView.configuration.websiteDataStore, isPrivate: isPrivate,
+                                              window: parentWindow, tab: opener)
+        switch await DownloadHandoff.decide(rule, request: handoff, tab: opener) {
+        case .handOff:
+            let outcome = await DownloadHandoff.perform(rule, request: handoff)
+            if case .failed = outcome { DownloadHandoff.report(outcome, rule: rule, request: handoff) }
+            // A rule that was matched but didn't take it leaves the pop-up's page as it was — unless the rule is set
+            // to stop the page, which keeps a link here from loading on and matching the rule again.
+            if case .noMatch = outcome { return appliesToLinks && rule.stopsThePage }
+            return true
+        case .browser, .ask:
+            return appliesToLinks && rule.stopsThePage
+        case .cancel:
+            return appliesToLinks || rule.stopsThePage
+        }
     }
 
     func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {

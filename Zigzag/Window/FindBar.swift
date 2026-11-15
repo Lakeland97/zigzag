@@ -783,6 +783,10 @@ enum Toast {
         var hideWork: DispatchWorkItem?
         /// What the toast showing is about, when it's about something that can go away (an offer for a tab's page).
         weak var owner: AnyObject?
+        /// The automation notice this toast is, when it is one, and how many times the same one has been said while it
+        /// has been up: what makes a repeat of it a repeat rather than another notice.
+        var notice: String?
+        var noticeTimes = 1
     }
     private static var showing: [ObjectIdentifier: Showing] = [:]
 
@@ -823,14 +827,14 @@ enum Toast {
 
     /// `closes` adds a close button, for an offer you may want gone before it goes on its own. `owner`: what it's
     /// about, for `hide(for:in:)`.
-    static func show(_ text: String, symbol: String? = nil, action: (title: String, run: () -> Void)? = nil,
+    static func show(_ text: String, symbol: String? = nil, image: NSImage? = nil, action: (title: String, run: () -> Void)? = nil,
                      duration: TimeInterval = 1.3, closes: Bool = false, owner: AnyObject? = nil, in controller: BrowserWindowController) {
-        show(text, symbol: symbol, action: action, duration: duration, closes: closes, over: controller.root.overlay, area: area(in: controller))
+        show(text, symbol: symbol, image: image, action: action, duration: duration, closes: closes, over: controller.root.overlay, area: area(in: controller))
         state(for: controller.root.overlay).owner = owner
     }
 
     /// Over the page, or with the desk open, over the desk, clear of its search field.
-    private static func area(in controller: BrowserWindowController) -> NSRect {
+    static func area(in controller: BrowserWindowController) -> NSRect {
         if let desk = controller.desk.toastArea { return desk }
         // Under the bar of an AI app using the page, if there is one.
         var page = controller.root.cardFrame
@@ -845,6 +849,34 @@ enum Toast {
     static func working(_ text: String, in controller: BrowserWindowController) {
         show(text, duration: .greatestFiniteMagnitude, over: controller.root.overlay, area: area(in: controller), busy: true)
     }
+
+    /// An automation's own notice: what a rule just did, said over the page it was handed. The same notice said again
+    /// while it is still up is **one** notice with a count — `Handed this link to mpv (×3)` — the way the diagnostics
+    /// count a repeat in a row, rather than a rule that fires on every page load burying the page in them.
+    ///
+    /// `over` and `area` are the same place `promptToast` uses, so every window says one the same way.
+    static func notice(_ text: String, symbol: String, over host: NSView, area: NSRect) {
+        let state = state(for: host)
+        let again = isRepeat(text, of: state.notice, whileUp: state.toast?.superview === host && state.toast?.dismissing == false)
+        let times = again ? state.noticeTimes + 1 : 1
+        show(counted(text, times: times), symbol: symbol, duration: noticeDuration, over: host, area: area)
+        // After `show`, which clears these for anything that isn't a notice.
+        state.notice = text
+        state.noticeTimes = times
+    }
+
+    /// Whether a notice is the same one as the notice already up, and so counts rather than adds. Both halves matter:
+    /// a different notice is a different notice, and the same one after the first has gone is a new one, not a fourth.
+    static func isRepeat(_ text: String, of showing: String?, whileUp up: Bool) -> Bool { up && showing == text }
+
+    /// A notice with its count, when there is one, in the diagnostics' own shape.
+    static func counted(_ text: String, times: Int) -> String {
+        times > 1 ? "\(text) (×\(times))" : text
+    }
+
+    /// How long a notice stays: long enough to read, and long enough that a rule firing a few times over is counted
+    /// rather than repeated. Longer than a confirmation from a key, shorter than a failure.
+    private static let noticeDuration: TimeInterval = 4
 
     /// Top center of the page: where your eyes already are, clear of the content you're reading.
     private static func place(_ toast: ToastView, in area: NSRect) {
@@ -875,7 +907,7 @@ enum Toast {
     }
 
     /// Shows a toast at the top center of `area` in any flipped host view (the Passwords window uses it too).
-    static func show(_ text: String, symbol: String? = nil, action: (title: String, run: () -> Void)? = nil,
+    static func show(_ text: String, symbol: String? = nil, image: NSImage? = nil, action: (title: String, run: () -> Void)? = nil,
                      duration: TimeInterval = 1.3, closes: Bool = false, over host: NSView, area: NSRect, busy: Bool = false) {
         let state = state(for: host)
         let toast: ToastView
@@ -892,7 +924,7 @@ enum Toast {
         toast.label.stringValue = text
         Announcement.post(text, priority: action == nil ? .medium : .high)
         // Busy: an empty picture keeps the icon's place for the spinner.
-        toast.icon.image = busy ? NSImage(size: NSSize(width: Tokens.Metric.favicon, height: Tokens.Metric.favicon)) : symbol.map { Tokens.Symbol.image($0) }
+        toast.icon.image = busy ? NSImage(size: NSSize(width: Tokens.Metric.favicon, height: Tokens.Metric.favicon)) : image ?? symbol.map { Tokens.Symbol.image($0) }
         busy ? toast.spinner.startAnimation(nil) : toast.spinner.stopAnimation(nil)
         toast.actionButton.isHidden = action == nil
         if let action {
@@ -927,6 +959,9 @@ enum Toast {
         // A repeat that's still up (zoom 90% → 80%) only changes the number: it comes from a key, so nothing moves.
         state.toast = toast
         state.owner = nil
+        // Anything else being said ends a run of the same automation notice: the next one is the first of its own.
+        state.notice = nil
+        state.noticeTimes = 1
         state.hideWork?.cancel()
         // Toasts with an action wait for the pointer to leave before going, however long it stays, so Undo never
         // slips away from under it.

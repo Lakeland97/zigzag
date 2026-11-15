@@ -1159,12 +1159,17 @@ final class FilledField: NSView {
     /// panel's field is a soft fill. A page's header sets it for its search.
     var isOutlined = false { didSet { updateColors(); needsLayout = true } }
 
+    /// What's in it is wrong for what it's for: its edge takes the warning color until it's right again, so a form
+    /// that can't be confirmed says which field is holding it up instead of leaving its button dead unexplained.
+    var isInvalid = false { didSet { guard isInvalid != oldValue else { return }; updateColors() } }
+
     private func updateColors() {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = (isOutlined ? Tokens.Color.controlFill : Tokens.Color.fieldFill).cgColor
             let ring = (tint ?? Brand.Theme.for(self).accent).withAlphaComponent(Tokens.Color.focusAlpha)
-            layer?.borderColor = (isEditing ? ring : isOutlined ? Tokens.Color.controlEdge : .clear).cgColor
-            layer?.borderWidth = isEditing ? 1.5 : isOutlined ? Tokens.Metric.hairline : 1.5
+            layer?.borderColor = (isInvalid ? Tokens.Color.destructive
+                                             : isEditing ? ring : isOutlined ? Tokens.Color.controlEdge : .clear).cgColor
+            layer?.borderWidth = isInvalid || isEditing ? 1.5 : isOutlined ? Tokens.Metric.hairline : 1.5
             layer?.shadowOpacity = isOutlined ? 1 : 0
             layer?.shadowColor = Tokens.Color.controlShadow.cgColor
             layer?.shadowRadius = Tokens.Shadow.controlRadius
@@ -1180,6 +1185,13 @@ final class FilledField: NSView {
     override func mouseDown(with event: NSEvent) { window?.makeFirstResponder(field) }
     /// Its padding is the field's: a press there types, never drags the window.
     override var mouseDownCanMoveWindow: Bool { false }
+
+    /// A field is filled by the space it's given, so it draws at the size its holder hands it — a sheet's row. But
+    /// a Settings row puts its control at the control's own width, and a stack beside a button has nothing else to
+    /// size it by, and both asked this: no answer, so no width, so no field at all.
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: Tokens.Page.searchWidth, height: Tokens.Metric.controlHeight)
+    }
 
     /// Capsule ends instead of the field's corners: a search or address field standing on its own in a panel.
     var isPill = false { didSet { needsLayout = true } }
@@ -1402,6 +1414,10 @@ final class DropdownButton: InteractiveView {
     var onSelect: ((Int) -> Void)?
     /// Under the choices, after a line: making a new thing to choose ("New Profile…").
     var actions: [Action] = []
+    /// How it's painted: the plain control, or, where it stands in for a filled answer (a question's own affirmative,
+    /// offered as choices), the primary look. `tint` replaces the primary's fill with the window's accent.
+    var look: ButtonLook = .secondary { didSet { stateDidChange(animated: false) } }
+    var tint: NSColor? { didSet { stateDidChange(animated: false) } }
     private var openedAt: TimeInterval = 0
     private var menuOpen = false { didSet { stateDidChange(animated: false) } }
 
@@ -1435,7 +1451,8 @@ final class DropdownButton: InteractiveView {
     private func refresh() {
         label.stringValue = current?.title ?? ""
         label.isHidden = showsPictureOnly
-        toolTip = showsPictureOnly ? current?.title : nil
+        if showsPictureOnly { toolTip = current?.title }
+        else if isEnabled { toolTip = nil }
         // A neutral globe where a site's icon is missing, so the column of pictures never has a gap.
         let pictured = options.contains { $0.image != nil }
         icon.image = current?.image ?? (pictured ? MenuPanel.placeholder : nil)
@@ -1475,11 +1492,11 @@ final class DropdownButton: InteractiveView {
         chevron.frame = NSRect(x: bounds.width - Self.textInset - 10, y: (bounds.height - 14) / 2, width: 10, height: 14)
         label.frame = NSRect(x: x - Label.inset, y: label.centeredY(in: bounds.height), width: max(0, chevron.frame.minX - x - Tokens.Space.x1), height: label.lineHeight)
         // A choice cut short (a long profile name) shows whole under the pointer (#189).
-        if !showsPictureOnly { toolTip = label.frame.width < label.textWidth - Tokens.Space.x1 ? current?.title : nil }
+        if !showsPictureOnly, isEnabled { toolTip = label.frame.width < label.textWidth - Tokens.Space.x1 ? current?.title : nil }
     }
 
     func openMenu() {
-        guard !options.isEmpty, MenuPanel.current?.anchor !== self else { return }
+        guard isEnabled, !options.isEmpty, MenuPanel.current?.anchor !== self else { return }
         var items: [MenuPanel.Entry] = options.enumerated().map { index, option in
             .item(MenuPanel.Item(title: option.title, image: option.image, isChecked: index == selectedIndex) { [weak self] in
                 guard let self else { return }
@@ -1523,10 +1540,12 @@ final class DropdownButton: InteractiveView {
     override func accessibilityPerformShowMenu() -> Bool { openMenu(); return true }
 
     override func stateDidChange(animated: Bool) {
-        let ink = applyButtonLook(.secondary)
-        if menuOpen { layer?.set(backgroundColor: cgColor(Tokens.Color.controlHover), animated: false) }
+        let ink = applyButtonLook(look, tint: look == .primary ? tint : nil)
+        // An open menu shows on the control itself, unless it's already the filled answer, whose fill says enough.
+        if menuOpen, look == .secondary { layer?.set(backgroundColor: cgColor(Tokens.Color.controlHover), animated: false) }
         label.textColor = ink
-        chevron.contentTintColor = Tokens.Color.textSecondary
+        chevron.contentTintColor = look == .primary ? ink : Tokens.Color.textSecondary
+        alphaValue = isEnabled ? 1 : Tokens.Opacity.disabled
     }
 }
 
@@ -2051,6 +2070,8 @@ final class MenuPanel: FloatingPanelView {
 final class StatusLabel: NSView {
     private let check = NSImageView()
     private let label: Label
+    /// The colour it was last told to say itself in; nil is its window's accent.
+    private var tint: NSColor?
 
     init(_ text: String, symbol: String = "checkmark.circle.fill") {
         label = Label(text, font: Tokens.Font.body(.medium), color: Tokens.Color.textSecondary)
@@ -2061,9 +2082,18 @@ final class StatusLabel: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    /// Says something else, in another colour: one line can be a calm state at rest and a warning when it matters.
+    func say(_ text: String, symbol: String, color: NSColor? = nil) {
+        label.stringValue = text
+        check.image = Tokens.Symbol.image(symbol, size: Tokens.TypeSize.body)
+        tint = color
+        check.contentTintColor = color ?? Brand.Theme.for(self).accent
+        needsLayout = true
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        check.contentTintColor = Brand.Theme.for(self).accent
+        check.contentTintColor = tint ?? Brand.Theme.for(self).accent
     }
 
     override var intrinsicContentSize: NSSize { NSSize(width: 16 + Tokens.Space.x2 + label.inkWidth + Label.inset, height: Tokens.Space.x7Height) }

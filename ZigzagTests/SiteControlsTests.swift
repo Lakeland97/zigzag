@@ -36,6 +36,124 @@ struct SiteControlsPermissionTests {
         #expect(PermissionChoice.block.allowed == false)
     }
 
+    /// Notifications are the one permission whose yes has two places: a notice in Zigzag, or the Mac's Notification
+    /// Center. The row offers them, reading back what's kept, and an answer saved before there were two places means
+    /// the Mac's, so nothing anyone has already answered changes.
+    @Test func aNotificationsAnswerIsThePlaceItShowsIn() throws {
+        try withDefaults {
+            #expect(SitePermission.notifications.choices == [.ask, .inZigzag, .onTheMac, .block])
+            // Every other permission keeps the three it always had.
+            #expect(SitePermission.location.choices == [.ask, .allow, .block])
+            #expect(SitePermission.webRTC.choices == [.allow, .block])
+
+            #expect(SitePermissions.choice(.notifications, origin: site) == .ask)
+
+            SitePermissions.setChoice(.inZigzag, for: .notifications, origin: site)
+            #expect(SitePermissions.choice(.notifications, origin: site) == .inZigzag)
+
+            SitePermissions.setChoice(.onTheMac, for: .notifications, origin: site)
+            #expect(SitePermissions.choice(.notifications, origin: site) == .onTheMac)
+
+            // An answer saved by an older Zigzag, when Allow meant the Mac.
+            SitePermissions.remember("allow", subject: PermissionSubject.notifications, origin: site)
+            #expect(SitePermissions.choice(.notifications, origin: site) == .onTheMac)
+
+            SitePermissions.setChoice(.block, for: .notifications, origin: site)
+            #expect(SitePermissions.choice(.notifications, origin: site) == .block)
+
+            // Ask forgets it, and the row goes back to asking.
+            SitePermissions.setChoice(.ask, for: .notifications, origin: site)
+            #expect(SitePermissions.choice(.notifications, origin: site) == .ask)
+            #expect(SitePermissions.action(PermissionSubject.notifications, origin: site) == nil)
+        }
+    }
+
+    /// The rule every other question already followed, and notifications were the one exception to: **"Always" keeps
+    /// the answer for the site — a no included — and "This time" leaves the site asking.** That the card now offers
+    /// the duration is the card; this is the part that matters, that a kept no is read back as Block rather than
+    /// being forgotten with the page.
+    @Test func aNotificationsAnswerCanBeKeptForTheSite() throws {
+        try withDefaults {
+            #expect(SitePermissions.choice(.notifications, origin: site) == .ask)
+
+            // "This time": nothing is kept for the site, so it still asks.
+            let thisTime = SitePermissions.rememberAnswer(
+                PermissionAnswer(action: NotificationPlace.blocked.action, remember: false),
+                subject: PermissionSubject.notifications, origin: site, tab: nil, isPrivate: false)
+            #expect(!thisTime)
+            #expect(SitePermissions.choice(.notifications, origin: site) == .ask)
+
+            // "Always": Block for the site, exactly as choosing Block in Site Controls would keep it.
+            let always = SitePermissions.rememberAnswer(
+                PermissionAnswer(action: NotificationPlace.blocked.action, remember: true),
+                subject: PermissionSubject.notifications, origin: site, tab: nil, isPrivate: false)
+            #expect(!always)
+            #expect(SitePermissions.choice(.notifications, origin: site) == .block)
+            #expect(SitePermissions.action(PermissionSubject.notifications, origin: site) == "deny")
+        }
+    }
+
+    /// A rule's answer is the caller's to write: it goes to the rule, never into the site's store, and a caller that
+    /// offered the rule scope without passing its rule loses nothing — the same answer still holds for the page.
+    @Test func aRuleAnswerIsWrittenOnTheRule() throws {
+        try withDefaults {
+            let rule = UUID()
+            let subject = PermissionSubject.handoff(rule)
+            var told: [String] = []
+            let kept = SitePermissions.rememberAnswer(
+                PermissionAnswer(action: "handOff", scope: .rule),
+                subject: subject, origin: site, tab: nil, isPrivate: false,
+                onRule: { told.append($0) })
+            #expect(kept)
+            #expect(told == ["handOff"])
+            #expect(SitePermissions.action(subject, origin: site) == nil)
+
+            // The same answer in a private window is kept nowhither, the rule included.
+            told = []
+            SitePermissions.rememberAnswer(
+                PermissionAnswer(action: "handOff", scope: .rule),
+                subject: subject, origin: site, tab: nil, isPrivate: true,
+                onRule: { told.append($0) })
+            #expect(told.isEmpty)
+            #expect(SitePermissions.action(subject, origin: site) == nil)
+        }
+    }
+
+    /// Screen sharing follows the same rule as everything else now: **a kept no is a no for the site, and "this time"
+    /// leaves the site asking.** It used to be the one question that kept nothing at all — the same two answers
+    /// meaning something different there than on every other card.
+    @Test func aScreenSharingNoCanBeKeptForTheSite() throws {
+        try withDefaults {
+            #expect(SitePermissions.choice(.screen, origin: site) == .ask)
+            #expect(DisplayCaptureChoice(action: SitePermissions.action(PermissionSubject.screen, origin: site)) == nil)
+
+            // "Always" on Don't Allow: Block for the site, read back as the same no when it next asks.
+            let always = SitePermissions.rememberAnswer(
+                PermissionAnswer(action: DisplayCaptureChoice.deny.action, remember: true),
+                subject: PermissionSubject.screen, origin: site, tab: nil, isPrivate: false)
+            #expect(!always)
+            #expect(SitePermissions.choice(.screen, origin: site) == .block)
+            #expect(DisplayCaptureChoice(action: SitePermissions.action(PermissionSubject.screen, origin: site)) == .deny)
+
+            // A kept yes is the Share Window… answer, which is the filled button, and a kept Share Screen… is its own.
+            SitePermissions.rememberAnswer(PermissionAnswer(action: DisplayCaptureChoice.window.action, remember: true),
+                                           subject: PermissionSubject.screen, origin: site, tab: nil, isPrivate: false)
+            #expect(SitePermissions.choice(.screen, origin: site) == .allow)
+            #expect(DisplayCaptureChoice(action: SitePermissions.action(PermissionSubject.screen, origin: site)) == .window)
+            #expect(DisplayCaptureChoice(action: DisplayCaptureChoice.screen.action) == .screen)
+        }
+    }
+
+    /// Both places are a yes: the Permissions row counts them as allowed, and only Block as blocked.
+    @Test func bothPlacesCountAsAllowed() {
+        #expect(PermissionChoice.inZigzag.permits)
+        #expect(PermissionChoice.onTheMac.permits)
+        #expect(PermissionChoice.allow.permits)
+        #expect(!PermissionChoice.block.permits)
+        #expect(!PermissionChoice.ask.permits)
+        #expect(PermissionChoice.summary([.inZigzag, .block]) == "1 allowed, 1 blocked")
+    }
+
     @Test func noRowUntilTheSiteAsks() throws {
         try withDefaults {
             #expect(SitePermissions.shown(origin: site, isPrivate: false).isEmpty)
@@ -61,7 +179,8 @@ struct SiteControlsPermissionTests {
             SitePermissions.setNotifications(true, origin: site)
             SitePermissions.remember(false, origin: site, type: .camera)
             #expect(SitePermissions.shown(origin: site, isPrivate: false) == [.cameraAndMicrophone, .notifications])
-            #expect(SitePermissions.choice(.notifications, origin: site) == .allow)
+            // A notification's yes is a place, so a plain allow saved by an older Zigzag reads as the Mac's.
+            #expect(SitePermissions.choice(.notifications, origin: site) == .onTheMac)
             #expect(SitePermissions.choice(.cameraAndMicrophone, origin: site) == .block)
             // A private window has no notifications or pop-ups to offer.
             #expect(SitePermissions.shown(origin: site, isPrivate: true) == [.cameraAndMicrophone])
@@ -110,8 +229,10 @@ struct SiteControlsPermissionTests {
     @Test func allowAndBlockAreKeptAndAskForgets() throws {
         try withDefaults {
             for permission in SitePermission.allCases {
-                SitePermissions.setChoice(.allow, for: permission, origin: site)
-                #expect(SitePermissions.choice(permission, origin: site) == .allow)
+                // A notification's yes is a *place*, so its plain yes is the Mac's — what the row reads back as that.
+                let yes: PermissionChoice = permission == .notifications ? .onTheMac : .allow
+                SitePermissions.setChoice(yes, for: permission, origin: site)
+                #expect(SitePermissions.choice(permission, origin: site) == yes)
                 SitePermissions.setChoice(.block, for: permission, origin: site)
                 #expect(SitePermissions.choice(permission, origin: site) == .block)
                 SitePermissions.setChoice(.ask, for: permission, origin: site)
@@ -201,24 +322,79 @@ struct SiteControlsPermissionTests {
     /// A frame from another site on the page is held back by the page's Block, and never let in by its Allow.
     @Test func aFrameFromElsewhereOnlyFollowsBlock() throws {
         try withDefaults {
+            // A site-wide Allow covers every app the page opens, as the row always meant.
             SitePermissions.setChoice(.allow, for: .apps, origin: site)
-            #expect(ExternalLinks.decision(page: site, scheme: "zoommtg", foreign: false) == true)
-            #expect(ExternalLinks.decision(page: site, scheme: "zoommtg", foreign: true) == nil)
+            #expect(SitePermissions.action(PermissionSubject.apps, origin: site) == "allow")
+            #expect(ExternalLinks.decision(page: site, foreign: false, stored: "allow") == "allow")
+            #expect(ExternalLinks.decision(page: site, foreign: true, stored: "allow") == nil)
+            // Always Open on one app is kept under that app's own key.
+            SitePermissions.allowOpeningApp(origin: site, scheme: "zoommtg")
+            #expect(SitePermissions.action(PermissionSubject.app("zoommtg"), origin: site) == "allow")
             SitePermissions.setChoice(.block, for: .apps, origin: site)
-            #expect(ExternalLinks.decision(page: site, scheme: "zoommtg", foreign: true) == false)
-            #expect(ExternalLinks.decision(page: nil, scheme: "zoommtg", foreign: false) == nil)
+            let blocked = SitePermissions.action(PermissionSubject.apps, origin: site)
+            #expect(blocked == "deny")
+            #expect(ExternalLinks.decision(page: site, foreign: true, stored: blocked) == "deny")
+            #expect(ExternalLinks.decision(page: nil, foreign: false, stored: "allow") == nil)
+        }
+    }
+
+    /// The whole read a page's app link is held to: the site-wide row is read before the app's own key, so a
+    /// site-wide Allow reaches every app, and the page's own "this time" answer is read too so a page that asks again
+    /// isn't asked twice. This is the composition whose absence let the site-wide-Allow regression ship.
+    @Test func anAppLinkReadsTheSiteWideRowThenTheAppThenThePage() throws {
+        try withDefaults {
+            let tab = Tab(url: URL(string: site + "/"), spaceID: UUID())
+            SitePermissions.setChoice(.allow, for: .apps, origin: site)
+            #expect(ExternalLinks.storedAppAction(pageOrigin: site, origin: site, scheme: "zoommtg",
+                                                  foreign: false, tab: tab) == "allow")
+            #expect(ExternalLinks.storedAppAction(pageOrigin: site, origin: site, scheme: "itms-apps",
+                                                  foreign: false, tab: tab) == "allow")
+            // A foreign frame never gets the page's site-wide Allow.
+            #expect(ExternalLinks.storedAppAction(pageOrigin: site, origin: site, scheme: "zoommtg",
+                                                  foreign: true, tab: tab) == nil)
+            // The page's own answer this time, with nothing kept for the site.
+            SitePermissions.setChoice(.ask, for: .apps, origin: site)
+            SitePermissions.rememberAnswer(PermissionAnswer(action: "deny", remember: false),
+                                           subject: PermissionSubject.app("zoommtg"), origin: site, tab: tab, isPrivate: false)
+            #expect(ExternalLinks.storedAppAction(pageOrigin: site, origin: site, scheme: "zoommtg",
+                                                  foreign: false, tab: tab) == "deny")
+            #expect(ExternalLinks.storedAppAction(pageOrigin: site, origin: site, scheme: "itms-apps",
+                                                  foreign: false, tab: tab) == nil)
+        }
+    }
+
+    /// "Always / Don't Allow" is kept for the whole site, the key Site Controls and Settings show, so the row and the
+    /// browser agree and no other app on the site asks again; "Always Allow" stays that one app's. It goes through the
+    /// same `storageSubject` the question itself uses, so reverting that choice fails this test.
+    @Test func anAnsweredDenyIsKeptForTheWholeSite() throws {
+        try withDefaults {
+            let tab = Tab(url: URL(string: site + "/"), spaceID: UUID())
+            let deny = PermissionAnswer(action: "deny", remember: true)
+            #expect(ExternalLinks.storageSubject(for: deny, scheme: "zoommtg") == PermissionSubject.apps)
+            #expect(ExternalLinks.storageSubject(for: PermissionAnswer(action: "allow", remember: true),
+                                                 scheme: "zoommtg") == PermissionSubject.app("zoommtg"))
+            #expect(ExternalLinks.storageSubject(for: PermissionAnswer(action: "deny", remember: false),
+                                                 scheme: "zoommtg") == PermissionSubject.app("zoommtg"))
+            SitePermissions.rememberAnswer(deny, subject: ExternalLinks.storageSubject(for: deny, scheme: "zoommtg"),
+                                           origin: site, tab: tab, isPrivate: false)
+            // The site's row, and the next app the page opens, both read the deny.
+            #expect(SitePermissions.appDecision(origin: site, scheme: "zoommtg") == false)
+            #expect(SitePermissions.appDecision(origin: site, scheme: "itms-apps") == false)
+            #expect(SitePermissions.choice(.apps, origin: site) == .block)
+            #expect(ExternalLinks.storedAppAction(pageOrigin: site, origin: site, scheme: "itms-apps",
+                                                  foreign: false, tab: tab) == "deny")
         }
     }
 
     /// A page with no site (about:blank its opener wrote) is held by the opener's Block, never let in by its Allow.
     @Test func aPageWithNoSiteKeepsItsOpenersBlock() throws {
         try withDefaults {
-            #expect(ExternalLinks.decision(page: nil, standIns: [site], scheme: "zoommtg", foreign: false) == nil)
+            #expect(ExternalLinks.storedAppAction(pageOrigin: nil, standIns: [site], origin: nil, scheme: "zoommtg", foreign: false, tab: nil) == nil)
             SitePermissions.setChoice(.allow, for: .apps, origin: site)
-            #expect(ExternalLinks.decision(page: nil, standIns: [site], scheme: "zoommtg", foreign: false) == nil)
+            #expect(ExternalLinks.storedAppAction(pageOrigin: nil, standIns: [site], origin: nil, scheme: "zoommtg", foreign: false, tab: nil) == nil)
             SitePermissions.setChoice(.block, for: .apps, origin: site)
-            #expect(ExternalLinks.decision(page: nil, standIns: [site], scheme: "zoommtg", foreign: false) == false)
-            #expect(ExternalLinks.decision(page: nil, standIns: [], scheme: "zoommtg", foreign: false) == nil)
+            #expect(ExternalLinks.storedAppAction(pageOrigin: nil, standIns: [site], origin: nil, scheme: "zoommtg", foreign: false, tab: nil) == "deny")
+            #expect(ExternalLinks.storedAppAction(pageOrigin: nil, standIns: [], origin: nil, scheme: "zoommtg", foreign: false, tab: nil) == nil)
         }
     }
 
