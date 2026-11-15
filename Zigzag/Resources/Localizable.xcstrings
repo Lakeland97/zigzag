@@ -1856,17 +1856,6 @@
         }
       }
     },
-    "A video you’re watching floats over other apps and desktops when you switch away, and goes back in its page when you come back to it." : {
-      "comment" : "Explanation under “Picture in picture when you leave Zigzag” in Settings › Tabs.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切到其他 App 或桌面时，你正在看的视频会浮在最上面；回到它的页面时，再回到页面里。"
-          }
-        }
-      }
-    },
     "AD" : {
       "comment" : "Label on a sample ad in the welcome window’s picture of Zigzag.",
       "localizations" : {
@@ -2379,13 +2368,13 @@
         }
       }
     },
-    "After you close a pinned tab that went to another page, like a new chat." : {
+    "After you close a pinned tab that went to another page." : {
       "comment" : "Explanation under “Offer to pin the page you moved to” in Settings › Tabs.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭一个已跳转到其他页面（比如新对话）的固定标签页后。"
+            "value" : "关闭已跳转到其他页面的固定标签页后。"
           }
         }
       }
@@ -4248,13 +4237,13 @@
         }
       }
     },
-    "Click a shortcut to change or remove it. To find one, type its name or keys in Find a setting." : {
-      "comment" : "Hint at the top of Settings › Shortcuts. “Find a setting” is the search field's placeholder.",
+    "Click a shortcut to change or remove it." : {
+      "comment" : "Hint at the top of Settings › Shortcuts.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "点按快捷键即可更改或移除。要查找某个快捷键，请在“查找设置”中键入它的名称或按键。"
+            "value" : "点按快捷键即可更改或移除。"
           }
         }
       }
@@ -6712,6 +6701,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "浮动"
+          }
+        }
+      }
+    },
+    "Floats over other apps and desktops when you switch away, and back in its page when you return." : {
+      "comment" : "Explanation under “Picture in picture when you leave Zigzag” in Settings › Tabs.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换离开时，视频浮在其他 App 和桌面之上；再切回来时，回到页面里。"
           }
         }
       }
@@ -9774,13 +9774,13 @@
         }
       }
     },
-    "No reused passwords. Each site has a password of its own." : {
+    "No reused passwords." : {
       "comment" : "Shown in the Passwords window's Reused list when it's empty.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有重复使用的密码。每个网站都有自己的密码。"
+            "value" : "没有重复使用的密码。"
           }
         }
       }
@@ -9873,13 +9873,13 @@
         }
       }
     },
-    "No weak passwords. Every one is long and varied enough to stand up to guessing." : {
+    "No weak passwords." : {
       "comment" : "Shown in the Passwords window's Weak list when it's empty.",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有弱密码。每个密码都足够长、足够多样，不容易被猜到。"
+            "value" : "没有弱密码。"
           }
         }
       }

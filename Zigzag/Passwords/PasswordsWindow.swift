@@ -383,8 +383,8 @@ final class PasswordsView: NSView {
             case .all:
                 empty.text = String(localized: "Passwords you save while signing in, or bring over from another browser, show up here.", comment: "Shown in the Passwords window with no passwords saved yet.")
                 empty.showsAction = true
-            case .weak: empty.text = String(localized: "No weak passwords. Every one is long and varied enough to stand up to guessing.", comment: "Shown in the Passwords window's Weak list when it's empty.")
-            case .reused: empty.text = String(localized: "No reused passwords. Each site has a password of its own.", comment: "Shown in the Passwords window's Reused list when it's empty.")
+            case .weak: empty.text = String(localized: "No weak passwords.", comment: "Shown in the Passwords window's Weak list when it's empty.")
+            case .reused: empty.text = String(localized: "No reused passwords.", comment: "Shown in the Passwords window's Reused list when it's empty.")
             case .never: empty.text = String(localized: "Sites where you choose Never when Zigzag offers to save show up here, so you can change your mind.", comment: "Shown in the Passwords window's Never Saved list when it's empty. Never is the button in the save-password prompt.")
             }
         }

@@ -1320,7 +1320,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         tabsGroup.add(videoRow)
         leavePipToggle.onChange = { on in AutoPictureInPicture.isOn = on }
         let leaveRow = FormRow(title: String(localized: "Picture in picture when you leave Zigzag", comment: "A setting in Settings › Tabs: a playing video floats over other apps when you switch to another app or desktop."),
-                               detail: String(localized: "A video you’re watching floats over other apps and desktops when you switch away, and goes back in its page when you come back to it.", comment: "Explanation under “Picture in picture when you leave Zigzag” in Settings › Tabs."),
+                               detail: String(localized: "Floats over other apps and desktops when you switch away, and back in its page when you return.", comment: "Explanation under “Picture in picture when you leave Zigzag” in Settings › Tabs."),
                                control: leavePipToggle)
         leaveRow.keywords = String(localized: "picture in picture pip floating video other app desktop space full screen leave switch away automatic", comment: "Words that find the Picture in picture when you leave Zigzag setting with Find a setting in Settings. Not shown.")
         tabsGroup.add(leaveRow)
@@ -1344,7 +1344,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
                               control: swipeToggle))
         pinOfferToggle.onChange = { on in BrowserWindowController.offersToPinWanderedPage = on }
         tabsGroup.add(FormRow(title: String(localized: "Offer to pin the page you moved to", comment: "A setting in Settings › Tabs."),
-                              detail: String(localized: "After you close a pinned tab that went to another page, like a new chat.", comment: "Explanation under “Offer to pin the page you moved to” in Settings › Tabs."),
+                              detail: String(localized: "After you close a pinned tab that went to another page.", comment: "Explanation under “Offer to pin the page you moved to” in Settings › Tabs."),
                               control: pinOfferToggle))
 
         // Spaces
@@ -2722,8 +2722,8 @@ final class SettingsView: NSView, NSTextFieldDelegate {
             resetAll.frame = NSRect(x: pad + contentWidth - Tokens.Page.groupPad - rw, y: y, width: rw, height: rh)
             place(resetAll)
             // Wraps on a narrow page rather than losing its end, its first line beside Reset All.
-            let hint = explanation(String(localized: "Click a shortcut to change or remove it. To find one, type its name or keys in Find a setting.",
-                                           comment: "Hint at the top of Settings › Shortcuts. “Find a setting” is the search field's placeholder."))
+            let hint = explanation(String(localized: "Click a shortcut to change or remove it.",
+                                           comment: "Hint at the top of Settings › Shortcuts."))
             let hintWidth = max(0, contentWidth - Tokens.Page.groupPad * 2 - (resetAll.isHidden ? 0 : rw + Tokens.Space.x4)) + Label.inset * 2
             let hintHeight = ceil(hint.sizeThatFits(NSSize(width: hintWidth, height: 400)).height)
             let lineHeight = ceil(hint.font.map { NSLayoutManager().defaultLineHeight(for: $0) } ?? hintHeight)
