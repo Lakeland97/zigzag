@@ -73,6 +73,9 @@ final class FormSheet: NSView, NSTextFieldDelegate {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+    /// Answered and fading away: clicks go through to what's under it at once.
+    private var isLeaving = false
+    override func hitTest(_ point: NSPoint) -> NSView? { isLeaving ? nil : super.hitTest(point) }
     override var isFlipped: Bool { true }
 
     /// Shows the form over `host`. `canConfirm` is asked whenever something in it changes (call `revalidate` after
@@ -82,12 +85,14 @@ final class FormSheet: NSView, NSTextFieldDelegate {
                      destructive: Bool = false, canConfirm: @escaping () -> Bool = { true }, completion: @escaping (Bool) -> Void) -> FormSheet {
         let sheet = FormSheet(title: title, symbol: symbol, message: message, rows: rows, confirmTitle: confirmTitle, destructive: destructive,
                               canConfirm: canConfirm, completion: completion)
+        // One sheet at a time: What's New, which only informs, makes way.
+        WhatsNewSheet.makeRoom(in: host.window)
         sheet.frame = host.bounds
         sheet.autoresizingMask = [.width, .height]
         host.addSubview(sheet)
         sheet.updateBackdrop()
         sheet.alphaValue = 0
-        Tokens.Motion.animate(Tokens.Motion.entering, evenFromKeyboard: true, { sheet.animator().alphaValue = 1 })
+        Tokens.Motion.fadeBackdrop(sheet, entering: true)
         sheet.layoutSubtreeIfNeeded()
         sheet.panel.growsFrom = Tokens.Motion.sheetOrigin
         sheet.panel.present(arrival: .pop)
@@ -188,7 +193,8 @@ final class FormSheet: NSView, NSTextFieldDelegate {
         let completion = self.completion
         self.completion = { _ in }
         panel.dismiss()
-        Tokens.Motion.animate(Tokens.Motion.leaving, evenFromKeyboard: true, { self.animator().alphaValue = 0 }, completion: { self.removeFromSuperview() })
+        isLeaving = true
+        Tokens.Motion.fadeBackdrop(self, entering: false) { self.removeFromSuperview() }
         completion(confirmed)
         if !confirmed { onCancel?() }
     }

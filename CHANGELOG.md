@@ -5,6 +5,12 @@ Every release of Zigzag, newest first. The app shows the notes for the version y
 
 ## [Unreleased]
 
+### Fixed
+- Zigzag no longer asks you to add it in 1Password while 1Password works with it. The note now shows only when 1Password really turns Zigzag away, and not again once 1Password has connected that session.
+- The window's buttons at the top left stay put when you switch tabs or a page loads. The green one could jump up and to the left for a moment.
+### New
+- The address bar above the page shows the page's whole address, the site's name dark and the rest gray, as there's room for it; pop-up windows and Zigzag Mini do the same when they're wide enough. The sidebar keeps the site's name alone. A long address loses the end of its path first, never the site's name.
+
 ## [0.9.1] - 2026-11-15
 
 Protection for your IP address from WebRTC, a smarter Clear that keeps split views whole and shows what it will close, favorites that show their state, the space's name kept in view, a long list of security hardening, and text and controls aligned to the pixel across the app.
@@ -12,6 +18,10 @@ Protection for your IP address from WebRTC, a smarter Clear that keeps split vie
 ### New
 - Protect IP address from WebRTC, in Settings › Privacy, keeps sites from learning your real IP address through WebRTC while you use a proxy or VPN. When it's on, WebRTC is off except on sites you allow: Site Controls › Permissions has a WebRTC row on every site, and a site that starts a call without it asks to Allow and Reload. Calls on Meet, Zoom, Teams or Discord work once the site is allowed. It's off unless you turn it on, and a private window follows it without remembering what you allow there. ([#229](https://github.com/ZigaoWang/zigzag/issues/229))
 - Right-clicking selected text that's a web address but not a link, like example.com in a post, offers Open and Open in New Tab, as Chrome's Go to does. Thanks to [Lakeland97](https://github.com/Lakeland97). ([#234](https://github.com/ZigaoWang/zigzag/issues/234))
+- Disable Images and Disable Styles, under ⋯ among the developer tools, in View › Developer and the command bar, show how a page in Developer Mode holds up without its pictures or without its CSS. Like the other choices they're that tab's alone, except that a tab a page opens shares Disable Images with it: turned on or off in either, it is in both, and ⋯ shows it in each. ([#141](https://github.com/ZigaoWang/zigzag/issues/141))
+- A video playing in the page you're on floats over everything in Picture in Picture when you switch to another app or desktop, a full screen app's too. Come back to its page and it goes back in; come back to another tab and it floats on until you go to its tab. Picture in Picture you started yourself stays as it is. Settings › Tabs › Picture in picture when you leave Zigzag turns it off. Thanks to [alextend](https://github.com/alextend). ([#238](https://github.com/ZigaoWang/zigzag/issues/238))
+- Groups of tabs: pick some tabs (⌘-click or ⇧-click their rows) and choose Group Tabs, or New Group with Tab on one tab, and they become a folder in the Tabs part of the sidebar, as pinned tabs have. It opens and closes with a click, renames from its menu, and keeps its tabs together: drag tabs onto it or among its tabs to put them in, drag them out to take them out, or drag the whole group somewhere else. Its menu also has Ungroup, Move to Space and Close Group, which closes its tabs, with Undo. Groups come back when you open Zigzag again, Clear keeps or closes a group as one, split views work inside one, and a group with no tabs left goes. Thanks to [Lakeland97](https://github.com/Lakeland97). ([#209](https://github.com/ZigaoWang/zigzag/issues/209))
+- A new tab comes into the sidebar the way a closed one leaves it: the tabs below glide down to make room and its row opens as it fades in, whether you opened it with the keyboard, the pointer or a link. The same goes for a tab moved in and for a folder or group opening. With Reduce Motion it only fades in.
 
 ### Fixed
 - Text across Zigzag sits exactly in the middle of its buttons, fields and rows, measured by its capital letters, with icons lined up beside it and even spacing: the sidebar, panels, prompts, toasts, Settings, History and the other windows. Some of it sat up to a point low.
@@ -24,7 +34,7 @@ Protection for your IP address from WebRTC, a smarter Clear that keeps split vie
 - The Apple Store's checkout shows one Apple Pay mark in its payment options, instead of the Apple Pay logo drawn over the Apple logo and Pay. ([#235](https://github.com/ZigaoWang/zigzag/issues/235))
 - Security hardening for pages, pop-ups, links, downloads, the address and secure connections.
 - The space's name stays at the top of the sidebar while you scroll the pinned tabs and tabs under it, as Arc keeps it, with the fine line under it while the list is scrolled. Rows pass under it rather than showing through.
-- Favorites show which are open, as tabs do: a favorite whose page isn't loaded is faded back until you point at it, one that's open has its fine edge, and the one you're on has the selected tab's card.
+- Favorites show which are open, as tabs do: one whose page is open is a brighter tile with a fine edge, one that isn't stays flat, with its icon in full color either way, and the one you're on has the selected tab's card.
 - A favorite that moved on from its page shows it, as a pinned tab does with Original / Current page: the tile shows the icon of the page it's on now with the favorite's own icon small on its corner, pointing at it names both, and Back to Favorite's Page in its menu takes it back, in a split favorite too.
 - A tab's or pinned tab's title no longer moves or gets cut shorter when the pointer brings up its close or back button: the button shows over the title's faded end.
 - Open in from Zigzag Mini, into a window that had just opened with its command bar, closes the bar instead of leaving it over the page.
@@ -47,6 +57,32 @@ Protection for your IP address from WebRTC, a smarter Clear that keeps split vie
 - An extension's popup opened from the sidebar stays inside the window, instead of hanging past its left edge.
 - In onboarding, the note that no other browsers were found sits in the middle of its card.
 - Install as App's name field shows it's ready for typing in light mode too, as it does in dark. In the sheet for adding an extension, a site's name no longer breaks across two lines at a hyphen.
+- Show All Tabs in a private window no longer takes a new picture of every tab loaded in the background each time it opens, on a Mac in light mode.
+- Site Controls, opened under the address with the sidebar on the right, stays under the address when the window is resized, instead of being cut off at the window's edge.
+- An extension's popup from its button pinned in the address stays under the button when the popup changes size after the address moved.
+- The warning for a site whose certificate it signed itself, like a router's reached at 192.168.1.1, says the certificate is self-signed instead of being for a different address. A certificate made out to an IP address counts for that address.
+- Two sentences joined in English keep the space between them when the first ends in a closing quotation mark.
+- A pop-up from a private window keeps the WebRTC choice made in the tab that opened it after that tab is closed.
+- Pages marked with an old language code, like iw for Hebrew or in for Indonesian, are offered translation from the right language.
+- In dark mode, buttons filled with the space's color, like Allow on a site's question and Done in What's New, have dark text that reads on them, instead of white text that was hard to read.
+- The offer to translate a page no longer shows over History or Settings.
+- A site's question and Save password? take turns at the top of the page instead of showing one over the other, and a toast that comes while one is up shows under it. What's New closes when you switch tabs, and makes way for Install as App and other sheets instead of staying under them.
+- Simplified Chinese reads more naturally across Settings, Site Controls and onboarding.
+- Calendar and Drive in the welcome window, and the Laptop, Desktop and Full HD page sizes in the developer tools, are named in your language.
+- A tab showing an error page, like a certificate warning, shows a warning icon instead of the icon of the page before it.
+- Buttons that can't be used yet, like Use Default Colors in the space editor, keep their text readable.
+- History lists a PDF by its file name instead of its site.
+- A PDF at an address without a file name, like a download link, is called by the name its site gave it, in its tab and in History, or by the site when it gave none, instead of the last part of the address.
+- A favorite or pinned tab made while its page was still loading, like en.wikipedia.org on its way to its Main Page, no longer shows as moved on from its page once it gets there. A favorite that did move on shows its own icon until the new page's icon is known, instead of a placeholder.
+- Sign-in fields no longer show the key icon when Fill saved passwords is off in Settings › Passwords, or when a password manager extension like Bitwarden or 1Password is on, where it sat over the extension's own icon. ([#236](https://github.com/ZigaoWang/zigzag/issues/236))
+- Space icons at the bottom of the sidebar follow Settings › Appearance › Sidebar size at every size, a step bigger than before at Small and Medium, and keep their size when you have many spaces: the row scrolls instead of shrinking them. Thanks to [alextend](https://github.com/alextend). ([#238](https://github.com/ZigaoWang/zigzag/issues/238))
+- DeepSeek no longer asks you to check your browser extensions in a tab that opened before ad blocking had its lists, or beside an ad blocker extension. Its blocked telemetry now always gets an empty answer while blocking is on, so nothing is sent. ([#208](https://github.com/ZigaoWang/zigzag/issues/208))
+- Backspace no longer takes a page back when no text field has the focus, as in Safari and Chrome. It still removes the rows you've picked in the sidebar.
+- Panels, menus, toasts, sheets and a site's dialogs come and go with one calm, consistent motion. A page's dialog fades in and out like the other sheets, the dimming behind a sheet or a peek fades with it, a tab's preview and the password menu grow out of what they belong to, a click right after closing one reaches what's under it, and Reduce Motion is respected.
+- History starts a new heading when the time of day changes, so pages from the evening are no longer listed under "Yesterday morning" after a long day of browsing.
+- Downie and other extensions that add their right-click menu items once, when they're installed, keep them after you quit and reopen Zigzag, as in Chrome. Clicking Downie's button sends the page to Downie, asking first, instead of opening the extension's settings, and the question comes from the site you're on, so Always Open works there. ([#239](https://github.com/ZigaoWang/zigzag/issues/239))
+- Protect IP address from WebRTC asks a site about calls only once: Don't Allow is kept as the site's Block, and a question you put away isn't asked again in any tab until Zigzag reopens. The switch stays in Site Controls.
+- Swiping back or forward on a page shows a plain gray backdrop beside it, in light or dark, with a soft shadow along the page's edge, instead of a strip of the page's own colors that could show odd bands. The round arrow stays inside the page's card, never hanging over the sidebar, the next pane or the window's edge.
 
 - A one-page PDF stays in the middle with Two Pages on, instead of sitting alone on the right like a book's first page.
 - A strong password from Use Strong Password stays in Passwords until a newer one for the same account takes its place, however long the site takes to confirm it. Unconfirmed ones are no longer deleted after two weeks.

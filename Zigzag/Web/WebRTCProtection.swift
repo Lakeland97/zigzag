@@ -43,11 +43,14 @@ final class WebRTCProtection: NSObject, WKScriptMessageHandler {
 
     /// Whether the page at `url` may use WebRTC in `tab`. A page with no site to keep a choice for (about:blank,
     /// file:, data:) follows the setting.
-    static func allows(_ url: URL?, in tab: Tab?) -> Bool {
+    static func allows(_ url: URL?, in tab: Tab?) -> Bool { allows(url, here: tab?.webRTCHere) }
+
+    /// The same with a private tab's own choices given (`Tab.webRTCHere`), as a pop-up keeps its opener's.
+    static func allows(_ url: URL?, here choices: [String: Bool]?) -> Bool {
         guard isAvailable else { return true }
         let origin = SiteOrigin.of(url)
         return allows(protectionOn: isOn, kept: origin.flatMap(SitePermissions.webRTC(origin:)),
-                      here: origin.flatMap { tab?.webRTCHere[$0] })
+                      here: origin.flatMap { choices?[$0] })
     }
 
     /// What Site Controls shows for the site in `tab`: Allow or Block, never Ask, since nothing asks first.
@@ -75,19 +78,12 @@ final class WebRTCProtection: NSObject, WKScriptMessageHandler {
     }
 
     /// Sets the web view's switch for the page it's going to. Each tab's web view has its own preferences
-    /// (`isolate`), so one page's choice never reaches another's.
-    static func apply(to webView: WKWebView, for url: URL?, in tab: Tab?) {
-        guard isAvailable else { return }
-        let preferences = webView.configuration.preferences
-        let wanted = allows(url, in: tab)
-        if (preferences.value(forKey: preferenceKey) as? Bool) != wanted { preferences.setValue(wanted, forKey: preferenceKey) }
-    }
+    /// (`WebKitSetup.separatePreferences`), so one page's choice never reaches another's.
+    static func apply(to webView: WKWebView, for url: URL?, in tab: Tab?) { apply(to: webView, for: url, here: tab?.webRTCHere) }
 
-    /// A page's new window (a tab, or a pop-up window) comes with its opener's preferences, the same object: it gets
-    /// a copy, so the switch set for one never changes the other.
-    static func isolate(_ configuration: WKWebViewConfiguration) {
-        guard isAvailable, let copy = configuration.preferences.copy() as? WKPreferences else { return }
-        configuration.preferences = copy
+    static func apply(to webView: WKWebView, for url: URL?, here choices: [String: Bool]?) {
+        guard isAvailable else { return }
+        WebKitSetup.setIfAvailable(allows(url, here: choices), key: preferenceKey, in: webView.configuration.preferences)
     }
 
     // MARK: Telling when a page tries
@@ -159,7 +155,7 @@ final class WebRTCProtection: NSObject, WKScriptMessageHandler {
         let webView = popup.webView
         guard SiteOrigin.of(webView.url) == origin else { return true }
         Diagnostics.note("WebRTC", site: SiteOrigin.label(origin), "allowed in a pop-up, reloaded", isPrivate: tab.isPrivate)
-        apply(to: webView, for: webView.url, in: tab)
+        apply(to: webView, for: webView.url, here: popup.webRTCChoices)
         webView.reload()
         return true
     }
@@ -167,7 +163,10 @@ final class WebRTCProtection: NSObject, WKScriptMessageHandler {
     /// Asks about the page at `here`, in `tab`'s window: the origin you allowed, or nil.
     private static func ask(for here: URL?, in tab: Tab, bringingForward: Bool = false) async -> String? {
         guard isAvailable, !allows(here, in: tab), let origin = SiteOrigin.of(here),
-              tab.permissionAnswers.answer(key: origin, kind: kind) == nil else { return nil }
+              tab.permissionAnswers.answer(key: origin, kind: kind) == nil,
+              // A site you've chosen for (Block in Site Controls, or Don't Allow here) is never asked again; nor one
+              // whose question you put away this session, in any tab: the switch is in Site Controls from then on.
+              SitePermissions.webRTC(origin: origin) == nil, !putAway.contains(origin) else { return nil }
         // Asked once a page, whatever the answer: a site trying again and again never asks again.
         tab.permissionAnswers.note(false, key: origin, kind: kind)
         SitePermissions.noteAsked(.webRTC, origin: origin, isPrivate: tab.isPrivate)
@@ -177,8 +176,18 @@ final class WebRTCProtection: NSObject, WKScriptMessageHandler {
         let answer = await PermissionPrompt.ask(host: SitePermissions.askerName(origin), origin: origin, what: "WebRTC", symbol: "phone.fill", in: controller, tab: tab,
                                                 title: String(localized: "Use WebRTC for calls", comment: "A site's permission question, without its question mark: WebRTC is off for the site (Settings › Privacy › Protect IP address from WebRTC), and it tried to start a call. WebRTC is a name: keep it as it is."),
                                                 allowTitle: String(localized: "Allow and Reload", comment: "Button on the question to use WebRTC for calls on a site: allows it for the site and reloads the page."))
-        return answer == .allow || answer == .always ? origin : nil
+        switch answer {
+        case .allow, .always: return origin
+        // Don't Allow is the site's choice: kept, as Block in Site Controls would be.
+        case .deny: keep(false, origin: origin, in: tab)
+        // Put away (×, Esc, the tab went on): not asked again until Zigzag next opens.
+        case .notNow, .alternate: putAway.insert(origin)
+        }
+        return nil
     }
+
+    /// Sites whose question was put away without an answer, this session.
+    private static var putAway: Set<String> = []
 
     private static let kind = "webRTC"
 

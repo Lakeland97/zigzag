@@ -13,6 +13,41 @@ struct HistoryStoreTests {
         #expect(HistoryStore.normalizedHost(URL(string: "https://WWW.Example.com/a")!) == "example.com")
     }
 
+    @Test func aPDFIsListedByItsFileName() throws {
+        // A PDF from the web has no title of its own: History calls it by its file's name, not its site.
+        let pdf = try #require(URL(string: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"))
+        #expect(HistoryStore.shownTitle("", url: pdf) == "dummy.pdf")
+        let spaced = try #require(URL(string: "https://example.com/files/Shanghai%20Guide.PDF"))
+        #expect(HistoryStore.shownTitle("", url: spaced) == "Shanghai Guide.PDF")
+        #expect(HistoryStore.shownTitle("", url: URL(fileURLWithPath: "/Users/me/notes.html")) == "notes.html")
+        // A title it has wins; a page with neither goes by its site.
+        #expect(HistoryStore.shownTitle("Dummy PDF file", url: pdf) == "Dummy PDF file")
+        #expect(HistoryStore.shownTitle("", url: try #require(URL(string: "https://www.w3.org/"))) == "www.w3.org")
+        #expect(HistoryStore.fileName(of: try #require(URL(string: "https://example.com/about"))) == nil)
+    }
+
+    /// A PDF at an address without a .pdf name goes by the name its server gave it, else its site, in its tab and
+    /// in History alike: never "download".
+    @Test func aPDFIsNamedByWhatItCameWith() throws {
+        let download = try #require(URL(string: "https://example.com/download?id=5"))
+        func response(_ disposition: String?) -> HTTPURLResponse? {
+            HTTPURLResponse(url: download, statusCode: 200, httpVersion: "HTTP/1.1",
+                            headerFields: ["Content-Type": "application/pdf"].merging(disposition.map { ["Content-Disposition": $0] } ?? [:]) { $1 })
+        }
+        let named = try #require(response("inline; filename=\"Quarterly Report.pdf\""))
+        #expect(HistoryStore.suggestedName(of: named) == "Quarterly Report.pdf")
+        #expect(HistoryStore.pdfName(of: download, suggested: HistoryStore.suggestedName(of: named)) == "Quarterly Report.pdf")
+        // No name given: its site, not the last part of the address.
+        let bare = try #require(response(nil))
+        #expect(HistoryStore.suggestedName(of: bare) == nil)
+        #expect(HistoryStore.pdfName(of: download, suggested: nil) == "example.com")
+        #expect(HistoryStore.suggestedName(of: try #require(response("inline"))) == nil)
+        // An address with a .pdf name keeps it when the server says nothing more.
+        let file = try #require(URL(string: "https://example.com/files/Shanghai%20Guide.pdf"))
+        #expect(HistoryStore.pdfName(of: file, suggested: nil) == "Shanghai Guide.pdf")
+        #expect(HistoryStore.pdfName(of: file, suggested: "guide-2026.pdf") == "guide-2026.pdf")
+    }
+
     @Test func startsAfreshFromADamagedFile() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("zigzag-history-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

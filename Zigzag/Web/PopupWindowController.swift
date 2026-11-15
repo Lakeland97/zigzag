@@ -36,6 +36,14 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
     /// The tab whose page opened it: WebRTC's question for its page is asked in that tab's window, and a private
     /// window's choices made there hold for it too (`WebRTCProtection`).
     private(set) weak var opener: Tab?
+    /// The opener's choices for sites (a private window's, made for that tab alone), as they were last seen: they
+    /// still hold once that tab has closed.
+    private var openerWebRTCChoices: [String: Bool] = [:]
+    /// What WebRTC follows here: the opener's choices while it's open, the ones kept from it after.
+    var webRTCChoices: [String: Bool] {
+        if let opener { openerWebRTCChoices = opener.webRTCHere }
+        return openerWebRTCChoices
+    }
     /// The strip at the top with the traffic lights and whose page it is.
     static let headerHeight = Tokens.Space.x8 + Tokens.Space.x1
     private var lastCrash: Date?
@@ -75,10 +83,11 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
     }
 
     private init(configuration: WKWebViewConfiguration, pageSize: NSSize, origin: NSPoint?, parent: NSWindow?, opener: Tab? = nil) {
-        // Its own WebRTC switch, never its opener's (`WebRTCProtection`), set for each page it goes to.
-        WebRTCProtection.isolate(configuration)
+        // Preferences of its own, never its opener's: its WebRTC switch is set for each page it goes to.
+        WebKitSetup.separatePreferences(of: configuration)
         webView = WKWebView(frame: .zero, configuration: configuration)
         self.opener = opener
+        openerWebRTCChoices = opener?.webRTCHere ?? [:]
         let placed = Self.frame(for: NSSize(width: max(320, pageSize.width), height: max(240, pageSize.height) + Self.headerHeight), origin: origin, parent: parent)
         let size = placed.size
         let origin = placed.origin
@@ -277,7 +286,7 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
         if navigationAction.request.url?.scheme?.lowercased() == HistoryPage.scheme { return .cancel }
         // WebRTC on or off for where it's going, before its page is made, as in a tab.
         if navigationAction.targetFrame?.isMainFrame == true, let url = navigationAction.request.url, !ExternalLinks.isExternal(url) {
-            WebRTCProtection.apply(to: webView, for: url, in: opener)
+            WebRTCProtection.apply(to: webView, for: url, here: webRTCChoices)
         }
         if let url = navigationAction.request.url, ExternalLinks.isExternal(url), url.scheme?.lowercased() != "file" {
             ExternalLinks.open(url, isMainFrame: navigationAction.targetFrame?.isMainFrame ?? true,
@@ -326,7 +335,7 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
         if policy == .cancel, navigationResponse.isForMainFrame { refusedDownload() }
         // WebRTC follows the page that's to show, where a redirect took it.
         if navigationResponse.isForMainFrame {
-            WebRTCProtection.apply(to: webView, for: policy == .allow ? response.url : webView.url, in: opener)
+            WebRTCProtection.apply(to: webView, for: policy == .allow ? response.url : webView.url, here: webRTCChoices)
         }
         return policy
     }
@@ -368,17 +377,11 @@ final class PopupWindowController: NSWindowController, NSWindowDelegate, WKUIDel
 private final class PopupWindow: NSWindow {
     var commandHandler: ((NSEvent) -> Bool)?
     private var buttonSpacing: CGFloat?
-    private var isPlacing = false
 
     override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
         super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
         // AppKit puts the buttons back whenever it relays the title bar; they go back where they belong.
-        let views = [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].compactMap { standardWindowButton($0) }
-            + [standardWindowButton(.closeButton)?.superview?.superview].compactMap { $0 }
-        for view in views {
-            view.postsFrameChangedNotifications = true
-            NotificationCenter.default.addObserver(self, selector: #selector(buttonsMoved), name: NSView.frameDidChangeNotification, object: view)
-        }
+        TrafficLightKeeper.install(in: self) { [weak self] in self?.placeTrafficLights() }
     }
 
     /// Centered on the header, as far in from the left as the browser window's.
@@ -388,23 +391,17 @@ private final class PopupWindow: NSWindow {
         buttonSpacing = placeTrafficLights(at: origin, spacing: buttonSpacing)
     }
 
-    @objc private func buttonsMoved() {
-        guard !isPlacing else { return }
-        isPlacing = true
-        placeTrafficLights()
-        isPlacing = false
-        DispatchQueue.main.async { [weak self] in self?.placeTrafficLights() }
-    }
-
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown, commandHandler?(event) == true { return }
         super.sendEvent(event)
     }
 }
 
-/// The popup's top strip: traffic lights on the left, the site's full host in the middle.
+/// The popup's top strip: traffic lights on the left, the page's whole address in the middle (`FullAddress`), its
+/// site alone when there isn't room for more.
 final class PopupHeaderView: NSView {
     private let label = Label("", font: Tokens.Font.body(.medium), color: Tokens.Color.textPrimary)
+    private var fullAddress: FullAddress.Parts?
     private let lock = NSImageView()
     /// Room kept clear at the right end for buttons laid over the strip (Zigzag Mini's Open in Zigzag).
     var trailingInset: CGFloat = 0 { didSet { needsLayout = true } }
@@ -426,6 +423,7 @@ final class PopupHeaderView: NSView {
 
     func show(url: URL?, secure: Bool) {
         // An extension's own page: whose it is, not an address no one could read.
+        fullAddress = nil
         if #available(macOS 15.4, *), let ext = ExtensionCenter.webExtension(ofPage: url) {
             label.stringValue = ext.displayName ?? ""
             lock.image = Tokens.Symbol.image("puzzlepiece.extension", size: Tokens.Symbol.inline)
@@ -437,6 +435,7 @@ final class PopupHeaderView: NSView {
         // No site at all (data:): said so, and no lock, which would vouch for a site that isn't there.
         let site = Self.site(of: url)
         label.stringValue = site ?? AddressView.name(of: url)
+        fullAddress = site == nil ? nil : FullAddress.parts(of: url)
         lock.isHidden = site == nil
         // The open padlock the address bar and Site Controls mark a page that isn't secure with.
         lock.image = Tokens.Symbol.image(secure ? "lock" : SitePanel.notSecureSymbol, size: Tokens.Symbol.inline)
@@ -458,15 +457,28 @@ final class PopupHeaderView: NSView {
 
     override func layout() {
         super.layout()
-        let textSize = NSSize(width: label.textWidth, height: label.lineHeight)
         // Without its lock, the name alone is centered.
         let lockWidth = lock.isHidden ? 0 : Tokens.Space.x3
         let gap = lock.isHidden ? 0 : Tokens.Space.x1
+        let leading = Tokens.Space.x16 + Tokens.Space.x4
+        var textWidth = label.textWidth
+        if let fullAddress {
+            // The whole address when it fits; cut at its end when the site and the start of the rest do; else the
+            // site alone, centered as it is.
+            let font = label.font ?? Tokens.Font.body(.medium)
+            func measure(_ text: String) -> CGFloat { ceil((text as NSString).size(withAttributes: [.font: font]).width) }
+            let most = max(0, bounds.width - leading - lockWidth - gap - Tokens.Space.x4 - trailingInset)
+            let pad = Tokens.Space.x2
+            textWidth = FullAddress.shown(fullAddress, room: most - pad, measure: measure) == .host ? measure(fullAddress.host) + pad
+                : min(measure(fullAddress.whole) + pad, most)
+        }
+        let textSize = NSSize(width: textWidth, height: label.lineHeight)
         let total = lockWidth + gap + ceil(textSize.width)
-        let x = max(Tokens.Space.x16 + Tokens.Space.x4, (bounds.width - total) / 2)
+        let x = max(leading, (bounds.width - total) / 2)
         let h = ceil(textSize.height)
         lock.frame = NSRect(x: x, y: 0, width: lockWidth, height: bounds.height)
         label.frame = NSRect(x: lock.frame.maxX + gap, y: (bounds.height - h) / 2, width: max(0, min(ceil(textSize.width), bounds.width - x - Tokens.Space.x4 - trailingInset)), height: h)
+        if let fullAddress { FullAddress.show(fullAddress, in: label, room: label.frame.width - Label.inset * 2) }
     }
 }
 

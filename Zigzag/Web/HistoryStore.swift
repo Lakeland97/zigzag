@@ -187,6 +187,35 @@ final class HistoryStore {
         }
     }
 
+    /// What a visited page is called where History lists it: its title, or for a file on your Mac or a PDF from the
+    /// web, which have no title of their own, its file's name; failing both, its site.
+    nonisolated static func shownTitle(_ title: String, url: URL) -> String {
+        if !title.isEmpty { return title }
+        return fileName(of: url) ?? url.host() ?? url.absoluteString
+    }
+
+    /// A file's name, for a page that's a file (one on your Mac, a PDF from the web); nil for any other page.
+    nonisolated static func fileName(of url: URL) -> String? {
+        guard url.isFileURL || url.pathExtension.lowercased() == "pdf" else { return nil }
+        let name = url.lastPathComponent
+        return name.isEmpty || name == "/" ? nil : name
+    }
+
+    /// What a PDF from the web is called, having no title of its own: the name its server gave it
+    /// (`Content-Disposition`'s filename, as `suggested`), else its file's name where the address has one
+    /// (`fileName(of:)`), else its site. A PDF at /download?id=5 is never called "download".
+    nonisolated static func pdfName(of url: URL, suggested: String?) -> String {
+        if let suggested = suggested?.trimmingCharacters(in: .whitespacesAndNewlines), !suggested.isEmpty { return suggested }
+        return fileName(of: url) ?? url.host() ?? ""
+    }
+
+    /// The file name a response's `Content-Disposition` gives, when it gives one.
+    nonisolated static func suggestedName(of response: URLResponse) -> String? {
+        guard let disposition = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition"),
+              disposition.range(of: "filename", options: .caseInsensitive) != nil else { return nil }
+        return response.suggestedFilename
+    }
+
     nonisolated static func normalizedHost(_ url: URL) -> String {
         let host = url.host()?.lowercased() ?? ""
         return host.withoutWWW

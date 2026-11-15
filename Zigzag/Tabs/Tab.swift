@@ -68,6 +68,9 @@ final class Tab: NSObject {
     var parentID: UUID?
     /// The tabs under this one are folded away in the sidebar.
     var isCollapsed = false
+    /// The group of tabs it's in (#209); nil for none. Pinned pages and favorites never have one. TabManager keeps it
+    /// right (see TabGroups).
+    var groupID: UUID?
 
     private(set) var url: URL? { didSet { refreshDevelopment() } }
     private(set) var title: String
@@ -117,6 +120,8 @@ final class Tab: NSObject {
     private var pageIsGet = true
     /// The main frame's last response was a PDF, at this address: known before the page can be asked.
     private var pdfResponseURL: URL?
+    /// The name that response gave the PDF (`Content-Disposition`), if it gave one.
+    private var pdfResponseName: String?
     /// Settings, over the page while the tab is at zigzag://settings; nil for any other page.
     private(set) var settingsView: SettingsView?
     /// The profile Settings was asked to show before this tab had its page: shown once it has.
@@ -338,6 +343,19 @@ final class Tab: NSObject {
     /// calendar.google.com) counts as the pinned page, so it's never "moved on" before you've done anything.
     var landingUntil: Date?
     var pinnedLanding: URL?
+
+    /// Pinned or made a favorite while its page is still on its way: where that load ends up (a redirect, as
+    /// en.wikipedia.org to its Main Page) counts as the saved page too, as when a pinned page is opened. However long
+    /// the load takes, then the usual while after it, for a page that sends itself on.
+    func settleLandingIfLoading() {
+        guard isLoading else { return }
+        landingUntil = .distantFuture
+    }
+
+    /// Where the page is, as it lands, while a pinned page is settling in (`landingUntil`).
+    private func noteLanding(_ url: URL?) {
+        if let until = landingUntil, Date() < until, let url { pinnedLanding = url }
+    }
     var customTitle: String? { didSet { if oldValue != customTitle { changed.send(.title); changed.send(.renamed) } } }
     /// An icon you gave the tab (an SF Symbol's name, or an emoji), drawn instead of its site's. The page of a pinned
     /// tab or a favorite shows that one's icon instead (`chosenIcon`).
@@ -364,7 +382,14 @@ final class Tab: NSObject {
         // Its choices come into effect with it, and are lifted with it.
         if !developer.isUnchanged { applyDeveloperState(); applyDeveloperStateToPage() }
         changed.send(.developer)
-        if settingsChanged, developer.needsReload(from: DeveloperState()) { reload() }
+        if settingsChanged, developer.needsReload(from: DeveloperState()) { reloadForDeveloperChoices() }
+    }
+
+    /// Loads the page again for a change to what the developer tools chose for it, unless it waits for the rule
+    /// that keeps its images off (`PageImages.defersReload`), which loads it again once the rule is in.
+    private func reloadForDeveloperChoices() {
+        if let webView, PageImages.defersReload(of: webView) { return }
+        reload()
     }
 
     /// What you chose for this tab with the developer tools (`DeveloperState`). Read through `developerInEffect`.
@@ -378,8 +403,20 @@ final class Tab: NSObject {
             applyDeveloperState()
             applyDeveloperStateToPage()
             // What a page is told and allowed as it loads shows once it has loaded again.
-            if isDevelopment, developer.needsReload(from: oldValue) { reload() }
+            if isDevelopment, developer.needsReload(from: oldValue) { reloadForDeveloperChoices() }
             changed.send(.developer)
+            if developer.imagesOff != oldValue.imagesOff { shareImagesChoice() }
+        }
+    }
+
+    /// Disable Images is one choice for a page and the tabs it opened, or that opened it: they share the rule that
+    /// keeps their images off (`PageImages`). Turned on or off here, it is in each of them too, and their pages load
+    /// again as this one does.
+    private func shareImagesChoice() {
+        guard let webView else { return }
+        for other in PageImages.sharing(with: webView) {
+            guard let tab = (other as? BrowserWebView)?.owner, tab !== self, tab.developer.imagesOff != developer.imagesOff else { continue }
+            tab.developer.imagesOff = developer.imagesOff
         }
     }
 
@@ -430,9 +467,7 @@ final class Tab: NSObject {
         if HistoryPage.isHistory(url) { return String(localized: "History", comment: "The name of the tab showing Zigzag's History.") }
         if !title.isEmpty { return title }
         // A file on your Mac, or a PDF from the web, is called by its name: it has no title of its own.
-        if let url, url.isFileURL || url.pathExtension.lowercased() == "pdf", !url.lastPathComponent.isEmpty, url.lastPathComponent != "/" {
-            return url.lastPathComponent
-        }
+        if let url, let name = HistoryStore.fileName(of: url) { return name }
         return url?.host() ?? String(localized: "New Tab", comment: "The name of a tab with no page yet.")
     }
     var isBlank: Bool { url == nil }
@@ -451,10 +486,11 @@ final class Tab: NSObject {
         let extensionConfiguration = fromWebKit ? nil : Self.extensionConfiguration(for: url, in: profile)
         let configuration = pendingConfiguration ?? extensionConfiguration ?? WebKitSetup.makeConfiguration(for: profile)
         pendingConfiguration = nil
-        // A page's new window would share its opener's WebRTC switch otherwise.
-        if fromWebKit { WebRTCProtection.isolate(configuration) }
+        // A page's new window would share its opener's preferences otherwise: its WebRTC switch, its styles.
+        if fromWebKit { WebKitSetup.separatePreferences(of: configuration) }
         if extensionConfiguration != nil {
             configuration.applicationNameForUserAgent = WebKitSetup.applicationNameForUserAgent
+            WebKitSetup.turnOffBackspaceNavigation(configuration.preferences)
         } else if !fromWebKit {
             WebKitSetup.configure(configuration, for: profile)
             WebNotifications.attach(to: configuration, isPrivate: privateStore != nil)
@@ -514,6 +550,13 @@ final class Tab: NSObject {
         observe(webView)
         DarkPages.attach(to: webView)
         PageFullScreen.attach(to: webView)
+        PageImages.join(webView)
+        // A page another opened shares its images rule: it starts with that page's Disable Images, so its menu says
+        // what its pages get (`shareImagesChoice`).
+        if fromWebKit, !developer.imagesOff,
+           PageImages.sharing(with: webView).contains(where: { ($0 as? BrowserWebView)?.owner?.developer.imagesOff == true }) {
+            developer.imagesOff = true
+        }
         // What you chose for this tab with the developer tools comes with a new web view, before its first page is
         // asked for: it's asked for as the browser chosen, and starts with the look chosen.
         if !developer.isUnchanged { applyDeveloperState() }
@@ -639,6 +682,8 @@ final class Tab: NSObject {
 
     private func tearDown(_ webView: BrowserWebView) {
         Autofill.shared.forget(webView)
+        // The pages it shared its rules with keep their images.
+        PageImages.set(false, in: webView)
         setPDFViewer(nil)
         if settingsView != nil {
             settingsView = nil
@@ -1062,6 +1107,8 @@ final class Tab: NSObject {
         // Settings likewise: the picture is of what covers the page, not the empty page under it.
         if let image = pdfViewer.flatMap({ $0.window != nil ? $0.snapshot() : nil }) ?? settingsView.flatMap({ $0.window != nil ? $0.snapshot() : nil }) {
             snapshot = image
+            // In the window's look, as what covers the page draws.
+            snapshotIsDark = webView.window?.effectiveAppearance.isDark
             if keep, !isPrivate { SnapshotStore.save(image, for: id) }
             changed.send(.snapshot)
             completion?()
@@ -1129,10 +1176,14 @@ final class Tab: NSObject {
         // A moment in the window first, for it to draw.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak webView] in
             guard let self, let webView, webView.window != nil else { letGo(); completion(); return }
+            // The look the page was drawn in, read while it's in the window: its own (Dark Pages sets one), or
+            // without one the window's, which it no longer has once let go.
+            let dark = webView.effectiveAppearance.isDark
             webView.takeSnapshot(with: config) { [weak self] image, _ in
                 letGo()
                 if let self, let image, !TabThumbnailView.isBlank(image) {
                     self.snapshot = image
+                    self.snapshotIsDark = dark
                     if !self.isPrivate { SnapshotStore.save(image, for: self.id) }
                     self.changed.send(.snapshot)
                 }
@@ -1153,7 +1204,13 @@ final class Tab: NSObject {
         takenDark.map { $0 != dark } ?? false
     }
 
-    func snapshotIsStale(dark: Bool) -> Bool { Self.pictureIsStale(takenDark: snapshotIsDark, dark: dark) }
+    /// Against the look the tab draws in now: a page its own (the app's light or dark, or Dark Pages'), whatever the
+    /// window's (a private window is always dark); Settings or the PDF viewer over it, the window's, `windowDark`.
+    func snapshotIsStale(windowDark: Bool) -> Bool {
+        let covered = pdfViewer != nil || settingsView != nil
+        let dark = covered ? windowDark : webView?.effectiveAppearance.isDark ?? windowDark
+        return Self.pictureIsStale(takenDark: snapshotIsDark, dark: dark)
+    }
 
     /// Saves the picture last taken in memory only, so it's there after a relaunch.
     func keepSnapshot() {
@@ -1173,7 +1230,9 @@ final class Tab: NSObject {
         // Zigzag's own pages (History, Settings) aren't visits, and neither is a page that failed to load.
         guard !isPrivate, url != lastRecorded, url != errorShownFor, !HistoryPage.isInternal(url) else { return }
         lastRecorded = url
-        profile.history.recordVisit(url: url, title: title, count: Self.visitCount(countsVisit: countsVisit))
+        // A PDF has no title of its own: it goes by the name it came with, as its tab does (`pdfName`).
+        let named = (title ?? "").isEmpty && pdfResponseURL == url ? pdfName(of: url) : title
+        profile.history.recordVisit(url: url, title: named, count: Self.visitCount(countsVisit: countsVisit))
     }
 
     /// What a page counts for in History's ranking: a load is a visit; an address the page changed itself, none.
@@ -1219,6 +1278,9 @@ final class Tab: NSObject {
                     self.isLoading = wv.isLoading
                     // Nothing on its way any more (a download, a load that stopped without a word).
                     if !wv.isLoading { self.isLeavingPage = false }
+                    // The load it was pinned during is over, however it ended: the usual while for a page that sends
+                    // itself on (`settleLandingIfLoading`).
+                    if !wv.isLoading, self.landingUntil == .distantFuture { self.landingUntil = Date().addingTimeInterval(8) }
                     self.changed.send(.loading)
                     // Back and Forward can bring a PDF back from memory without a finished load: check here too.
                     if !wv.isLoading { self.checkForPDF(wv) }
@@ -1288,6 +1350,15 @@ final class Tab: NSObject {
     /// The page last committed here: the site the tab's icon belongs to.
     private var committedURL: URL? { didSet { refreshDevelopment() } }
 
+    /// What a tab wears while an error page ("This Connection Isn't Private", "Can't find…") stands in for its page:
+    /// a warning, never the icon of the page that was there before, nor the site's own, as if it had loaded.
+    static let errorPageIcon = Tokens.Symbol.image("exclamationmark.triangle", size: Tokens.Symbol.row)
+
+    /// The icon a page wears straight away: the warning on an error page, else the one kept for its site.
+    static func immediateIcon(for url: URL, errorPage: Bool) -> NSImage? {
+        errorPage ? errorPageIcon : FaviconStore.shared.cachedIcon(for: url)
+    }
+
     /// Whether the icon stays as a new page commits: only on the same site (www. or not). The first page committed
     /// in a tab keeps the icon it was restored with.
     nonisolated static func keepsIcon(from previous: URL?, to committed: URL) -> Bool {
@@ -1303,6 +1374,12 @@ final class Tab: NSObject {
 
     fileprivate func refreshFavicon() {
         guard let webView, let pageURL = webView.url else { return }
+        // An error page has no icon of its own to look for; the warning stays.
+        if showsErrorPage {
+            favicon = Self.immediateIcon(for: pageURL, errorPage: true)
+            changed.send(.favicon)
+            return
+        }
         // Private tabs only use icons already saved from normal browsing; they never fetch or save one.
         if isPrivate || Self.isExtensionPage(pageURL) || HistoryPage.isInternal(pageURL) {
             favicon = FaviconStore.shared.cachedIcon(for: pageURL)
@@ -1314,7 +1391,7 @@ final class Tab: NSObject {
                 let links = ((try? answer.get()) as? [[String: String]]) ?? []
                 if let self, self.favicon != nil, let source = self.iconSource, source.page == pageURL, source.links == links { return }
                 FaviconStore.shared.resolve(pageURL: pageURL, links: links) { image in
-                    guard let self, let image, self.url?.host() == pageURL.host() else { return }
+                    guard let self, let image, self.url?.host() == pageURL.host(), !self.showsErrorPage else { return }
                     self.iconSource = (pageURL, links)
                     self.favicon = image
                     self.changed.send(.favicon)
@@ -1509,7 +1586,10 @@ extension Tab: WKNavigationDelegate {
         }
         let mime = (response.mimeType ?? "").lowercased()
         // A PDF on its way: Zigzag's viewer covers the page as soon as it commits, before WebKit's own shows.
-        if navigationResponse.isForMainFrame { pdfResponseURL = mime == "application/pdf" ? response.url : nil }
+        if navigationResponse.isForMainFrame {
+            pdfResponseURL = mime == "application/pdf" ? response.url : nil
+            pdfResponseName = mime == "application/pdf" ? HistoryStore.suggestedName(of: response) : nil
+        }
         let disposition = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition")
         let policy = downloads.decide(mimeType: mime, contentDisposition: disposition, canShowMIMEType: navigationResponse.canShowMIMEType,
                                       isMainFrame: navigationResponse.isForMainFrame)
@@ -1563,6 +1643,8 @@ extension Tab: WKNavigationDelegate {
         forgetPageErrors()
         // The new page is here: its address shows.
         addressWaitsForCommit = false
+        // Before the address shows: a pinned page landing where it was sent is never "moved on" in between.
+        noteLanding(webView.url)
         if webView.url != url { followAddress(of: webView) }
         // Answers to the last page's questions were for that page: this one asks again.
         permissionAnswers.forget()
@@ -1596,14 +1678,15 @@ extension Tab: WKNavigationDelegate {
         if let url = webView.url {
             // A new page from another site never wears the last one's icon, even where the address showed it before
             // it came (Zigzag's own loads): the site's own if it's known, otherwise the globe until the page offers one.
-            if !Self.keepsIcon(from: committedURL, to: url) {
+            // Nor does a page that came after an error page (Try Again) keep its warning.
+            if !Self.keepsIcon(from: committedURL, to: url) || showsErrorPage {
                 favicon = FaviconStore.shared.cachedIcon(for: url)
                 iconSource = nil
                 changed.send(.favicon)
             }
             committedURL = url
-            // What the developer tools put into a page itself (its outlines) goes into the new one, now that the
-            // tab knows whether this is a development page.
+            // How the developer tools have a page drawn (its styles, its outlines) goes to the new one, now that the
+            // tab knows whether this is a development page: never to the one it left while this was on its way.
             if !developer.isUnchanged { applyDeveloperStateToPage() }
             // A private window's zoom isn't saved for the site, so it lasts while you stay on that site in this tab.
             let host = HistoryStore.normalizedHost(url)
@@ -1614,6 +1697,12 @@ extension Tab: WKNavigationDelegate {
             zoomHost = host
             if isSearchTab, !SearchFolding.isSearchResultsPage(url) { isSearchTab = false }
             errorShownFor = ErrorPage.consume(webView) ? url : nil
+            // An error page in place of the page: the warning, whatever icon was showing.
+            if showsErrorPage {
+                favicon = Self.immediateIcon(for: url, errorPage: true)
+                iconSource = nil
+                changed.send(.favicon)
+            }
             recordHistory(url, title: webView.title)
         }
     }
@@ -1624,7 +1713,7 @@ extension Tab: WKNavigationDelegate {
         // The page is all here now: what the developer tools put into it is too.
         if !developer.isUnchanged { applyDeveloperStateToPage() }
         addressWaitsForCommit = false
-        if let until = landingUntil, Date() < until, let url = webView.url { pinnedLanding = url }
+        noteLanding(webView.url)
         checkForPDF(webView)
         refreshFavicon()
         restorePageState(in: webView)
@@ -1653,6 +1742,15 @@ extension Tab: WKNavigationDelegate {
         languageCheck += 1
         let check = languageCheck
         let url = webView.url
+        // History and Settings list other pages' titles in their own languages, and an error page is in yours: none
+        // of them is a page in another language to translate.
+        guard PageTranslator.readsLanguage(of: url, errorPage: url != nil && url == errorShownFor) else {
+            if foreignLanguage != nil {
+                foreignLanguage = nil
+                changed.send(.language)
+            }
+            return
+        }
         Task { [weak self] in
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
             guard let self, self.languageCheck == check, self.webView === webView, webView.url == url, !self.isTranslated else { return }
@@ -1890,6 +1988,11 @@ extension Tab {
         }
     }
 
+    /// What the PDF at `url` is called until it says more: the name its response gave it, else its file's, else its site.
+    fileprivate func pdfName(of url: URL) -> String {
+        HistoryStore.pdfName(of: url, suggested: pdfResponseURL == url ? pdfResponseName : nil)
+    }
+
     /// What asks the page whether it's a PDF.
     static let pdfCheckScript = "document.contentType"
 
@@ -1900,8 +2003,7 @@ extension Tab {
         let showing = self.pdfViewer?.url == url
         // A PDF has no page title, so the last page's would linger: it's named by its file until it says more.
         if !showing {
-            let file = url.lastPathComponent
-            self.title = file.isEmpty || file == "/" ? (url.host() ?? "") : (file.removingPercentEncoding ?? file)
+            self.title = pdfName(of: url)
             self.changed.send(.title)
         }
         // In peek, a form's reply, or one ours couldn't open (on this page, or one that brought the helper down this
