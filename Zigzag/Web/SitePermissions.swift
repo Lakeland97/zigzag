@@ -172,6 +172,14 @@ enum SitePermissions {
         }.sorted { $0.origin < $1.origin }
     }
 
+    /// Forgets every answer kept under a subject's prefix — a deleted rule's standing answers on every site go with
+    /// it, rather than stay in the store where nothing can name them again.
+    static func forgetActions(prefix: String) {
+        var now = stored
+        for key in now.keys where key.contains("|" + prefix) { now[key] = nil }
+        stored = now
+    }
+
     private static func allowed(_ action: String?) -> Bool? { action.map { $0 != "deny" } }
     static func kind(_ type: WKMediaCaptureType) -> String {
         switch type {

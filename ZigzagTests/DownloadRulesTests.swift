@@ -96,6 +96,24 @@ struct DownloadRuleTests {
         #expect(DownloadTokens.filename(for: URL(string: "https://example.com/")!, suggested: "") == "example.com")
     }
 
+    /// A rule's standing answers, kept per site, go when the rule does: nothing could name them again, and they
+    /// would otherwise sit in the store for good.
+    @Test func deletingARuleForgetsItsSiteAnswers() throws {
+        let suite = "zigzag-download-rules-test-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let before = SitePermissions.defaults
+        SitePermissions.defaults = defaults
+        defer {
+            SitePermissions.defaults = before
+            defaults.removePersistentDomain(forName: suite)
+        }
+        let id = UUID()
+        SitePermissions.remember("handOff", subject: PermissionSubject.handoff(id), origin: "https://a.example")
+        #expect(SitePermissions.decisions(prefix: PermissionSubject.handoff(id)).count == 1)
+        SitePermissions.forgetActions(prefix: PermissionSubject.handoff(id))
+        #expect(SitePermissions.decisions(prefix: PermissionSubject.handoff(id)).isEmpty)
+    }
+
     /// A rule names its script, and a name alone means the scripts folder in your Documents: one place for them, which
     /// is what makes them findable, and a script kept elsewhere is still reachable by its own path.
     @Test func aRuleNamesAScriptInItsOneFolder() {

@@ -933,6 +933,8 @@ final class DownloadRulesStore {
     func remove(id: UUID) {
         rules.removeAll { $0.id == id }
         HandoffSecrets.removeSecret(for: id)
+        // What the rule kept for individual sites goes with it: nothing can name those answers again.
+        SitePermissions.forgetActions(prefix: PermissionSubject.handoff(id))
         save()
     }
 
