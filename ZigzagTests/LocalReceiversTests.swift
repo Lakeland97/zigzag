@@ -192,6 +192,23 @@ struct LocalReceiversTests {
         #expect(await recorder.all().isEmpty)
     }
 
+    @Test func aSiteReachesThisMacOnlyAfterItsSwitchIsOn() {
+        let name = "LocalReceiversTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        let before = SitePermissions.defaults
+        SitePermissions.defaults = defaults
+        defer {
+            SitePermissions.defaults = before
+            defaults.removePersistentDomain(forName: name)
+        }
+        let origin = "https://creator.zerowork.io"
+        #expect(!SitePermissions.localReceivers(origin: origin))
+        SitePermissions.setLocalReceivers(true, origin: origin)
+        #expect(SitePermissions.localReceivers(origin: origin))
+        SitePermissions.setLocalReceivers(false, origin: origin)
+        #expect(!SitePermissions.localReceivers(origin: origin))
+    }
+
     private func expect(_ failure: LocalReceivers.Failure, _ body: () async throws -> Void) async {
         do {
             try await body()

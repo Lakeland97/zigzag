@@ -38,6 +38,9 @@ nonisolated enum PermissionSubject {
     static let location = "location", notifications = "notifications", popups = "popups", apps = "apps"
     /// Screen sharing, whose yes is *which* picker macOS shows rather than a plain allow.
     static let screen = "screen"
+    /// Whether this site's own scripts may reach a program listening on this Mac. A switch in Site Controls, off
+    /// until the person turns it on; no page can ask for it.
+    static let localReceivers = "localReceivers"
     /// Whether a site may save files at all. The destination an allowed file goes to is a separate decision, made per
     /// file type by the download rules.
     static let downloads = "downloads"

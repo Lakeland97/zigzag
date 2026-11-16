@@ -386,6 +386,19 @@ enum SitePermissions {
         return rememberAnswer(answer, subject: PermissionSubject.downloads, origin: origin, tab: tab, isPrivate: isPrivate)
     }
 
+    /// Whether this site may reach a program listening on this Mac. Off until the person turns it on in Site
+    /// Controls, and never asked over the page: a switch, not a question. A private window's page keeps nothing, so
+    /// the tab refuses before this is read.
+    static func localReceivers(origin: String) -> Bool {
+        action(PermissionSubject.localReceivers, origin: origin) == "allow"
+    }
+
+    /// Turns that on or off for one origin. Off forgets the answer, so the site is back where it started rather than
+    /// carrying a block.
+    static func setLocalReceivers(_ allowed: Bool, origin: String) {
+        remember(allowed ? "allow" : nil, subject: PermissionSubject.localReceivers, origin: origin)
+    }
+
     /// Whether a site may open links for another app (zoommtg:, itms-apps:): Allow or Block kept for the site, chosen
     /// in Site Controls or Settings, comes first; else yes for an app it was told Always Open to on its question;
     /// else nil, asked each time.

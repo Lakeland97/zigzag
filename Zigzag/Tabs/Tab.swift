@@ -511,6 +511,11 @@ final class Tab: NSObject {
            configuration.webExtensionController === profile.extensions.controller {
             profile.extensions.bridge.userScripts.attach(configuration.userContentController)
         }
+        // A page's own scripts may ask Zigzag to make a loopback call, when the site's switch in Site Controls is on.
+        // An extension's own page has its bridge instead, and a private window's page is refused by the handler.
+        if extensionConfiguration == nil {
+            LocalReceiverShim.attach(to: configuration, tab: self)
+        }
         showsExtensionPage = extensionConfiguration != nil
         openedByPage = fromWebKit
         if Self.isExtensionPage(url) { ExtensionPageErrors.attach(to: configuration) }

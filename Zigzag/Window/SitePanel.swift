@@ -818,6 +818,7 @@ final class SitePanel: FloatingPanelView {
             && (CookieBanners.outcome(in: tab.webView, site: site) != nil || CookieBanners.choice(for: url) != nil)
         if #available(macOS 15.4, *) { context.extensionHost = controller != nil && tab.extensionHost != nil && !isBlank }
         context.hasExtensions = !(extensionsSection?.items.isEmpty ?? true)
+        context.localApps = context.isWeb && !isPrivate && origin != nil
         context.hasPermissions = origin.map { !SitePermissions.shown(origin: $0, isPrivate: isPrivate || tab.isPrivate).isEmpty } ?? false
         context.siteChoices = KeepAwake.isOffered(for: url, isPrivate: isPrivate)
         // Offered on a page with a video, or once chosen; the setting is in Settings › Tabs.
@@ -900,6 +901,15 @@ final class SitePanel: FloatingPanelView {
                                     on: PageFullScreen.fills(for: url) == .page, status: { $0 ? Self.onHere : Self.offHere }) { [weak self] on in
                     guard let self else { return }
                     PageFullScreen.setChoice(on ? .page : .screen, for: self.url)
+                })
+            case .localApps:
+                // This site's own scripts may reach a program listening on this Mac (LocalReceivers): a switch, never a
+                // question the page can raise. Off until it is turned on here.
+                guard let origin else { break }
+                rows.append(.toggle(String(localized: "Local apps", comment: "Row in the site panel's This Site group: lets this site's own scripts talk to a program listening on this Mac."),
+                                    on: SitePermissions.localReceivers(origin: origin),
+                                    status: { $0 ? Self.onHere : Self.offHere }) { on in
+                    SitePermissions.setLocalReceivers(on, origin: origin)
                 })
             case .extensions:
                 // Whether extensions run here at all; off, every tile above dims and says so (#215).
@@ -1859,7 +1869,7 @@ enum SitePanelSizing {
 /// Which of the panel's rows apply to the page: none is shown that does nothing there.
 enum SitePanelRows {
     /// This Site's switches, on the panel's first page.
-    enum Row: Equatable { case zoom, adBlocking, cookieBanners, darkPage, keepAwake, fullScreenFills, alwaysTranslate, extensions }
+    enum Row: Equatable { case zoom, adBlocking, cookieBanners, darkPage, keepAwake, fullScreenFills, alwaysTranslate, localApps, extensions }
     /// The rows into the panel's other pages. Extensions are on the first page itself (#215), and the connection is a
     /// small line under the site's name (#221).
     enum Link: Equatable { case permissions }
@@ -1886,6 +1896,8 @@ enum SitePanelRows {
         var extensionHost = true
         /// There are extensions to run, or not, on this site.
         var hasExtensions = false
+        /// The site may be allowed to reach a program listening on this Mac: a web page, not a private window.
+        var localApps = false
     }
 
     static func rows(_ c: Context) -> [Row] {
@@ -1899,6 +1911,7 @@ enum SitePanelRows {
         }
         if c.fullScreen { rows.append(.fullScreenFills) }
         if c.foreignLanguage { rows.append(.alwaysTranslate) }
+        if c.localApps { rows.append(.localApps) }
         // Whether extensions run here: on a web site, once there are extensions to run.
         if c.isWeb, !c.isPrivate, c.extensionHost, c.hasExtensions { rows.append(.extensions) }
         return rows
