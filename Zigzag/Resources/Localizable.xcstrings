@@ -2946,6 +2946,17 @@
         }
       }
     },
+    "Apps, scripts, installers, archives and configuration profiles are always saved, never opened." : {
+      "comment" : "Under the fields of a per-extension destination's sheet: the file types Open never opens, whatever the choice says.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App、脚本、安装器、压缩包和配置描述文件始终只会保存，绝不会打开。"
+          }
+        }
+      }
+    },
     "Archive tabs you haven’t used" : {
       "comment" : "A setting in Settings › Tabs.",
       "localizations" : {
@@ -7054,6 +7065,17 @@
         }
       }
     },
+    "Files of this type are saved to the folder above, or opened in your Mac’s app for them. The first file type that matches wins." : {
+      "comment" : "Under the fields of a per-extension destination's sheet: what it does, and that the first one that matches decides.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此类型的文件会保存到上面的文件夹，或用 Mac 上对应的 App 打开。最先匹配的文件类型生效。"
+          }
+        }
+      }
+    },
     "Files of this type are saved to the folder downloads are saved to again, and nothing else changes." : {
       "comment" : "Message of the sheet that deletes a per-extension destination.",
       "localizations" : {
@@ -7075,7 +7097,8 @@
           }
         }
       }
-    },    "Fill forms from My Card" : {
+    },
+    "Fill forms from My Card" : {
       "comment" : "A setting in Settings › Passwords.",
       "localizations" : {
         "zh-Hans" : {
@@ -11784,7 +11807,6 @@
         }
       }
     },
-
     "Outline Every Element" : {
       "comment" : "View › Developer menu item and command, on a development site, checked while on: draws a line around each element of the page.",
       "localizations" : {
@@ -14472,17 +14494,6 @@
         }
       }
     },
-    "Save to Folder" : {
-      "comment" : "A destination a file of a given type can have: saved into a folder of its own, instead of the one everything else goes to.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存到文件夹"
-          }
-        }
-      }
-    },
     "Saved" : {
       "comment" : "Toast after changes to a login are saved.",
       "localizations" : {
@@ -14573,17 +14584,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "存储的密码会保留。"
-          }
-        }
-      }
-    },
-    "Saved somewhere of its own, instead of with everything else." : {
-      "comment" : "Under the title of the sheet that makes a per-extension destination.",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存到它自己的位置，而不是与其他文件放在一起。"
           }
         }
       }
@@ -15145,6 +15145,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "服务器地址"
+          }
+        }
+      }
+    },
+    "Service" : {
+      "comment" : "Label of the service choice in the Torrents preset's sheet.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "服务"
           }
         }
       }
@@ -18115,6 +18126,17 @@
         }
       }
     },
+    "Torrents" : {
+      "comment" : "The rule name a Torrents preset starts with when its service is left to be filled in by hand.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "种子"
+          }
+        }
+      }
+    },
     "Transformations" : {
       "comment" : "Submenu of the Edit menu.",
       "localizations" : {
@@ -19519,6 +19541,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "发生了什么？在那之前你正在做什么？"
+          }
+        }
+      }
+    },
+    "What happens to files of this type." : {
+      "comment" : "Under the title of the sheet that makes a per-extension destination.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此类型的文件会怎么处理。"
           }
         }
       }
