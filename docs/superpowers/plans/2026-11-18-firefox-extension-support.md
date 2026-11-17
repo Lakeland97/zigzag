@@ -210,24 +210,23 @@ Expected: PASS.
 
 **Files:**
 - Create: `Zigzag/Resources/Extensions/firefox-polyfill.js`
-- Modify: `Zigzag/Extensions/ExtensionBridge.swift` (load it)
-- Modify: `Zigzag/Extensions/ExtensionHost.swift` (inject it only for Firefox packages)
-- Modify: `Zigzag/Extensions/ExtensionStore.swift` (same in the prelude at ~878)
+- Modify: `Zigzag/Extensions/ExtensionBridge.swift` (load it and append it to `afterCompatibility`)
+- Modify: `Zigzag/Extensions/ExtensionStore.swift` (only if the contrast between the two preludes needs a comment; no code path change)
 - Test: `ZigzagTests/FirefoxSurfaceTests.swift`
 
 **Interfaces:**
-- Produces: `ExtensionBridgeScript.firefoxPolyfill: String`.
-- Produces: a prelude selector, e.g. `ExtensionBridgeScript.prelude(for: ExtensionKind)`, used at both injection points.
+- Produces: `ExtensionBridgeScript.firefoxPolyfill: String`, appended after the surface in `afterCompatibility`.
+- The facade is **self-gated**: it builds `browser` only when `chrome.runtime.getManifest()` carries `browser_specific_settings` or `applications`. The prelude is injected per profile, not per package, so a kind selector cannot be used; the manifest is the package's own signature. A Chrome manifest with neither key gets no `browser` from Zigzag.
 
 - [ ] **Step 1: Write the failing tests** (JavaScriptCore, following `ExtensionScriptTests`)
 
 - `browser.tabs.query({})` returns a Promise and resolves with the bridge's answer.
 - A failing `browser.*` call rejects with an object whose `message` is the bridge's error text.
 - `browser.runtime.getManifest()` returns the object directly, not a Promise.
-- `browser.runtime.id` is the injected gecko ID.
+- `browser.runtime.id` is the manifest's gecko ID.
 - `browser.runtime.getBrowserInfo()` resolves `{name: "Zigzag", vendor: "Lakeland97"}`; `getPlatformInfo()` resolves `os: "mac"`.
 - `browser.runtime.onMessage.addListener(fn)` is the same event object as `chrome.runtime.onMessage`'s and registration works.
-- A Chrome world's prelude does not evaluate the polyfill (assert the selector, not a global).
+- Self-gating: with a manifest carrying `browser_specific_settings`, evaluating the polyfill builds `browser`; with a Chrome-shaped manifest and no Firefox keys, pre-existing `browser` is left exactly as it was.
 
 - [ ] **Step 2: Run and see them fail**
 
@@ -235,7 +234,7 @@ Expected: FAIL, no `browser` facade.
 
 - [ ] **Step 3: Implement `firefox-polyfill.js` and wire it**
 
-Build `browser` lazily over `chrome`; cache wrappers; the sync list is exactly `runtime.getManifest`, `runtime.getURL`, `runtime.id`, `i18n.getMessage`, `i18n.getUILanguage`, `i18n.getAcceptLanguages`; events (`addListener` and `removeListener`) pass through; missing members stay missing. Rejections normalize to `{message}`. Read the gecko ID from `runtime.getManifest()` so no extra injection is needed; fall back to the opaque ID only if the manifest has none. Append the polyfill after `afterCompatibility` only when the package kind is Firefox.
+Build `browser` lazily over `chrome`; return early unless the manifest has `browser_specific_settings` or `applications`; cache wrappers; the sync list is exactly `runtime.getManifest`, `runtime.getURL`, `runtime.id`, `i18n.getMessage`, `i18n.getUILanguage`, `i18n.getAcceptLanguages`; events (`addListener` and `removeListener`) pass through; missing members stay missing. Rejections normalize to `{message}`. Append the polyfill after the surface in `afterCompatibility`, so every extension page and background gets it; the manifest gate keeps it out of Chrome packages.
 
 - [ ] **Step 4: Run the tests**
 

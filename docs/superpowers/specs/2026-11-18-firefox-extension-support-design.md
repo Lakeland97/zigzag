@@ -52,12 +52,14 @@ MV3; MV2 string `web_accessible_resources` become MV3 objects. The original keys
 ignores them. The zip's files are never edited in the package the person chose: XPIs are extracted into Zigzag's
 store, and normalization writes the manifest there.
 
-**The Promise facade is per-package, not global.** A new `firefox-polyfill.js` runs after Zigzag's surface and
-differences, only for a package whose kind is Firefox, and builds `browser` from the finished `chrome` surface: a
-function returns a Promise unless it is on the small synchronous list (`runtime.getManifest`, `runtime.getURL`,
-`runtime.id`, `i18n.getMessage`, `i18n.getUILanguage`, `i18n.getAcceptLanguages`); event objects pass through;
-properties pass through. Rejections use Firefox's error shape `{message}`. It is a stand-in, so the claims say
-`emulated`, not `native`.
+**The Promise facade is self-gated, not per-package plumbing.** A new `firefox-polyfill.js` is appended to the shared
+compatibility prelude, after Zigzag's surface and differences. The prelude is injected per profile, not per package, so
+the script decides for itself: it builds `browser` only when `runtime.getManifest()` carries `browser_specific_settings`
+or `applications`, the keys only a Firefox package has. It then wraps the finished `chrome` surface: a function returns a
+Promise unless it is on the small synchronous list (`runtime.getManifest`, `runtime.getURL`, `runtime.id`,
+`i18n.getMessage`, `i18n.getUILanguage`, `i18n.getAcceptLanguages`); event objects pass through; properties pass through.
+Rejections use Firefox's error shape `{message}`. It is a stand-in, so the claims say `emulated`, not `native`. A Chrome
+manifest with neither key is left exactly as it was, including WebKit's own `browser` if it supplies one.
 
 **`runtime.getBrowserInfo` answers Zigzag, not Firefox.** `{name: "Zigzag", vendor: "Lakeland97", version: <app
 version>, buildID: ""}` and `getPlatformInfo` `{os: "mac", arch: "aarch64"}` on Apple silicon, `"x86-64"` otherwise.
