@@ -172,7 +172,7 @@ enum PageScripts {
         // Picture in Picture lives in the site panel and View › Picture in Picture (⌥⌘P), not as a pill drawn over
         // videos: pages lay out their own players, and a pill placed from outside drifts off them.
         [WKUserScript(source: linkHover, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: .defaultClient), applePayMark,
-         commandClickedLinks, modifiedLinkClicks, ScrollMessages.script]
+         modifiedLinkClicks, ScrollMessages.script]
     }
 
     /// ⌘ is the browser's and the page never hears it (#317); ⇧ and ⌥ are the page's, and only the navigation it makes right after one is taken (#322).
