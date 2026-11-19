@@ -1018,6 +1018,8 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     private let passwordsWindowGroup = FormGroup()
     private let privacyGroup = FormGroup()
     private let sitesGroup = FormGroup()
+    /// The one master switch for a page reaching an app on this Mac, above the sites' own answers.
+    private let localReceiversGroup = FormGroup()
     /// Each site keeping cookies, storage or a cache on this Mac, to remove one at a time (#207): one list, with
     /// rows only for what's in view, and its search and Remove All by its heading.
     private let siteDataGroup = FormGroup()
@@ -2135,6 +2137,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         }
         for (id, ext) in installed {
             extensionsGroup.add(extensionRow(id: id, ext: ext))
+            extensionsGroup.add(localReceiversRow(id: id))
             let name = ext.displayName ?? id
             // Only for one that asks to read and change sites.
             if !ext.allRequestedMatchPatterns.isEmpty {
@@ -2345,6 +2348,23 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         return row
     }
 
+    /// Its own switch, indented under it: a grant the person gives one extension, with the reason in plain words.
+    private func localReceiversRow(id: String) -> FormRow {
+        let installs = profile.installs
+        let toggle = Toggle(isOn: installs.localReceivers(id))
+        toggle.setAccessibilityLabel(String(localized: "Let this extension reach apps on this Mac",
+                                            comment: "Accessibility label of the apps-on-this-Mac switch under an extension in Settings › Extensions."))
+        // Read where each call is made, so the switch takes effect at once: nothing to reload.
+        toggle.onChange = { on in installs.setLocalReceivers(on, for: id) }
+        let row = FormRow(title: String(localized: "Apps on This Mac",
+                                        comment: "A switch under an extension in Settings › Extensions: its own code may reach a program listening on this Mac."),
+                          detail: String(localized: "Lets this extension’s own code reach a program listening on this Mac, over loopback only. Off until you turn it on.",
+                                         comment: "Explanation under the apps-on-this-Mac switch on an extension’s row in Settings › Extensions."),
+                          control: toggle)
+        row.isIndented = true
+        return row
+    }
+
     private func loadUnpacked() {
         guard #available(macOS 15.4, *), let window else { return }
         let panel = NSOpenPanel()
@@ -2525,6 +2545,59 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         blockingToggle.onChange?(blockingToggle.isOn)
     }
     #endif
+
+    /// One switch, off, and a briefing before it can be turned on. The same words are the site row's name, so the two
+    /// places read as one feature.
+    private func reloadLocalReceivers() {
+        localReceiversGroup.removeAllRows()
+        let toggle = Toggle(isOn: LocalReceivers.isEnabled)
+        toggle.setAccessibilityLabel(String(localized: "Allow websites to reach apps on this Mac",
+                                            comment: "Accessibility label of the master switch in Settings › Privacy."))
+        let more = PillButton(title: String(localized: "What This Allows…",
+                                            comment: "Button on the apps-on-this-Mac setting in Settings › Privacy: reopens the briefing."))
+        more.onClick = { [weak self] _ in if let self { self.explainLocalReceivers(reason: nil) } }
+        toggle.onChange = { [weak self] on in
+            guard let self else { return }
+            guard on else {
+                LocalReceivers.isEnabled = false
+                return
+            }
+            // The knob has already moved; the setting follows only the acknowledgement.
+            toggle.isOn = LocalReceivers.isEnabled
+            self.explainLocalReceivers(reason: {
+                LocalReceivers.isEnabled = true
+                toggle.isOn = true
+            })
+        }
+        let controls = NSStackView(views: [more, toggle])
+        controls.spacing = Tokens.Space.x2
+        let row = FormRow(title: String(localized: "Allow websites to reach apps on this Mac",
+                                        comment: "A setting in Settings › Privacy: the master switch for a site's scripts reaching a program listening on this Mac."),
+                          detail: String(localized: "A site you switch on in Site Controls can use fetch, XMLHttpRequest and WebSocket to talk to a program on this Mac, over loopback only. Never the local network, and a page can’t switch itself on.",
+                                         comment: "Explanation under the apps-on-this-Mac setting in Settings › Privacy. fetch, XMLHttpRequest and WebSocket are API names: keep them as they are."),
+                          control: controls)
+        row.keywords = String(localized: "localhost loopback local server app fetch websocket xmlhttprequest",
+                              comment: "Words that find the apps-on-this-Mac setting with Find a setting. Not shown.")
+        localReceiversGroup.add(row)
+    }
+
+    /// The briefing the master switch needs before it goes on. `reason` runs only after "I understand"; without one
+    /// this is the row's link, read-only.
+    private func explainLocalReceivers(reason: (() -> Void)?) {
+        let message = String(localized: "Websites you switch on in Site Controls can use fetch, XMLHttpRequest and WebSocket to reach programs listening on this Mac, over loopback only.\n\nThe local network, other machines, images, scripts and stylesheets are not included, and a page cannot switch itself on.\n\nA local program may not have been written to be reachable by a web page, and a site you grant could use it in ways you did not intend. Only grant sites you trust.\n\nTurn one site off in its Site Controls, or turn this setting off for every site.",
+                          comment: "The briefing shown before websites may reach apps on this Mac. fetch, XMLHttpRequest and WebSocket are API names: keep them as they are.")
+        guard let reason else {
+            ConfirmSheet.notice(in: self, title: String(localized: "Apps on This Mac", comment: "Title of the briefing about the apps-on-this-Mac setting."),
+                                message: message)
+            return
+        }
+        ConfirmSheet.show(in: self, title: String(localized: "Before You Allow This", comment: "Title of the briefing shown before the apps-on-this-Mac setting can be turned on."),
+                          message: message,
+                          confirmTitle: String(localized: "I understand", comment: "Button that acknowledges the briefing and turns the setting on.")) { agreed in
+            guard agreed else { return }
+            reason()
+        }
+    }
 
     private func reloadBlocking() {
         blockingGroup.removeAllRows()
@@ -2923,6 +2996,9 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     private static var profilesHeading: String { String(localized: "Your Profiles", comment: "A heading in Settings › Profiles.") }
     private static var unlistedHeading: String { String(localized: "Not Listed", comment: "A heading in Settings › Profiles, over data left on this Mac by profiles that are no longer in the list.") }
     private static var sitesHeading: String { String(localized: "Site Permissions", comment: "A heading in Settings › Privacy: camera, location, pop-ups and other choices made for single sites.") }
+    private static var localReceiversHeading: String {
+        String(localized: "Apps on This Mac", comment: "A heading in Settings › Privacy, over the master switch that lets websites reach programs on this Mac.")
+    }
     private static var alwaysTranslateHeading: String { String(localized: "Always Translate", comment: "A heading in Settings › Translation.") }
     private static var fillingHeading: String { String(localized: "AutoFill", comment: "A heading in Settings › Passwords: when Zigzag offers to save and fill passwords and forms.") }
     /// With more than one profile, over the one row every profile shares: what it fills, named plainly, so it doesn't
@@ -2966,7 +3042,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         case .spaces: [(nil, newSpacesGroup), (Self.spacesHeading, spacesGroup)] + (Library.shared.spaces.count > 1 ? [(Self.routesHeading, routesGroup)] : [])
         case .profiles: [(Self.profilesHeading, profilesGroup), (Self.unlistedHeading, unlistedGroup)]
         case .passwords: [(nil, passwordsWindowGroup), (savingHeading, passwordsGroup)] + (hasManyProfiles ? [(Self.formsHeading, cardGroup)] : [])
-        case .privacy: [(nil, blockingGroup), (Self.sitesHeading, sitesGroup)] + (SettingsPane.websiteData(manyProfiles: hasManyProfiles) == .privacy ? websiteDataGroups : [])
+        case .privacy: [(nil, blockingGroup), (Self.localReceiversHeading, localReceiversGroup), (Self.sitesHeading, sitesGroup)] + (SettingsPane.websiteData(manyProfiles: hasManyProfiles) == .privacy ? websiteDataGroups : [])
         case .websiteData: SettingsPane.websiteData(manyProfiles: hasManyProfiles) == .websiteData ? websiteDataGroups : []
         case .translation: [(nil, translationGroup), (Self.alwaysTranslateHeading, alwaysGroup)]
         case .extensions: [(installedHeading, extensionsGroup), (Self.appExtensionsHeading, appExtensionsGroup), (Self.otherProfilesHeading, otherProfilesGroup)]
@@ -3838,6 +3914,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         let profile = self.profile
         privacyGroup.removeAllRows()
         sitesGroup.removeAllRows()
+        reloadLocalReceivers()
         // Ask on a site's first download, or always save.
         downloadsAskToggle.isOn = SitePermissions.asksBeforeDownloads
         downloadsAskToggle.onChange = { SitePermissions.asksBeforeDownloads = $0 }
