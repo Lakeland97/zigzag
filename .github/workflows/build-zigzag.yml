@@ -81,24 +81,23 @@ jobs:
             -only-testing:ZigzagTests/SettingsLayoutTests \
             -only-testing:ZigzagTests/EdgePeekTests \
             -only-testing:ZigzagTests/EdgePeekPreviewTests \
-            -only-testing:ZigzagTests/SidebarSideTests | tee test.log
+            -only-testing:ZigzagTests/SidebarSideTests \
+            -only-testing:ZigzagTests/PinnedSpaceNameTests \
+            -only-testing:ZigzagTests/RowHoverTests \
+            -only-testing:ZigzagTests/EdgeSidebarLayoutTests \
+            -only-testing:ZigzagTests/EdgeSidebarSettingTests | tee test.log
           # labelsCenterTheirCapitals is upstream's own test and measures a sub-pixel offset, which rounds away on a
           # runner with no Retina display: it stands aside there itself, at the top of the test. `-skip-testing:` with
           # a single test's name is not honoured for this suite, so the test is what knows (see SettingsLayoutTests).
 
       - name: Check the tests that matter really ran
-        # A selector that matches nothing passes silently, so name one test per area; and a red test is a red build.
+        # A selector that matches nothing passes silently, so require every selected suite to report a pass;
+        # and a red test is a red build.
         run: |
-          for t in eachMatchKind remembersAnActionPerSubjectAndOrigin migratesOldBoolsOnce theAnswerCarriesTheChosenActionAndDuration openAppsIsAPermission aTabWearsTheMarkerOnlyWhileItsQuestionCannotBeShown everyPopupValueHasADestination anAppLinkReadsTheSiteWideRowThenTheAppThenThePage theDownloadsListGroupsSitesByTheirAnswer anAnswerIsKeptOnlyWhereItMayBe aStoredAllowSkipsTheQuestionAndABlockStopsIt aLegacyPopupYesKeepsTheOrdinaryRouting allowingPopupsKeepsTheViewer anAnsweredDenyIsKeptForTheWholeSite aPopUpGoesThroughTheTabThatAskedNotABrowserWindow aPagesOwnThisTimePopUpAnswerIsReadBack aCardSaysHowManyWaitBehindIt fitsThePageItIsGivenInsideAnAnimation aFieldInARowIsGivenRoomToDraw aFieldHasASizeOfItsOwn aFieldBesideAButtonKeepsTheButtonInsideTheRow anActionThatCannotRunNamesTheFieldHoldingItUp aRuleSaysEverythingHoldingAddBack aFileTypeMatchesByNameAndNeverByAddress aFileTypeTakesADotAndTwoParts aFileTypeFollowsTheCaseSwitch aDownloadIsCaughtByItsTypeAndALinkIsNot aDestinationIsTheFirstThatMatches aDestinationSaysWhatItIsAndNeedsItsFolder aDestinationReadsAsASentence aDestinationSurvivesItsJSON aDestinationIsReadAsAPlaceToSave aWebAddressIsZigzagsAndAnythingElseItsAppsOwn aRuleRemembersWhereItsWebAddressOpens everyPlaceIsOneTheQuestionKnows whereAWebAddressOpensNeverHoldsTheRuleBack aRuleLetsThePageGoOnUntilItIsToldNotTo aStoredDownloadAnswerIsUsedWithoutAskingAnything thisTimeDownloadAnswerHoldsForThePageNotTheSite aDownloadDenyIsKeptForTheSiteAndAPrivateTabKeepsNothing theSiteControlsDownloadRowIsTheSameAnswerAsTheQuestion downloadsAreARowInSiteControlsOnceTheSiteHasAnAnswer aFormThatCannotBeConfirmedSaysWhatHoldsItUp theLinksOwnPartsAreTokensOfTheirOwn aRuleNamesAScriptInItsOneFolder onlyAPlainGETIsAskedForAgain allowOnceOnANoticeHoldsForThePage storedHandoffAnswersMapToGates aHandoffQuestionUsesThePageOrigin aHandoffQuestionFallsBackToTheReferrerThenTheTarget aHandoffAnsweredThisTimeIsNotAskedAgain aNotificationsAnswerIsThePlaceItShowsIn bothPlacesCountAsAllowed aScriptNoticeSaysHowItWent aFileTypeNeedsItsExtensionsAndOnlyAFolderToSaveInto aRuleMovesToSitBeforeTheOneItWasDroppedOn aScriptsAnswerNamesOneActionAndNeverAnotherScript everyFiringThatWouldBeSilentIsAnnounced theSameNoticeAgainIsOneWithACount aWebAddressOpensWhereTheNoticeSaysItDoes aNotificationsAnswerCanBeKeptForTheSite aScreenSharingNoCanBeKeptForTheSite theAppMenuListsApplicationsOneLevelDeep aRuleQuestionAsksHowLongForThreeScopes theAnswerKeepsItsEntryAndItsScope aRuleAnswerIsWrittenOnTheRule aRulesOwnAnswerStandsForEverySite aSitesAnswerOutranksTheRulesOwn aRulesOwnAnswerSurvivesItsJSON theThirdDurationChoiceNamesTheRule anOpenInDecisionReadsSiteThenRuleThenPage deletingARuleForgetsBothKindsOfSiteAnswer aRuleStaysOutOfPrivateWindowsUnlessItSaysOtherwise aRuleKeepsWhetherItRunsInPrivateWindows aDestinationIsNeverAHandoff aDownloadAnswerKnowsHowFarItReaches aTorrentPresetCatchesTorrentsAndMagnets aClosedTabIsNeverRestored thePreviewWaitsAndStaysAwayWhileThePeekIsOut aMirrorTracksHoverWhileAnotherAppIsInFront; do
-            grep -q "✔ Test $t() passed" test.log || { echo "did not run: $t"; exit 1; }
+          for s in DownloadRuleTests DownloadPolicyTests SitePermissionsPolicyTests PermissionPromptTests \
+                   PendingQuestionsTests PageLinkTests SiteControlsPermissionTests FormSheetTests \
+                   SettingsLayoutTests EdgePeekTests EdgePeekPreviewTests SidebarSideTests \
+                   PinnedSpaceNameTests RowHoverTests EdgeSidebarLayoutTests EdgeSidebarSettingTests; do
+            grep -q "✔ Suite $s passed" test.log || { echo "suite did not run: $s"; exit 1; }
           done
           if grep -q "✘" test.log; then echo "a test failed"; exit 1; fi
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: build-logs
-          path: |
-            build.log
-            test.log
-          if-no-files-found: warn
