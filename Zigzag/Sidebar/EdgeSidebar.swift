@@ -32,6 +32,12 @@ enum EdgeSidebarLayout {
     static func screen(containing point: NSPoint, in screens: [NSRect]) -> Int? {
         screens.firstIndex { $0.contains(point) }
     }
+
+    /// Whether the panel may come out: for a window of another app in front, whose sidebar is away. Zigzag's own
+    /// window already brings its sidebar out at its edge, and a sidebar on screen is the one the panel would copy.
+    static func canShow(appIsActive: Bool, sidebarVisible: Bool, sidebarFloating: Bool) -> Bool {
+        !appIsActive && !sidebarVisible && !sidebarFloating
+    }
 }
 
 /// The sidebar's hot screen edge (#363): one switch, and the one panel that comes out of it.
@@ -59,6 +65,10 @@ final class EdgeSidebar {
     private weak var target: BrowserWindowController?
     private var panel: EdgeSidebarPanel?
     private var host: EdgeSidebarHost?
+    /// The browser's command bar, over the screen while the panel is in use (#363).
+    private var commandBarPopup: EdgeCommandBarPopup?
+    /// The bar is open in that popup, not in the window.
+    private(set) var isCommandBarOpen = false
     private var reveal = SidebarEdgeReveal()
     /// Whether the panel is out now (or on its way back in).
     private(set) var isShowing = false
@@ -91,6 +101,11 @@ final class EdgeSidebar {
         })
         // A screen coming or going changes the edge under the panel: it goes until it's asked for again.
         observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.hide(animated: false) }
+        })
+        // Zigzag coming forward puts it back: the panel is for reaching a tab from another app, and the window's own
+        // sidebar takes over from here.
+        observers.append(NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.hide(animated: false) }
         })
         if Self.isOn { start() }
@@ -145,6 +160,9 @@ final class EdgeSidebar {
         // The window whose sidebar comes out: the last one in front, or, after that one closed, the one Zigzag would
         // have brought forward.
         if target == nil { target = WindowManager.shared.keyController }
+        guard let target, EdgeSidebarLayout.canShow(appIsActive: NSApp.isActive,
+                                                    sidebarVisible: target.root.sidebarVisible,
+                                                    sidebarFloating: target.root.isSidebarFloatingVisible) else { return }
         let point = NSEvent.mouseLocation
         guard let (zone, local, _) = zone(at: point), zone.opens(at: local) else { return }
         met(at: event.timestamp)
@@ -212,12 +230,20 @@ final class EdgeSidebar {
 
     private func follow() {
         guard isShowing, let visible = shownScreen, let zone = zone(in: visible) else { return }
+        // Zigzag came forward, or the window's sidebar came out: the panel has nothing left to show.
+        guard let target, EdgeSidebarLayout.canShow(appIsActive: NSApp.isActive,
+                                                    sidebarVisible: target.root.sidebarVisible,
+                                                    sidebarFloating: target.root.isSidebarFloatingVisible) else {
+            hide()
+            return
+        }
         let point = EdgeSidebarLayout.point(NSEvent.mouseLocation, in: visible)
         // A pressed button holds it out, as a drag from the panel does. So does a menu opened from it, whose tracking
         // (system menus) or open panel (MenuPanel) runs while the pointer is over it.
         let held = NSEvent.pressedMouseButtons != 0
             || RunLoop.current.currentMode == .eventTracking
             || MenuPanel.current != nil
+            || isCommandBarOpen
         if reveal.follow(at: point, time: ProcessInfo.processInfo.systemUptime, in: zone, held: held) {
             hide()
         }
@@ -225,8 +251,61 @@ final class EdgeSidebar {
 
     // MARK: The panel
 
+    // MARK: The command bar
+
+    /// The surface the browser's command bar draws in while the panel is in use: the screen the panel is on.
+    var commandBarOverlay: NSView? { isCommandBarOpen ? commandBarPopup?.overlay : nil }
+    var commandBarPageFrame: NSRect? {
+        guard isCommandBarOpen, let popup = commandBarPopup else { return nil }
+        return NSRect(origin: .zero, size: popup.frame.size)
+    }
+
+    /// New Tab from the panel — ⌘T or its row: the browser's own bar, over the screen, not in the window behind it.
+    func newTabInPlace() {
+        guard isShowing, !isCommandBarOpen, let target, let visible = shownScreen else { return }
+        let popup = commandBarPopup ?? makeCommandBarPopup()
+        popup.setFrame(visible, display: true)
+        popup.overlay.frame = NSRect(origin: .zero, size: visible.size)
+        isCommandBarOpen = true
+        popup.orderFrontRegardless()
+        target.showEdgeCommandBar()
+    }
+
+    /// The bar's field is in the popup, and the popup takes the keyboard for it.
+    func focusCommandBar(_ field: NSTextField) {
+        guard isCommandBarOpen, let popup = commandBarPopup else { return }
+        popup.makeKeyAndOrderFront(nil)
+        popup.makeFirstResponder(field)
+    }
+
+    /// The bar has finished leaving: the popup goes, and the panel (still out) takes the keyboard back.
+    func commandBarDidHide() {
+        guard isCommandBarOpen else { return }
+        isCommandBarOpen = false
+        commandBarPopup?.orderOut(nil)
+        if isShowing { panel?.makeKey() }
+    }
+
+    private func makeCommandBarPopup() -> EdgeCommandBarPopup {
+        let popup = EdgeCommandBarPopup(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        popup.level = .statusBar
+        popup.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        popup.isOpaque = false
+        popup.backgroundColor = .clear
+        popup.hasShadow = false
+        popup.hidesOnDeactivate = false
+        popup.isMovable = false
+        popup.isReleasedWhenClosed = false
+        popup.animationBehavior = .none
+        popup.contentView = popup.overlay
+        commandBarPopup = popup
+        return popup
+    }
+
     private func show(on visible: NSRect) {
-        guard let target else { return }
+        guard let target, EdgeSidebarLayout.canShow(appIsActive: NSApp.isActive,
+                                                    sidebarVisible: target.root.sidebarVisible,
+                                                    sidebarFloating: target.root.isSidebarFloatingVisible) else { return }
         let (sidebar, container) = target.edgeSidebarForDisplay()
         target.prepareEdgeSidebar()
         let onRight = target.edgeSidebarOnRight
@@ -251,6 +330,8 @@ final class EdgeSidebar {
         shownScreen = visible
         isShowing = true
         panel.orderFrontRegardless()
+        // The panel has the keyboard while it's out: ⌘T and typing work there, over the app in front.
+        panel.makeKey()
 
         // The card slides in from beyond the screen's edge, as the window's hidden sidebar does.
         let card = host.cardFrame
@@ -264,6 +345,8 @@ final class EdgeSidebar {
     /// Puts the panel away. Without the slide for a pick, so its window can come forward at once.
     func hide(animated: Bool = true) {
         stopDeciding(dismiss: true)
+        // The bar open over the screen goes with the panel.
+        if isCommandBarOpen, let target { target.commandBar.dismiss(restoringFocus: false) }
         followTimer?.invalidate()
         followTimer = nil
         guard isShowing else { return }
@@ -310,9 +393,10 @@ final class EdgeSidebar {
     }
 }
 
-/// The edge sidebar's panel: it comes out over another app without taking the front, and never becomes key itself.
+/// The edge sidebar's panel: it comes out over another app without taking the front; it takes the keyboard while it's
+/// out, so ⌘T and typing in it work there, and gives it back when it goes.
 final class EdgeSidebarPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 }
 
@@ -340,4 +424,24 @@ final class EdgeSidebarHost: NSView {
     func placeCard() {
         container?.frame = cardFrame
     }
+
+    /// File › New Tab (⌘T) with the panel key: the browser's own bar, in place over the screen.
+    @objc func newTab(_ sender: Any?) { EdgeSidebar.shared.newTabInPlace() }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let mods = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        if mods == .command, event.charactersIgnoringModifiers?.lowercased() == "t" {
+            EdgeSidebar.shared.newTabInPlace()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+/// The browser's command bar over the screen while the edge sidebar is in use: it takes the keyboard without bringing
+/// Zigzag forward, so the bar can be typed in over another app.
+final class EdgeCommandBarPopup: NSPanel {
+    let overlay = NSView()
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
 }
