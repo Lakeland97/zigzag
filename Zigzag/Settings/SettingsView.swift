@@ -1196,7 +1196,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     private let addRouteButton = PillButton(title: String(localized: "Add Site…", comment: "Button beside Sites in Spaces in Settings › Spaces: opens the sheet that sends a site to a space."))
     private let addProfileButton = PillButton(title: String(localized: "New Profile…", comment: "Button beside Your Profiles in Settings › Profiles: opens the sheet that makes a profile."))
     private let getExtensionsButton = PillButton(title: String(localized: "Get Extensions", comment: "Button in Settings › Extensions: opens the Chrome Web Store."))
-    private let loadUnpackedButton = PillButton(title: String(localized: "Install from Folder…", comment: "Button in Settings › Extensions: installs an extension from a folder on this Mac, one you're building or one that came with an app."))
+    private let loadUnpackedButton = PillButton(title: String(localized: "Install from File…", comment: "Button in Settings › Extensions: installs an extension from a folder or a Firefox package file (.xpi) on this Mac."))
     private var spaceRows: [SpaceSettingsRow] = []
     /// Download rule rows in order with their rule ids, for drag reordering.
     private var downloadRuleRows: [(id: UUID, row: DraggableRow)] = []
@@ -2273,6 +2273,14 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         }
     }
 
+    /// What a package's record says about where it came from, beyond its version: a Firefox package says it is one.
+    /// Its gecko ID and its signature file tell the person nothing they can act on, and a signature file's presence
+    /// isn't a verification, so neither is said. A Chrome package adds nothing.
+    static func packageKindDetail(_ id: String) -> [String] {
+        guard ExtensionStore.kind(of: id) == .firefox, ExtensionStore.package(id) != nil else { return [] }
+        return [String(localized: "Firefox", comment: "Under an extension's name in Settings › Extensions: it is a Firefox extension (.xpi).")]
+    }
+
     @available(macOS 15.4, *)
     private func extensionRow(id: String, ext: WKWebExtension) -> FormRow {
         var controls: [NSView] = []
@@ -2315,13 +2323,16 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         if ExtensionStore.needsApproval(id) {
             detail.append(String(localized: "Update wants more access", comment: "Under an extension's name in Settings › Extensions."))
         }
+        // A Firefox package says so, and names the gecko ID it has in Firefox; a Chrome one adds neither.
+        detail += Self.packageKindDetail(id)
         // The features it asks for that Zigzag lacks, named right in the row rather than counted: "2 features"
         // says something is missing without saying what.
         var summary = detail.isEmpty ? "" : Words.list(detail)
         if let manifest = ExtensionStore.manifest(for: id) {
-            // Limits only: the overlay is decoded once in ExtensionCompatibility.shared, and no full report is built
-            // per row.
-            let limits = ExtensionReport.limits(for: ext, manifest: manifest, id: id)
+            // The lines only: the overlay is decoded once, behind ExtensionCompatibility.shared(for:), and each row
+            // does not build a whole report for them. A Firefox package reads its own overlay.
+            let kind = ExtensionStore.kind(of: id)
+            let limits = ExtensionReport.limits(for: ext, manifest: manifest, id: id, kind: kind)
             if let first = limits.first {
                 let names = Words.list([first.text] + limits.dropFirst().map { Words.lowercasedForList($0.text) })
                 let note = String(localized: "\(names) won’t work in Zigzag.",
@@ -2337,15 +2348,19 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     private func loadUnpacked() {
         guard #available(macOS 15.4, *), let window else { return }
         let panel = NSOpenPanel()
+        panel.allowedContentTypes = ExtensionFilePicker.types
         panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.prompt = String(localized: "Install", comment: "Button of the panel that installs an extension from a folder.")
-        panel.message = String(localized: "Choose the folder that contains the extension’s manifest.json.",
-                               comment: "Message of the panel that loads an unpacked extension. manifest.json is a file name.")
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = String(localized: "Install", comment: "Button of the panel that installs an extension from a folder or a package file.")
+        panel.message = String(localized: "Choose a folder that holds the extension’s manifest.json, or a Firefox extension (.xpi) file.",
+                               comment: "Message of the panel that installs an extension from a folder or a .xpi file. manifest.json and .xpi are file names.")
         let profile = profile
         panel.beginSheetModal(for: window) { [weak self] response in
-            guard response == .OK, let url = panel.url else { return }
-            self?.confirmUnpacked(url, from: nil) { [weak self] in
+            guard response == .OK, let url = panel.url, let self else { return }
+            // A Firefox package is installed from its file; a folder as before.
+            if url.pathExtension.lowercased() == "xpi" { installPickedXPI(url, in: profile); return }
+            confirmUnpacked(url, from: nil) { [weak self] in
                 if await ExtensionStore.loadUnpacked(url, in: profile) == nil, let host = self {
                     ConfirmSheet.notice(in: host, title: String(localized: "Couldn’t load this extension", comment: "Title of the notice when an unpacked extension can't load."),
                                         message: String(localized: "That folder needs a manifest.json that Zigzag can read. Choose the folder that holds it.",
@@ -2353,6 +2368,28 @@ final class SettingsView: NSView, NSTextFieldDelegate {
                 }
             }
         }
+    }
+
+    /// A picked `.xpi`: prepared as the store prepares a package, offered with the store's own sheet, then added.
+    private func installPickedXPI(_ url: URL, in profile: Profile) {
+        guard #available(macOS 15.4, *), let host = window?.contentView else { return }
+        Task { @MainActor in
+            switch await ExtensionStore.prepareInstallXPI(at: url) {
+            case .failure(let error): noticeCouldNotAdd(error.message)
+            case .success(let prepared):
+                ExtensionSheet.offer(prepared, in: profile, over: host, onInstalled: { [weak self] result in
+                    if case .failure(let error) = result { self?.noticeCouldNotAdd(error.message) }
+                    self?.reloadExtensions()
+                })
+            }
+        }
+    }
+
+    /// Why a picked extension file couldn't be added, in the app's own words.
+    private func noticeCouldNotAdd(_ message: String) {
+        guard let host = window?.contentView else { return }
+        ConfirmSheet.notice(in: host, title: String(localized: "Couldn’t add this extension", comment: "Title of the notice when a picked extension file can't be added."),
+                            message: message)
     }
 
     /// The profiles there are, each with what it holds and the ways to change it. The first has no trash: there's
