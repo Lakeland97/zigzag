@@ -375,6 +375,8 @@ final class WindowManager {
     func saveNow(synchronously: Bool = false) {
         saveDebouncer.cancel()
         guard !controllers.isEmpty, !sessionWaiting else { return }
+        // Started fresh and nothing done yet: the session from before is still the one to bring back.
+        if startingFresh, !sessionWasUsed { return }
         // Private windows are never written down.
         let saved = controllers.filter { !$0.tabManager.isPrivate }
         guard !saved.isEmpty else { return }
@@ -473,6 +475,23 @@ final class WindowManager {
     /// Whatever asks for a browser window next brings them back first.
     var sessionWaiting = false
 
+    /// Launched with Settings › General › On launch set to start fresh: until the new window is used, saving would put
+    /// one blank page in place of the session that's still there to reopen (#433).
+    var startingFresh = false
+
+    /// Whether a page has actually loaded since a fresh start, so the old session should give way. It stays used for
+    /// the rest of the run, even after that page closes. A new window or a second blank tab isn't browsing by itself,
+    /// and mustn't let a save overwrite the session that's still there to reopen (#433).
+    var sessionWasUsed: Bool {
+        get { sessionUsed }
+        set { if newValue { sessionUsed = true } }
+    }
+    private var sessionUsed = false
+
+    /// Called as pages load: a page that finished loading somewhere marks the fresh session used, and it stays used
+    /// for the rest of the run even after its tabs close.
+    func pageLoaded() { sessionWasUsed = true }
+
     /// Brings back every window and tab from the last run, crash or not. Returns false if there was nothing.
     @discardableResult
     func restoreSession() -> Bool {
@@ -491,6 +510,37 @@ final class WindowManager {
         SnapshotStore.prune(keeping: allIDs)
         return !controllers.isEmpty
     }
+
+    /// A fresh start passed the last session over: keep it, so Window › Reopen Last Session can bring back what it
+    /// was, however long the fresh window is used first (#433).
+    func keepSessionForReopening() {
+        guard let saved = JSONStore.load(SessionState.self, from: Paths.session), !saved.windows.isEmpty else { return }
+        // One copy per run: the session from before this launch, never this run's own saving over it.
+        guard !keptPreviousSession else { return }
+        JSONStore.save(saved, to: Paths.previousSession)
+        keptPreviousSession = true
+    }
+
+    /// Whether there's a session from before a fresh start to bring back.
+    var canReopenLastSession: Bool {
+        guard let saved = JSONStore.load(SessionState.self, from: Paths.previousSession), !saved.windows.isEmpty else { return false }
+        let open = openTabIDs
+        return saved.windows.contains { window in
+            !isBack(window, open: open)
+        }
+    }
+
+    /// Window › Reopen Last Session: the windows and tabs a fresh start passed over come back, and the fresh
+    /// session stays until the next launch writes over it.
+    func reopenLastSession() {
+        guard let saved = JSONStore.load(SessionState.self, from: Paths.previousSession), !saved.windows.isEmpty else { return }
+        let shares = TabStore.windowsShareTabs
+        let state = shares ? saved : saved.givingWindowsTheirOwnTabs()
+        let store: TabStore? = shares ? sharedStore ?? TabStore() : nil
+        for windowState in state.windows { restoreWindow(windowState, store: store) }
+    }
+
+    private var keptPreviousSession = false
 
     /// Windows closed this session, newest last, to bring back with ⇧⌘N's neighbor, Reopen Closed Window.
     private var closedWindows: [(id: UUID, state: SessionState.WindowState, history: [UUID: Data], closedAt: Date)] = []
