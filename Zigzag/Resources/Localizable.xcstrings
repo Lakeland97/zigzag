@@ -15429,6 +15429,17 @@
         }
       }
     },
+    "Reader Options": {
+      "comment": "Tooltip and VoiceOver name of the address bar's Reader button while Reader is on, and VoiceOver name of the panel it opens: text size, typeface, column width, colors and Turn Off Reader.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器选项"
+          }
+        }
+      }
+    },
     "Reader Text and Colors": {
       "comment": "View menu item: opens Reader's text size, typeface, column width and color choices.",
       "localizations": {
@@ -18713,6 +18724,17 @@
         }
       }
     },
+    "Space: your space’s colors": {
+      "comment": "Tooltip of the Space color choice in Reader: the article takes the colors of the space you're in.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空间：你所在空间的颜色"
+          }
+        }
+      }
+    },
     "Spaces": {
       "comment": "A section of Settings.\nVoiceOver name of the space switcher: the list of spaces to pick one from with the keyboard.",
       "localizations": {
@@ -21016,6 +21038,17 @@
         }
       }
     },
+    "Translating from %@… %lld%%": {
+      "comment": "Toast while a page is translated, with how much is done. The language is its name, like French; then a percent, like 40%.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在从%@翻译… %lld%%"
+          }
+        }
+      }
+    },
     "Translation": {
       "comment": "A section of Settings: translating web pages.",
       "localizations": {
@@ -21155,6 +21188,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "关闭小播放器"
+          }
+        }
+      }
+    },
+    "Turn Off Reader": {
+      "comment": "Action at the bottom of Reader's text and color choices: closes Reader and shows the page.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭阅读器"
           }
         }
       }

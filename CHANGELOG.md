@@ -5,6 +5,23 @@ Every release of Zigzag, newest first. The app shows the notes for the version y
 
 ## [Unreleased]
 
+### New
+- Reader has a Space color. The article takes the colors of the space you're in, the same color as the sidebar, light or dark as the space is, with text and links kept dark (or light) enough to read easily. It changes right away when you switch spaces or change the space's color. ([#455](https://github.com/ZigaoWang/zigzag/issues/455))
+
+### Fixed
+- Add on the bar over a Chrome Web Store theme ends with one line saying Zigzag doesn't use browser themes, and the bar no longer offers Try Again, which could only fail the same way. Thanks to [Lakeland97](https://github.com/Lakeland97). ([#454](https://github.com/ZigaoWang/zigzag/issues/454))
+- A link followed inside Peek can be walked back. Once the Peek has gone to another page, back and forward buttons show in its top strip, and ⌘[ and ⌘] or a two-finger swipe work there as in a tab. Esc still closes the whole Peek. Thanks to [Lakeland97](https://github.com/Lakeland97). ([#463](https://github.com/ZigaoWang/zigzag/issues/463))
+- Translating a long page no longer gives up after 45 seconds. The text on screen is translated first and each part appears as soon as it's ready, the toast shows how far along it is, and it only stops with an error when nothing has come back for 45 seconds. Thanks to [orisred](https://github.com/orisred). ([#465](https://github.com/ZigaoWang/zigzag/issues/465))
+- The traffic lights and the buttons beside them sit midway between the top of the window and the address field, with as much room above them as below, instead of lower down.
+- To help fix the Mac's Passwords list on macOS 26, Zigzag keeps a small log of its steps on your Mac, never your logins, in ~/Library/Logs/Zigzag/passwords.log. Help › Report a Problem includes it. ([#378](https://github.com/ZigaoWang/zigzag/issues/378))
+- A swipe back or forward no longer fills its arrow partway and then empties it when your fingers stop. The arrow now fills only once you've swiped far enough, and with your fingers resting it stays exactly as it is. A quick flick let go while your fingers are still moving still goes back or forward. Thanks to [frarees](https://github.com/frarees). ([#377](https://github.com/ZigaoWang/zigzag/issues/377))
+- Reader is one button in the address bar. With Reader off it turns Reader on; with Reader on it opens Reader's options (text size, typeface, column width, colors), which now end with Turn Off Reader. The separate Aa button is gone. Esc and ⌥⌘R still turn Reader off, and View › Reader Text and Colors still opens the options. The site's icon at the top of an article now lines up with the text, and the color swatches in Reader and the space editor no longer grow under the pointer; a faint ring shows instead. ([#455](https://github.com/ZigaoWang/zigzag/issues/455))
+- In Show All Tabs, a fine line shows under the search field while cards are scrolled under it, instead of the cards being cut off there. ([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- What's New shows a fine line above its buttons while there are more notes below, and under its title once you've scrolled, instead of the notes being cut off there. ([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- The close button in the find bar, and every other ✕ button, sits level with the buttons beside it instead of half a point low. ([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- While an update downloads, its card in the sidebar keeps the same margin on the right as on the left. ([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- The yes-or-no steps in the welcome window sit in the middle of the window, with no large empty gap above the buttons at the bottom. ([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+
 ## [0.9.4] - 2026-11-21
 
 Reader redesigned to feel like part of Zigzag, Capture like Arc's for an area, an element or the page, Handoff to your iPhone, iPad and other Macs, ⌘Z for split changes, a sidebar width every window keeps, typed and held zoom, and a calmer Settings.

@@ -12,6 +12,23 @@ Zigzag 的每个版本，最新的在最上面。App 会显示你正在用的版
 
 ## [Unreleased]
 
+### 新功能
+- 阅读器多了“空间”颜色：文章用你所在空间的颜色，和边栏同一个颜色，空间是浅色就浅、深色就深，文字和链接的对比度保证读起来轻松。切换空间或改空间颜色时会马上跟着变。([#455](https://github.com/ZigaoWang/zigzag/issues/455))
+
+### 修复
+- 在 Chrome 网上应用店的主题页面上点提示栏的“添加”，现在只会显示一行说明 Zigzag 不使用浏览器主题，也不再出现“重试”按钮，因为重试也只会得到同样的结果。感谢 [Lakeland97](https://github.com/Lakeland97)。([#454](https://github.com/ZigaoWang/zigzag/issues/454))
+- 在 Peek 里点了链接之后可以退回去了。Peek 打开过别的页面后，顶部会出现后退和前进按钮，⌘[、⌘] 和双指轻扫也跟在标签页里一样能用。按 Esc 还是直接关掉整个 Peek。感谢 [Lakeland97](https://github.com/Lakeland97)。([#463](https://github.com/ZigaoWang/zigzag/issues/463))
+- 翻译很长的网页不会再在 45 秒后放弃了。屏幕上看得到的部分先翻，翻好一段就换上一段，提示里会显示翻到多少了；只有连续 45 秒什么都没翻出来才会报错。感谢 [orisred](https://github.com/orisred)。([#465](https://github.com/ZigaoWang/zigzag/issues/465))
+- 红黄绿按钮和旁边的按钮现在正好在窗口顶部和地址栏中间，上下留白一样，不再偏下。
+- 为了修好 macOS 26 上 Mac 的密码列表，Zigzag 会在你的 Mac 上记一份很小的步骤日志，绝不记你的登录信息，放在 ~/Library/Logs/Zigzag/passwords.log。“帮助 › 报告问题”会附上它。([#378](https://github.com/ZigaoWang/zigzag/issues/378))
+- 轻扫后退或前进时，箭头不会再扫到一半就变成实心，手指一停又变回空心。现在只有扫得够远箭头才会变实心，手指停住不动时箭头保持原样。手指还在移动时快速一扫松手，照样会后退或前进。感谢 [frarees](https://github.com/frarees)。([#377](https://github.com/ZigaoWang/zigzag/issues/377))
+- 地址栏里的阅读器只剩一个按钮：没开阅读器时点它打开阅读器；开着时点它打开阅读器选项（文字大小、字体、栏宽、颜色），最下面多了“关闭阅读器”。单独的 Aa 按钮去掉了。Esc 和 ⌥⌘R 照样直接关闭阅读器，“显示”菜单里的“阅读器文字和颜色”也照样能打开选项。文章顶部的网站图标现在和正文左边对齐了；阅读器和空间编辑器里的色块鼠标移上去不再放大，只显示一圈淡淡的边。([#455](https://github.com/ZigaoWang/zigzag/issues/455))
+- 在“显示所有标签页”里，卡片滚到搜索框下面时会出现一条细线，不会再像被硬切掉一样。([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- “新功能”里，下面还有内容时按钮上方会出现一条细线，往下滚后标题下面也会有，说明文字不会再被硬切掉。([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- 查找栏的关闭按钮和其他所有 ✕ 按钮现在跟旁边的按钮对齐了，不会再低半个点。([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- 下载更新时，边栏里那张卡片左右两边的边距现在一样了。([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+- 欢迎窗口里只需要选“是/否”的那几步现在放在窗口中间了，底部按钮上方不会再空一大块。([#458](https://github.com/ZigaoWang/zigzag/issues/458))
+
 ## [0.9.4] - 2026-11-21
 
 阅读器重新设计，更像 Zigzag 自己的一部分；像 Arc 一样截图，可以截一块区域、一个元素或整个页面；支持接力到 iPhone、iPad 和其他 Mac；⌘Z 可以撤销分屏调整；侧边栏宽度每个窗口都记得；缩放可以按住连续调，也能直接输入；设置里的文字更简洁。
