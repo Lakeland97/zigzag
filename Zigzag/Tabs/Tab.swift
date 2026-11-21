@@ -16,10 +16,19 @@ protocol TabHost: AnyObject {
     func tabWantsFocus(_ tab: Tab)
     /// True when a route (#286) opened the link in another space. Only browser windows route.
     func tab(_ tab: Tab, routesLink url: URL, arrival: SiteRoutes.Arrival, inBackground: Bool) -> Bool
+    /// Its page went in or out of full screen in the window (#462).
+    func tab(_ tab: Tab, pageFullScreenChanged on: Bool)
+    /// Whether the page's own full screen can be promoted to The Whole Screen: a windowed page, or a pane in a split.
+    func tabShowsFullScreenExpand(_ tab: Tab) -> Bool
+    /// The expand button over a page-filled page: take it to The Whole Screen.
+    func tabDidAskToExpandFullScreen(_ tab: Tab)
 }
 
 extension TabHost {
     func tabWantsFocus(_ tab: Tab) {}
+    func tab(_ tab: Tab, pageFullScreenChanged on: Bool) {}
+    func tabShowsFullScreenExpand(_ tab: Tab) -> Bool { false }
+    func tabDidAskToExpandFullScreen(_ tab: Tab) {}
     func tab(_ tab: Tab, routesLink url: URL, arrival: SiteRoutes.Arrival, inBackground: Bool) -> Bool { false }
     /// Loads an address with no sender: page links and every caller except a rule.
     func tab(_ tab: Tab, openURL url: URL, disposition: OpenDisposition) {
@@ -231,13 +240,20 @@ final class Tab: NSObject {
     /// Its video is playing in the window's mini player, its page with it.
     var isInMiniPlayer = false
     /// Its page fills the page's area with something in full screen, as Settings › Tabs › Full screen videos fill
-    /// The Page has it (PageFullScreen), so Esc in the window leaves it.
+    /// The Page has it (PageFullScreen), or a split's page fills its pane, so Esc in the window leaves it. The expand
+    /// button takes it to The Whole Screen (#257, #462).
     var isInPageFullScreen = false {
         didSet {
             guard isInPageFullScreen != oldValue else { return }
-            pageHolder?.onExpand = { [weak self] in self.map(PageFullScreen.expand) }
-            pageHolder?.showsExpand = isInPageFullScreen
+            pageHolder?.onExpand = { [weak self] in self?.expandPageFullScreen() }
+            pageHolder?.showsExpand = isInPageFullScreen && (host?.tabShowsFullScreenExpand(self) ?? false)
+            host?.tab(self, pageFullScreenChanged: isInPageFullScreen)
         }
+    }
+
+    /// The expand button over a page-filled video: the window takes it to The Whole Screen.
+    private func expandPageFullScreen() {
+        host?.tabDidAskToExpandFullScreen(self)
     }
     /// What you answered the page's questions (camera, location, notifications) while it's open: asked again once
     /// it loads another page or reloads, as a site set to Ask is.

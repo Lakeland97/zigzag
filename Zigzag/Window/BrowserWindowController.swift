@@ -28,6 +28,14 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private var tokens: [SignalToken] = []
     private var selectedTabToken: SignalToken?
     private weak var shownTab: Tab?
+    /// The page filling the window in full screen (#462), and whether it was the page that took the browser into its
+    /// full-screen space: leaving then gives the window back. A browser already in a space keeps it.
+    private var pageFullScreenTab: Tab?
+    private var pageFullScreenAskedForSpace = false
+    /// The page left while the browser was still entering its space: leave once it has.
+    private var pageFullScreenExitAfterEnter = false
+    /// The expand button zoomed a split's pane over the others for the duration; put it back on leaving.
+    private var pageFullScreenExpandedZoom = false
     private var fadeTimer: Timer?
     var onClose: ((BrowserWindowController) -> Void)?
     var onStateChange: (() -> Void)?
@@ -1253,6 +1261,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             card.isUnfocusedPane = false
             card.showsHeader = false
         }
+        updatePageFullScreenForLayout()
     }
 
     /// Show Here (#162): moves the loaded page into this window; the other shows a placeholder.
@@ -2265,6 +2274,117 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         CATransaction.commit()
     }
 
+    // MARK: Full screen in the page (#462)
+
+    /// A page's full screen fills its pane in a split, or follows the setting on its own: The Page fills the window
+    /// with the chrome around it; The Whole Screen takes the browser into its own space. The space is the browser's,
+    /// the same as Enter Full Screen; the page does not get a separate one.
+    func tab(_ tab: Tab, pageFullScreenChanged on: Bool) {
+        guard tab === tabManager.selectedTab else { return }
+        if on {
+            guard tabManager.split(for: tab) == nil, PageFullScreen.fills(for: tab.url) == .screen else { return }
+            beginWholeScreen(tab)
+        } else if tab === pageFullScreenTab {
+            endWholeScreen()
+        }
+    }
+
+    /// The page has the window: a windowed browser enters its full-screen space for the duration. The chrome gets
+    /// out of the way and comes back from the top. A browser already in a space stays in it.
+    private func beginWholeScreen(_ tab: Tab) {
+        guard pageFullScreenTab == nil else { return }
+        pageFullScreenTab = tab
+        root.isImmersive = true
+        holdAddressInBar()
+        showTopBar()
+        // The browser's own space, not a second one for the page (#462). The system gives the windowed frame back.
+        if !browserWindow.styleMask.contains(.fullScreen), browserWindow.fullScreenPhase == .windowed {
+            pageFullScreenAskedForSpace = true
+            browserWindow.toggleFullScreen(nil)
+        }
+        layoutTrafficLights()
+    }
+
+    /// Leaving puts the chrome back. If the page took the browser into its space, leaving the page leaves the space,
+    /// and macOS gives the window back; one already in a space stays there.
+    private func endWholeScreen() {
+        guard pageFullScreenTab != nil else { return }
+        pageFullScreenTab = nil
+        root.isImmersive = false
+        restoreAddressAfterImmersive()
+        showTopBar()
+        layoutTrafficLights()
+        if pageFullScreenExpandedZoom {
+            pageFullScreenExpandedZoom = false
+            paneZoom.clear()
+            showPages()
+        }
+        guard pageFullScreenAskedForSpace else { return }
+        switch browserWindow.fullScreenPhase {
+        case .fullScreen:
+            pageFullScreenAskedForSpace = false
+            browserWindow.toggleFullScreen(nil)
+        case .entering:
+            // The space is still coming: leave it as soon as it has arrived.
+            pageFullScreenAskedForSpace = false
+            pageFullScreenExitAfterEnter = true
+        case .windowed, .exiting:
+            pageFullScreenAskedForSpace = false
+        }
+    }
+
+    /// In full screen the bar comes down with the address, whatever Settings › Appearance says, so back, forward,
+    /// reload and the address are one place.
+    private func holdAddressInBar() {
+        guard sidebar.holdsAddress else { return }
+        sidebar.holdsAddress = false
+        root.topBar.hold(buttons: sidebar.addressButtons, address: sidebar.address)
+        let tab = tabManager.selectedTab
+        root.topBar.showPage(url: tab?.url, notSecure: tab?.isNotSecure ?? false)
+        root.barHoldsAddress = true
+    }
+
+    /// Back to where Settings › Appearance keeps the address.
+    private func restoreAddressAfterImmersive() {
+        if BrowserRootView.addressAbovePage {
+            if sidebar.holdsAddress { holdAddressInBar() } else { root.barHoldsAddress = true }
+        } else {
+            sidebar.holdsAddress = true
+            root.barHoldsAddress = false
+        }
+    }
+
+    /// Whether the page's expand button shows: a windowed page can be promoted, and so can a page in a split, which
+    /// fills its pane. A page already in The Whole Screen has nothing to promote.
+    func tabShowsFullScreenExpand(_ tab: Tab) -> Bool {
+        guard tab === tabManager.selectedTab, pageFullScreenTab !== tab else { return false }
+        return tabManager.split(for: tab) != nil || PageFullScreen.fills(for: tab.url) == .page
+    }
+
+    /// The expand button over a page-filled video: take it to The Whole Screen, a pane in a split filling the space
+    /// first, as a tile expands over the others.
+    func tabDidAskToExpandFullScreen(_ tab: Tab) {
+        guard tab === tabManager.selectedTab, pageFullScreenTab !== tab else { return }
+        if let pair = tabManager.split(for: tab), paneZoom.tabID != tab.id {
+            paneZoom.toggle(tab.id, in: pair.ids, places: pair.shape.regions)
+            pageFullScreenExpandedZoom = true
+            showPages()
+        }
+        beginWholeScreen(tab)
+    }
+
+    /// The split ended (or began), or the tab changed: a page that was in The Whole Screen and is no longer alone
+    /// leaves the space; a page that is alone and follows The Whole Screen takes it.
+    private func updatePageFullScreenForLayout() {
+        guard let tab = tabManager.selectedTab else { return }
+        if let full = pageFullScreenTab, tab !== full || tabManager.split(for: tab) != nil {
+            PageFullScreen.exit(full)
+            endWholeScreen()
+        }
+        guard tab.isInPageFullScreen, pageFullScreenTab == nil, tabManager.split(for: tab) == nil else { return }
+        if PageFullScreen.fills(for: tab.url) == .screen { beginWholeScreen(tab) }
+    }
+
     // MARK: Traffic lights
 
     private var trafficLightsPicture: NSImage?
@@ -2285,7 +2405,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         // Beside a sidebar on the right they're in the bar holding the address the whole time, slid out or not; with
         // only a page's tools there, they ride in the sidebar at the window's other edge, and go with it.
         let barKeepsLights = root.sidebarOnRight && root.barHoldsAddress
-        let stays = root.showsTopBar && (barKeepsLights || (!root.sidebarOnRight && !root.isSidebarFloatingVisible))
+        let stays = root.chromeBarShown && (barKeepsLights || (!root.sidebarOnRight && !root.isSidebarFloatingVisible))
         // On either side the bar's toggle is where the sidebar's lands (on the right, both at the window's right end).
         if stays, duration > 0 {
             toggleHeldUntil = Date().addingTimeInterval(duration)
@@ -2300,7 +2420,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     func layoutTrafficLights() {
         let window = browserWindow
         let floating = root.isSidebarFloatingVisible
-        let docked = root.sidebarVisible
+        let docked = root.chromeSidebarShown
         let sliding = isSliding
         // The picture shows only mid-slide, and only when the sidebar is (or is becoming) visible.
         // Not in full screen: the lights live in the title bar that comes down with the menu bar there, so a picture of
@@ -2312,7 +2432,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         // (#166), and a bar there for a page's tools alone leaves them be, as on the left.
         let onRight = root.sidebarOnRight
         let barKeepsLights = onRight && root.barHoldsAddress
-        let inBar = root.showsTopBar && (barKeepsLights || (!docked && !floating))
+        let inBar = root.chromeBarShown && (barKeepsLights || (!docked && !floating))
         let room = barKeepsLights ? 0 : window.trafficLightsWidth
         // Their room in the sidebar's row comes at once as it slides out, and goes only once it's out of sight, so
         // nothing in the row moves while it's on screen; until then their picture rides in it.
@@ -2334,11 +2454,12 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         // The lights' room in the bar stays while the sidebar floats over it, so nothing in the bar moves as it does.
         // Full screen included: the lights come down with the menu bar, so the bar leaves their space
         // rather than drawing its controls under them.
-        root.topBar.trafficLightsWidth = root.showsTopBar && (!docked || barKeepsLights) ? window.trafficLightsWidth : 0
+        root.topBar.trafficLightsWidth = root.chromeBarShown && (!docked || barKeepsLights) ? window.trafficLightsWidth : 0
         // With the sidebar hidden its toggle goes with it, so the bar above the page has one of its own. While the
         // sidebar slides back in, the bar's stays where the sidebar's lands, and the sidebar's shows once it's there.
-        let held = root.showsTopBar && holdsToggle
-        root.topBar.showsSidebarButton = root.showsTopBar && !docked
+        let held = root.chromeBarShown && holdsToggle
+        // The Whole Screen has no docked sidebar to toggle: its edge still brings it out.
+        root.topBar.showsSidebarButton = root.chromeBarShown && !docked && !root.isImmersive
         root.topBar.sidebarOnRight = onRight
         sidebar.isOnRight = onRight
         // The sidebar's own, where the docked sidebar puts it.
@@ -2372,12 +2493,26 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         fullScreenChanged(.willEnter)
     }
 
-    func windowDidEnterFullScreen(_ notification: Notification) { fullScreenChanged(.didEnter) }
+    func windowDidEnterFullScreen(_ notification: Notification) {
+        fullScreenChanged(.didEnter)
+        // The page left while the space was coming: give the window back now that it has arrived, unless another
+        // page has taken it in the meantime, which then owns the space.
+        if pageFullScreenExitAfterEnter {
+            pageFullScreenExitAfterEnter = false
+            if pageFullScreenTab != nil {
+                pageFullScreenAskedForSpace = true
+            } else {
+                browserWindow.toggleFullScreen(nil)
+            }
+        }
+    }
 
     /// macOS gave up on full screen: the window is as it was, so its title bar and buttons are too (#401).
     func windowDidFailToEnterFullScreen(_ window: NSWindow) {
         Diagnostics.note("Full screen didn't start")
         windowedFrame = nil
+        pageFullScreenAskedForSpace = false
+        pageFullScreenExitAfterEnter = false
         fullScreenChanged(.didFailToEnter)
     }
 
@@ -2385,6 +2520,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     func windowDidExitFullScreen(_ notification: Notification) {
         windowedFrame = nil
+        // Leaving the space takes the page out of full screen too: the window is back, with its chrome.
+        pageFullScreenAskedForSpace = false
+        pageFullScreenExitAfterEnter = false
+        if let tab = pageFullScreenTab {
+            PageFullScreen.exit(tab)
+            endWholeScreen()
+        }
         fullScreenChanged(.didExit)
     }
 
@@ -2409,6 +2551,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         updateHandoff()
         switcher.windowResignedKey()
         spaceSwitcher.windowResignedKey()
+        if root.isImmersive { root.hideTopBar() }
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
