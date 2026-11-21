@@ -701,7 +701,7 @@ final class BrowserRootView: SpaceFrameView {
         attentionEdge.isHidden = true
         attentionEdge.onClick = { [weak self] in
             guard let self else { return }
-            // In full screen the sidebar is out of the layout: its edge brings it out, the pin keeps it.
+            // In full screen the sidebar is out of the layout: its edge brings it out.
             if self.isImmersive { self.reveal(true) } else { self.setSidebarVisible(true, animated: true) }
             // Select the tab the question is for so its banner shows.
             if let waiting = self.waitingTabs.first,
@@ -738,7 +738,7 @@ final class BrowserRootView: SpaceFrameView {
             // opens again. Closed this way it keeps the width it had, for when it opens next.
             let closesAt = Tokens.Metric.sidebarMinWidth / 2
             // Out over the page, the edge sets the width and nothing else: it stays out until the pointer leaves.
-            if self.sidebarRevealed, !self.sidebarVisible {
+            if self.sidebarRevealed, !self.chromeSidebarShown {
                 // The card floats a frame's inset in from the window edge, so the width is the pointer's reach less it.
                 let reach = x - Tokens.Metric.cardInset
                 let width = Tokens.Space.snap(min(max(reach, Tokens.Metric.sidebarMinWidth), Tokens.Metric.sidebarMaxWidth))
@@ -1692,7 +1692,7 @@ final class BrowserRootView: SpaceFrameView {
     }
 
     /// In full screen, the pointer at the window's top brings the bar down over the page without moving it, and
-    /// leaving the bar puts it away again. The pin keeps it there instead (#462).
+    /// leaving the bar puts it away again (#462).
     private func revealTopBar(near point: NSPoint) {
         guard isImmersive else { return }
         let bar = topBarFrame
