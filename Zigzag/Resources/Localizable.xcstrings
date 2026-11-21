@@ -11513,6 +11513,17 @@
         }
       }
     },
+    "Move the pointer to the edge of the screen to bring the sidebar out over other apps. Click a tab to switch to it.": {
+      "comment": "Explanation under “Sidebar from the screen edge” in Settings › Appearance.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将指针移到屏幕边缘，即可在其他应用上方拉出边栏。点按标签页即可切换过去。"
+          }
+        }
+      }
+    },
     "Move these tabs to %@?": {
       "comment": "Title of the sheet that asks before several tabs move to a space on another profile. The placeholder is the space's name.",
       "localizations": {
@@ -18152,6 +18163,28 @@
         }
       }
     },
+    "Sidebar from the screen edge": {
+      "comment": "A setting in Settings › Appearance: moving the pointer to the screen's edge shows the sidebar over other apps, as the Dock does.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从屏幕边缘拉出边栏"
+          }
+        }
+      }
+    },
+    "Sidebar on the right": {
+      "comment": "A setting in Settings › Appearance: puts the sidebar along the window's right edge.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "边栏放在右侧"
+          }
+        }
+      }
+    },
     "Sidebar position": {
       "comment": "A setting in Settings › Appearance: which edge of the window the sidebar runs along, Left or Right.",
       "localizations": {
@@ -23993,6 +24026,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "下载 文件 保存 阻止 允许 网站 权限 询问 downloads files save block allow site permission ask"
+          }
+        }
+      }
+    },
+    "edge dock hover peek reveal hidden sidebar over apps corner": {
+      "comment": "Words that find the Sidebar from the screen edge setting with Find a setting in Settings. Not shown.",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "边缘 拉出 悬停 显示 隐藏 边栏 角落 edge dock hover peek reveal hidden sidebar over apps corner"
           }
         }
       }
