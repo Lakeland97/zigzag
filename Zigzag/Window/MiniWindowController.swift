@@ -179,7 +179,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         weak var browser: BrowserWindowController?
         var paneScreen: NSRect
         var dim: MiniPeekDimView?
-        var resizeToken: NSObjectProtocol?
+        var moveToken: NSObjectProtocol?
         var closeToken: NSObjectProtocol?
         var clickGlobal: Any?
         var clickLocal: Any?
@@ -188,6 +188,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         var resignToken: NSObjectProtocol?
     }
     private var dock: Dock?
+    /// A programmatic frame change while refitting: the move it causes is ours, not the person dragging the Peek out.
+    private var isAdjustingDock = false
     /// The pointer watcher that brings the overlay chrome down.
     private var chromePointerToken: Any?
     /// Whether this Mini is showing a tab borrowed from a browser, not a page it owns.
@@ -819,12 +821,13 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     }
 
     /// Installs the page's follow, close, and click-out watchers once, whether the Peek is opening or coming back.
+    /// The page's own layout drives the refit; a browser move updates the pane the drag is measured against.
     private func installDockObservers() {
         guard let browserWindow = dock?.browser?.window else { return }
-        if dock?.resizeToken == nil {
-            dock?.resizeToken = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification,
-                                                                        object: browserWindow, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.paneResized() }
+        if dock?.moveToken == nil {
+            dock?.moveToken = NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification,
+                                                                      object: browserWindow, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.dockPaneChanged() }
             }
         }
         if dock?.closeToken == nil {
@@ -856,7 +859,11 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         guard pane.width > 1, pane.height > 1 else { return }
         if let old = dock?.paneScreen, old.width > 1, old.height > 1 {
             let resized = MiniDockLayout.resized(window.frame, from: old, to: pane)
-            if resized != window.frame { window.setFrame(resized, display: false) }
+            if resized != window.frame {
+                isAdjustingDock = true
+                window.setFrame(resized, display: false)
+                isAdjustingDock = false
+            }
         }
         dock?.paneScreen = pane
 
@@ -891,12 +898,29 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         // resize instead of the Mini lagging a frame behind.
         browserWindow.contentView?.layoutSubtreeIfNeeded()
         let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        refit(window, to: pane, in: browser)
+    }
+
+    /// The browser window moved: keep the pane the drag is measured against in screen coordinates. The child moved
+    /// with its parent, so this is a refit at the same place, not a detach.
+    private func dockPaneChanged() {
+        guard isDockedPeek, let window, let browser = dock?.browser, let browserWindow = browser.window else { return }
+        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        guard pane.width > 1, pane.height > 1 else { return }
+        refit(window, to: pane, in: browser)
+    }
+
+    /// The dim follows the page exactly; the Mini keeps its share and relative place in it, and never grows past it.
+    private func refit(_ window: NSWindow, to pane: NSRect, in browser: BrowserWindowController) {
         let old = dock?.paneScreen ?? pane
         dock?.paneScreen = pane
         dock?.dim?.frame = browser.root.cardFrame
         guard old.width > 1, old.height > 1, pane.width > 1, pane.height > 1 else { return }
         let resized = MiniDockLayout.resized(window.frame, from: old, to: pane)
-        if resized != window.frame { window.setFrame(resized, display: true) }
+        guard resized != window.frame else { return }
+        isAdjustingDock = true
+        window.setFrame(resized, display: true)
+        isAdjustingDock = false
     }
 
     /// The page's bounds on screen, read live: the browser may have moved or changed size under the stored frame.
@@ -921,6 +945,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         hideDockDim(animated: false)
         removeDockObservers()
         dock = nil
+        // A detached URL Peek is a standalone Mini now and may be restored as one. A borrowed page is already a
+        // tab, so its Mini must not come back as a second window for it.
+        if borrowedOrigin == nil { isPeekPresentation = false }
         // The detached Mini keeps the keyboard and stays above its browser, at exactly the frame it had.
         window.makeKey()
         window.orderFront(nil)
@@ -990,8 +1017,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func removeDockObservers() {
-        if let token = dock?.resizeToken { NotificationCenter.default.removeObserver(token) }
-        dock?.resizeToken = nil
+        if let token = dock?.moveToken { NotificationCenter.default.removeObserver(token) }
+        dock?.moveToken = nil
         if let token = dock?.closeToken { NotificationCenter.default.removeObserver(token) }
         dock?.closeToken = nil
         if let token = dock?.clickGlobal { NSEvent.removeMonitor(token) }
@@ -1717,8 +1744,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// A docked Mini dragged past the page's edge becomes a full Mini. The check is the page itself, so a window
     /// moved because the browser moved stays docked, and only the hand that leaves the page takes it out.
     func windowDidMove(_ notification: Notification) {
-        guard isDockedPeek, let window, let pane = dockedPaneScreen() else { return }
-        guard !MiniDockLayout.staysDocked(window.frame, in: pane) else { return }
+        guard isDockedPeek, !isAdjustingDock, let window, let pane = dockedPaneScreen() else { return }
+        guard MiniPeekPolicy.detaches(frame: window.frame, viewport: pane, isAdjusting: isAdjustingDock) else { return }
         detachFromPane()
     }
 

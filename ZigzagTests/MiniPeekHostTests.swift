@@ -176,4 +176,96 @@ struct MiniPeekHostTests {
             mini.window?.close()
         }
     }
+
+    /// A user move, with the delegate call the window server posts; deterministic in the test host.
+    private func move(_ mini: MiniWindowController, to origin: NSPoint) {
+        mini.window?.setFrameOrigin(origin)
+        if mini.isDockedPeek {
+            mini.windowDidMove(Notification(name: NSWindow.didMoveNotification, object: mini.window))
+        }
+    }
+
+    @Test func anyExitDetachesIncludingFixedSidebarAndTopBar() async throws {
+        try await inWindow { controller, tabs in
+            let pane = try #require(MiniPeekHost.pane(of: controller))
+            // Touching the page's edge stays docked.
+            #expect(open("https://example.com/edge", in: controller, from: tabs[0]))
+            let touching = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            move(touching, to: NSPoint(x: pane.minX, y: pane.minY))
+            #expect(touching.isDockedPeek)
+            controller.miniPeeks.windowClosing()
+
+            let exits: [(String, NSPoint)] = [
+                ("fixed sidebar", NSPoint(x: pane.minX - 20, y: pane.midY)),
+                ("top bar", NSPoint(x: pane.midX, y: pane.maxY - 20)),
+                ("right edge", NSPoint(x: pane.maxX - 20, y: pane.midY)),
+                ("bottom edge", NSPoint(x: pane.midX, y: pane.minY - 20)),
+                ("outside the content", NSPoint(x: pane.maxX + 200, y: pane.maxY + 200)),
+            ]
+            for (index, exit) in exits.enumerated() {
+                let (name, origin) = exit
+                #expect(open("https://example.com/exit\(index)", in: controller, from: tabs[0]), "\(name)")
+                let mini = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+                move(mini, to: origin)
+                #expect(!mini.isDockedPeek, "\(name)")
+                #expect(!mini.isDockShown, "\(name)")
+                #expect(controller.root.miniPeekDim == nil, "\(name)")
+                #expect(controller.window?.childWindows?.contains { $0 === mini.window } != true, "\(name)")
+                #expect(controller.miniPeeks.records[tabs[0].id] == nil, "\(name)")
+                #expect(MiniWindowController.all.contains { $0 === mini }, "\(name)")
+                mini.window?.close()
+            }
+        }
+    }
+
+    @Test func viewportChangeRefitsWithoutDetach() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/fit", in: controller, from: tabs[0]))
+            let mini = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            // The fixed sidebar opens and closes: the page grows and shrinks under the Peek, which is not a drag.
+            controller.root.sidebarVisible = false
+            controller.root.needsLayout = true
+            controller.root.layoutSubtreeIfNeeded()
+            #expect(mini.isDockedPeek)
+            #expect(controller.miniPeeks.records[tabs[0].id] != nil)
+
+            controller.root.sidebarVisible = true
+            controller.root.needsLayout = true
+            controller.root.layoutSubtreeIfNeeded()
+            let pane = try #require(MiniPeekHost.pane(of: controller))
+            let frame = try #require(mini.window?.frame)
+            #expect(mini.isDockedPeek)
+            #expect(pane.contains(frame))
+            #expect(controller.root.miniPeekDim?.frame == controller.root.cardFrame)
+            controller.miniPeeks.windowClosing()
+        }
+    }
+
+    @Test func detachKeepsFrameAlphaAndNeverReDocks() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/detach", in: controller, from: tabs[0]))
+            let mini = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            let pane = try #require(MiniPeekHost.pane(of: controller))
+            let size = try #require(mini.window?.frame.size)
+            let alpha = mini.window?.alphaValue ?? 0
+            let target = NSPoint(x: pane.minX - 40, y: mini.window?.frame.minY ?? 0)
+            move(mini, to: target)
+            #expect(!mini.isDockedPeek)
+            #expect(controller.miniPeeks.records[tabs[0].id] == nil)
+            // No jump, resize, or refade: the hand-off keeps the dragged frame and alpha exactly.
+            #expect(mini.window?.frame.origin == target)
+            #expect(mini.window?.frame.size == size)
+            #expect(mini.window?.alphaValue == alpha)
+            #expect(MiniWindowController.all.contains { $0 === mini })
+
+            // Changing tabs does not hide a Peek that is no longer owned by one.
+            controller.tabManager.select(tabs[1])
+            #expect(mini.window?.isVisible == true)
+            // Dragging it back over the page does not re-dock it.
+            move(mini, to: NSPoint(x: pane.midX, y: pane.midY))
+            #expect(!mini.isDockedPeek)
+            #expect(controller.miniPeeks.records.isEmpty)
+            mini.window?.close()
+        }
+    }
 }
