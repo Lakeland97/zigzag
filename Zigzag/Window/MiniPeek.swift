@@ -1,15 +1,15 @@
 import AppKit
 import WebKit
 
-/// What a ⇧-click does: nothing new (`off`), or a Mini docked over the page that closes on a tab switch
-/// (`close`), or the same with the old setting's name (`keep`). One Peek per window either way; `keep` is kept so an
-/// older build's setting still turns the Peek on, not a second lifecycle.
+/// What a ⇧-click does: a Mini docked over the page (`close`), the same inline presentation under the old setting's
+/// name (`keep`), or the standalone window (`off`). One Peek per window either way; `keep` is kept so an older build's
+/// setting still means inline, not a second lifecycle.
 enum MiniPeekMode: String, CaseIterable {
     case off, close, keep
 }
 
-/// The one switch for the docked Peek. It lives in `UserDefaults` with no Settings UI, so a build can turn it on
-/// without a second build; absence means `off`, today's standalone Mini.
+/// The Peek presentation switch in Settings › Zigzag Mini. Absence means inline, the default; `off` is the choice to
+/// keep ⇧-clicked links in a separate Mini window.
 enum MiniPeekSettings {
     static let key = "MiniPeekMode"
     /// Injectable, so tests never write the settings of the build they run in.
@@ -21,11 +21,19 @@ enum MiniPeekSettings {
     }
 
     static func mode(in defaults: UserDefaults) -> MiniPeekMode {
-        MiniPeekMode(rawValue: defaults.string(forKey: key) ?? "") ?? .off
+        MiniPeekMode(rawValue: defaults.string(forKey: key) ?? "") ?? .close
     }
 
     static func setMode(_ mode: MiniPeekMode, in defaults: UserDefaults) {
         defaults.set(mode.rawValue, forKey: key)
+    }
+
+    /// The Settings switch: on keeps a previous `keep` as it was, and otherwise turns inline on as `close`; off is the
+    /// standalone window. The two on modes behave the same today, so only a setting written by an older build keeps
+    /// its name.
+    static func setEnabled(_ on: Bool, in defaults: UserDefaults = .standard) {
+        guard on else { setMode(.off, in: defaults); return }
+        if mode(in: defaults) == .off { setMode(.close, in: defaults) }
     }
 }
 

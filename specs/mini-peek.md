@@ -1,9 +1,11 @@
 # Mini Peek
 
-The Mini that lives inside a browser page, for a ⇧-clicked link. Off by default (`MiniPeekMode`); one Peek per browser window.
+The Mini that lives inside a browser page, for a ⇧-clicked link. Inline by default; Settings › Zigzag Mini can put ⇧-clicks back in the standalone window. One Peek per browser window.
 
-- With the Peek on, ⇧-clicking a link in a page → the link's page opens in a Mini over that page, not in a tab or a separate window.
+- ⇧-clicking a link in a page → the link's page opens in a Mini over that page, not in a tab or a separate window.
   Test: MiniFromPageTests.dockedURLPeekLivesInTheBrowserPage
+- With the setting turned off → the same ⇧-click opens the standalone Mini window, as before.
+  Test: MiniPeekHostTests.modeOffShiftClickFallsBackToTheStandaloneMini
 - A second ⇧-click in the same window → replaces the first Peek; there is never more than one.
   Test: MiniPeekHostTests.onePeekReplacesThePrevious
 - The Peek's page is a real tab in the page's space and profile; a private window's Peek is private.
@@ -31,6 +33,6 @@ The Mini that lives inside a browser page, for a ⇧-clicked link. Off by defaul
   Test: MiniPeekHostTests.viewportChangeRefitsThePeek
   Test: MiniPeekHostTests.fullscreenRedocksThePeek
   Test: MiniPeekHostTests.minimizeAndAppSwitchKeepThePeek
-- The mode is off by default; with it off, a ⇧-click opens the standalone Mini as before.
-  Test: MiniPeekPolicyTests.modeDefaultsOff
+- The Peek is inline by default; with the setting off, a ⇧-click opens the standalone Mini as before.
+  Test: MiniPeekPolicyTests.modeDefaultsInline
   Test: MiniPeekHostTests.modeOffShiftClickFallsBackToTheStandaloneMini

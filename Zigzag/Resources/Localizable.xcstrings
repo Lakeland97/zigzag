@@ -26465,6 +26465,28 @@
           }
         }
       }
+    },
+    "Open shift-clicked links in a Mini over the page" : {
+      "comment" : "A setting in Settings › Zigzag Mini.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按住 Shift 点击的链接在页面上的 Mini 中打开"
+          }
+        }
+      }
+    },
+    "The Mini stays over the page you clicked from. When off, shift-clicked links open in a separate Mini window instead; Expand turns the inline one into a window." : {
+      "comment" : "Explanation under “Open shift-clicked links in a Mini over the page” in Settings › Zigzag Mini.",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mini 会留在你点击的页面上面。关闭后，按住 Shift 点击的链接会改为在独立的 Mini 窗口中打开；展开按钮会把页面上的 Mini 变成独立窗口。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

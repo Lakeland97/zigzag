@@ -1134,6 +1134,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
     private let shareTabsToggle = Toggle()
     private let swipeToggle = Toggle()
     private let miniToggle = Toggle()
+    private let miniPeekToggle = Toggle()
     private let energyToggle = Toggle()
     private let languagePicker = DropdownButton()
     private let launchChoice = DropdownButton()
@@ -1794,6 +1795,15 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         miniGroup.add(FormRow(title: String(localized: "New Zigzag Mini", comment: "A row in Settings › Zigzag Mini, showing its keyboard shortcut. Zigzag Mini is a name, kept in Latin letters."),
                               detail: String(localized: "A small window for a quick look at a page. Esc closes it, and ⌘O moves it into your browser window to keep it.", comment: "Explanation under “New Zigzag Mini” in Settings › Zigzag Mini: what Zigzag Mini is."),
                               control: miniKeys))
+        miniPeekToggle.onChange = { on in
+            MiniPeekSettings.setEnabled(on)
+            WindowManager.shared.controllers.forEach { $0.miniPeeks.modeChanged() }
+        }
+        let peekRow = FormRow(title: String(localized: "Open shift-clicked links in a Mini over the page", comment: "A setting in Settings › Zigzag Mini."),
+                              detail: String(localized: "The Mini stays over the page you clicked from. When off, shift-clicked links open in a separate Mini window instead; Expand turns the inline one into a window.", comment: "Explanation under “Open shift-clicked links in a Mini over the page” in Settings › Zigzag Mini."),
+                              control: miniPeekToggle)
+        peekRow.keywords = String(localized: "peek shift click mini embedded over the page expand window", comment: "Words that find the shift-click Mini Peek setting with Find a setting in Settings. Not shown.") + " 点击 嵌入 窗口"
+        miniGroup.add(peekRow)
         miniToggle.onChange = { on in MiniWindowController.opensExternalLinks = on }
         miniGroup.add(FormRow(title: String(localized: "Open links from other apps in Zigzag Mini", comment: "A setting in Settings › Zigzag Mini."),
                               detail: String(localized: "Sign-in pages and links from scripts and other apps open in a small window instead of a new tab.", comment: "Explanation under “Open links from other apps in Zigzag Mini” in Settings › Zigzag Mini."),
@@ -4023,6 +4033,7 @@ final class SettingsView: NSView, NSTextFieldDelegate {
         ownProfileToggle.isOn = Library.newSpacesGetOwnProfile
         swipeToggle.isOn = SwipeNavigator.isOn
         miniToggle.isOn = MiniWindowController.opensExternalLinks
+        miniPeekToggle.isOn = MiniPeekSettings.mode != .off
         miniKeys.keys = Shortcuts.allItems.first { $0.action == #selector(AppDelegate.newMiniWindow(_:)) }.map(Shortcuts.caps) ?? []
         energyToggle.isOn = EnergyWatch.sleepsBusyTabs
         motionToggle.isOn = Tokens.Motion.reducesMotionHere

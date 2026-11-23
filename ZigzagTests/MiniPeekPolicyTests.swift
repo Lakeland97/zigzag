@@ -16,9 +16,9 @@ struct MiniPeekPolicyTests {
         try body(defaults)
     }
 
-    @Test func modeDefaultsOff() {
+    @Test func modeDefaultsInline() {
         withDefaults { defaults in
-            #expect(MiniPeekSettings.mode(in: defaults) == .off)
+            #expect(MiniPeekSettings.mode(in: defaults) == .close)
         }
     }
 
@@ -31,7 +31,7 @@ struct MiniPeekPolicyTests {
             }
             // Anything else in the setting is the safe default, not a crash or a hidden Peek.
             defaults.set("something else", forKey: MiniPeekSettings.key)
-            #expect(MiniPeekSettings.mode(in: defaults) == .off)
+            #expect(MiniPeekSettings.mode(in: defaults) == .close)
         }
     }
 
@@ -67,6 +67,20 @@ struct MiniPeekPolicyTests {
         #expect(MiniPeekPolicy.closesOnSelectionChange(mode: .close))
         #expect(MiniPeekPolicy.closesOnSelectionChange(mode: .keep))
         #expect(!MiniPeekPolicy.closesOnSelectionChange(mode: .off))
+    }
+
+    @Test func theSettingTurnsThePeekOnAndKeepsAPreviousChoice() {
+        withDefaults { defaults in
+            #expect(MiniPeekSettings.mode(in: defaults) == .close)
+            MiniPeekSettings.setEnabled(false, in: defaults)
+            #expect(MiniPeekSettings.mode(in: defaults) == .off)
+            MiniPeekSettings.setEnabled(true, in: defaults)
+            #expect(MiniPeekSettings.mode(in: defaults) == .close)
+            // A setting an older build wrote as keep stays keep when the switch comes back on.
+            MiniPeekSettings.setMode(.keep, in: defaults)
+            MiniPeekSettings.setEnabled(true, in: defaults)
+            #expect(MiniPeekSettings.mode(in: defaults) == .keep)
+        }
     }
 
     @Test func aShiftClickThePageHandlesIsStillThePeek() {
