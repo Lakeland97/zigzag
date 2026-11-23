@@ -350,6 +350,63 @@ struct MiniPeekHostTests {
         }
     }
 
+    @Test func dockedPeekWearsTheFullMiniChrome() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/chrome", in: controller, from: tabs[0]))
+            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            let state = peek.debugState
+            // The page fills the Mini and the strip waits above it, as in the Mini.
+            #expect(state["chromeOverlay"] as? Bool == true)
+            #expect(state["chromeRevealed"] as? Bool == false)
+            // The whole strip is there, not a reduced header.
+            let frames = try #require(state["strip"] as? [String: [CGFloat]])
+            for control in ["back", "forward", "reload", "space", "title", "site", "pin", "copy", "open"] {
+                #expect((frames[control]?.first ?? 0) > 0, "\(control)")
+            }
+            // Keep on Top would lift the child off its browser: the pin says so and cannot be used.
+            #expect(state["pinEnabled"] as? Bool == false)
+            #expect(state["pinTip"] as? String == String(localized: "Not while docked", comment: "Tooltip on Zigzag Mini's Keep on Top pin while the Mini is docked over a page: the pin can't be used there."))
+            let window = try #require(peek.window)
+            let level = window.level
+            peek.toggleKeepOnTop()
+            #expect(window.level == level)
+            #expect(!KeepOnTop.isOn(window))
+            controller.miniPeeks.windowClosing()
+        }
+    }
+
+    @Test func dockedDimMatchesThePageAndLetsClicksThroughWhenItGoes() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/dim", in: controller, from: tabs[0]))
+            let dim = try #require(controller.root.miniPeekDim as? MiniPeekDimView)
+            #expect(dim.frame == controller.root.cardFrame)
+            #expect(dim.layer?.cornerRadius == Tokens.Radius.card)
+            #expect(dim.layer?.cornerCurve == .continuous)
+            #expect(!dim.mouseDownCanMoveWindow)
+
+            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            peek.closePeek(animated: false)
+            // The page behind is never left dimmed.
+            #expect(controller.root.miniPeekDim == nil)
+            #expect(dim.superview == nil)
+            controller.miniPeeks.windowClosing()
+        }
+    }
+
+    @Test func escapeWithTheBrowserKeyboardClosesAShownPeek() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/escape", in: controller, from: tabs[0]))
+            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            // Back from another tab: visible, but the browser kept the keyboard.
+            controller.tabManager.select(tabs[1])
+            controller.tabManager.select(tabs[0])
+            #expect(peek.debugState["focus"] as? String == "leavesKeyboard")
+            #expect(controller.miniPeeks.escapePressed())
+            #expect(controller.miniPeeks.records[tabs[0].id] == nil)
+            #expect(!controller.miniPeeks.escapePressed())
+        }
+    }
+
     /// A user move, with the delegate call the window server posts; deterministic in the test host.
     private func move(_ mini: MiniWindowController, to origin: NSPoint) {
         mini.window?.setFrameOrigin(origin)

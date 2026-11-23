@@ -205,6 +205,17 @@ struct MiniWindowTests {
         #expect(!MiniChromeLayout.revealsChrome(at: NSPoint(x: 450, y: 80), in: bounds, stripHeight: 36))
     }
 
+    @Test func thePeekDimIsRoundedAndLetsClicksThroughWhenItGoes() {
+        let dim = MiniPeekDimView(color: Tokens.Color.peekScrim)
+        dim.frame = NSRect(x: 0, y: 0, width: 200, height: 120)
+        #expect(dim.layer?.cornerRadius == Tokens.Radius.card)
+        #expect(dim.layer?.cornerCurve == .continuous)
+        #expect(!dim.mouseDownCanMoveWindow)
+        #expect(dim.hitTest(NSPoint(x: 100, y: 60)) === dim)
+        dim.passesClicks = true
+        #expect(dim.hitTest(NSPoint(x: 100, y: 60)) == nil)
+    }
+
     // MARK: Open in
 
     @Test func openInPrefersAWindowOnThisDesktop() {
@@ -381,6 +392,23 @@ struct MiniFromPageTests {
             #expect(mini.fromPage && mini.source === controller)
             #expect(mini.tab.spaceID == controller.tabManager.currentSpaceID)
             #expect(!mini.isPrivate)
+        }
+    }
+
+    @Test func aStandaloneMiniKeepsItsFullStrip() async throws {
+        try await inWindow { controller, source in
+            let mini = MiniWindowController.open(fromPage: nil, configuration: nil, opener: source, in: controller)
+            defer { mini.window?.close() }
+            // Only a Peek wears the page; a Mini opened on its own keeps the strip below the title bar as before.
+            #expect(mini.debugState["chromeOverlay"] as? Bool == false)
+            #expect(mini.debugState["chromeRevealed"] as? Bool == true)
+            #expect(mini.debugState["pinEnabled"] as? Bool == true)
+            // A standalone Mini's pin still works.
+            let window = try #require(mini.window)
+            mini.toggleKeepOnTop()
+            #expect(KeepOnTop.isOn(window))
+            mini.toggleKeepOnTop()
+            #expect(!KeepOnTop.isOn(window))
         }
     }
 

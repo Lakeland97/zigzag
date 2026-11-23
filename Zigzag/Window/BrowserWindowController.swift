@@ -86,6 +86,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         window.delegate = self
         window.contentView = root
         miniPeeks.browser = self
+        installPeekEscMonitor()
         window.sidebar = sidebar
         window.setFrame(rect, display: false)
         root.sidebarVisible = sidebarVisible
@@ -1135,6 +1136,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     /// The split's pages, shape and zoomed pane as last shown, to tell when the panes move (`showPages`).
     private var shownPaneLayout = ""
     private var zoomEscMonitor: Any?
+    /// Esc with the browser holding the keyboard closes a shown Peek that isn't key, as it would the old one.
+    private var peekEscMonitor: Any?
 
     /// Zooms `tab`'s pane over the rest of its split or group, or puts it back if it's the one zoomed. Zoomed, it's
     /// the pane you're in.
@@ -1165,6 +1168,18 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         } else if !paneZoom.isZoomed, let monitor = zoomEscMonitor {
             NSEvent.removeMonitor(monitor)
             zoomEscMonitor = nil
+        }
+    }
+
+    /// A Peek shown again after a tab switch is visible but not key: the browser holds the keyboard, so its Esc is
+    /// read here, before the page, and closes the Peek. Other overlays that own Esc keep it.
+    private func installPeekEscMonitor() {
+        peekEscMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.window === self.window, event.keyCode == 53, !event.isARepeat,
+                  event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
+                  !self.commandBar.isVisible, !self.findBar.isVisible, !self.paneZoom.isZoomed,
+                  self.readerKeyMonitor == nil, !self.switcher.isActive else { return event }
+            return self.miniPeeks.escapePressed() ? nil : event
         }
     }
 
@@ -2716,6 +2731,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         // Nor the zoomed pane's Esc.
         if let monitor = zoomEscMonitor { NSEvent.removeMonitor(monitor) }
         zoomEscMonitor = nil
+        // Nor the Esc that closes a Peek shown without the keyboard.
+        if let monitor = peekEscMonitor { NSEvent.removeMonitor(monitor) }
+        peekEscMonitor = nil
         // Its page is no longer on offer to your other devices.
         handoff = HandoffPage.update(handoff, to: nil)
         onClose?(self)

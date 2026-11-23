@@ -314,6 +314,16 @@ final class MiniPeekHost {
         records[hostTabID]?.controller.openInZigzag()
     }
 
+    /// Esc reaching the browser first: the shown Peek, left visible but not key by a tab switch, still goes.
+    /// The monitor that calls this has already checked the event belongs to this browser window.
+    func escapePressed() -> Bool {
+        guard mode != .off,
+              let shown = records.values.first(where: { $0.isShown }),
+              shown.controller.window?.isKeyWindow != true else { return false }
+        close(hostTabID: shown.hostTabID, animated: true)
+        return true
+    }
+
     /// The person dragged the Peek out of the page. Per-tab ownership ends; the Mini lives on as it is.
     func detach(_ controller: MiniWindowController) {
         remove(controller)

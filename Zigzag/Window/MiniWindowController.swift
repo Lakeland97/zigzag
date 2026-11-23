@@ -89,8 +89,25 @@ final class MiniPanel: NSPanel {
 /// never reaches the page behind it.
 final class MiniPeekDimView: ColorView {
     var onClick: (() -> Void)?
+    /// The Peek has gone and the dim is only fading: the page behind is live again, so clicks pass through.
+    var passesClicks = false
+
+    override init(color: NSColor? = nil) {
+        super.init(color: color)
+        // The same rounded card as the page it covers, so its corners match the old Peek's scrim.
+        layer?.cornerRadius = Tokens.Radius.card
+        layer?.cornerCurve = .continuous
+        layer?.masksToBounds = true
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var mouseDownCanMoveWindow: Bool { false }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        passesClicks ? nil : super.hitTest(point)
+    }
 
     override func mouseDown(with event: NSEvent) { onClick?() }
 }
@@ -115,6 +132,11 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
 
     /// What the feature is called wherever Zigzag names it.
     static var name: String { String(localized: "Zigzag Mini", comment: "The name of Zigzag's small window for one page, without the sidebar (Arc called it Little Arc). Kept in Latin letters, like the app's name.") }
+
+    /// The pin's tooltip while the Mini is a docked Peek: lifting a child panel off its browser would strand it.
+    private static var dockedPinTooltip: String {
+        String(localized: "Not while docked", comment: "Tooltip on Zigzag Mini's Keep on Top pin while the Mini is docked over a page: the pin can't be used there.")
+    }
 
     let tab: Tab
     /// The floating popout the edge sidebar borrows a tab into: it closes with the panel and when the person clicks
@@ -615,10 +637,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         }
         strip.copyButton.onClick = { [weak self] _ in self?.copyPageURL(nil) }
         strip.siteButton.onClick = { [weak self] _ in self?.showSiteControls() }
-        strip.pinButton.onClick = { [weak self] _ in
-            guard let window = self?.window else { return }
-            KeepOnTop.toggle(window)
-        }
+        strip.pinButton.onClick = { [weak self] _ in self?.toggleKeepOnTop() }
         keepOnTopToken = NotificationCenter.default.addObserver(forName: KeepOnTop.changed, object: window, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshStrip() }
         }
@@ -654,7 +673,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         } else {
             strip.trafficLightsWidth = 0
         }
-        root.chromeOverlay = !usesFullChrome
+        // Only the Peek wears the page over the whole Mini; a standalone Mini keeps its full strip, as before.
+        root.chromeOverlay = dockedIn != nil
         if root.chromeOverlay {
             root.setChromeRevealed(false, animated: false)
             installChromePointerMonitor()
@@ -788,6 +808,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         isDockedPeek = true
         isDockShown = true
         peekFocus = focus
+        refreshStrip()
         if !NSApp.isActive { NSApp.activate() }
         if browserWindow.isMiniaturized { browserWindow.deminiaturize(nil) }
 
@@ -985,6 +1006,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         guard isDockedPeek, let window else { return }
         isDockedPeek = false
         isDockShown = false
+        refreshStrip()
         let browserWindow = dock?.browser?.window
         browserWindow?.removeChildWindow(window)
         let size = window.frame.size
@@ -1010,6 +1032,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         guard let dim = dock?.dim else { return }
         dock?.dim = nil
         dim.onClick = nil
+        dim.passesClicks = true
         if let root = dock?.browser?.root, root.miniPeekDim === dim { root.miniPeekDim = nil }
         guard animated, !Tokens.Motion.reduceMotion else { dim.removeFromSuperview(); return }
         Tokens.Motion.fadeBackdrop(dim, entering: false) { dim.removeFromSuperview() }
@@ -1200,6 +1223,13 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         isPrivate ? String(localized: "Private", comment: "The heading at the top of a private window's sidebar, where a space's name would be.") : space.name
     }
 
+    /// The pin in the strip. A docked Peek is its browser's child: Keep on Top would lift it off the page and the
+    /// child window would be stranded, so it does nothing there.
+    func toggleKeepOnTop() {
+        guard !isDockedPeek, let window else { return }
+        KeepOnTop.toggle(window)
+    }
+
     private func refreshStrip() {
         strip.title.show(tab)
         strip.spaceChip.show(space, name: isPrivate ? placeName : nil)
@@ -1210,6 +1240,10 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         strip.copyButton.isEnabled = tab.url != nil
         strip.siteButton.isEnabled = tab.url != nil
         strip.showNavigation(canGoBack: tab.canGoBack, canGoForward: tab.canGoForward, isLoading: tab.isLoading)
+        // A docked Peek is a child panel: Keep on Top would lift it off its browser. The full strip keeps the pin
+        // visible but says why it can't be used.
+        strip.pinButton.isEnabled = !isDockedPeek
+        strip.pinButton.toolTip = isDockedPeek ? Self.dockedPinTooltip : KeepOnTop.title
         KeepOnTop.refresh(strip.pinButton, for: window)
         strip.needsLayout = true
     }
@@ -1381,6 +1415,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         ["editing": commandBar.isVisible, "private": isPrivate, "fromPage": fromPage,
          "docked": isDockedPeek, "dockShown": isDockShown, "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
          "fullChrome": usesFullChrome, "focus": peekFocus == .takesKeyboard ? "takesKeyboard" : "leavesKeyboard",
+         "pinEnabled": strip.pinButton.isEnabled, "pinTip": strip.pinButton.toolTip ?? "",
          "sourceWindow": source?.window?.windowNumber ?? 0, "titleShown": !strip.title.isHidden, "title": strip.title.text,
          "space": space.name, "profile": Library.shared.directory.profile(tab.profile.id)?.name ?? "",
          "store": tab.webView?.configuration.websiteDataStore.identifier?.uuidString ?? (tab.webView == nil ? "no page" : "default"),
