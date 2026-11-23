@@ -177,6 +177,121 @@ struct MiniPeekHostTests {
         }
     }
 
+    @Test func closeModeClosesOnTabSwitch() async throws {
+        try await inWindow { controller, tabs in
+            controller.miniPeeks.modeProvider = { .close }
+            #expect(open("https://example.com/close", in: controller, from: tabs[0]))
+            let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
+            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            controller.tabManager.select(tabs[1])
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(page.isClosed)
+            #expect(!MiniWindowController.all.contains { $0 === peek })
+            #expect(controller.root.miniPeekDim == nil)
+        }
+    }
+
+    @Test func keepModeBorrowedSuspendResume() async throws {
+        try await inWindow { controller, tabs in
+            #expect(controller.listPeek(tabs[1]))
+            let content = tabs[1]
+            let webView = content.webView
+            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+
+            controller.tabManager.select(tabs[1])
+            var record = try #require(controller.miniPeeks.records[tabs[0].id])
+            #expect(record.isSuspended && !record.isShown)
+            #expect(!peek.isDockShown)
+            #expect(controller.root.miniPeekDim == nil)
+            // The page is back in its own tab, live, not blank.
+            #expect(content.pageHolder?.window === controller.window)
+            #expect(content.webView === webView)
+
+            controller.tabManager.select(tabs[0])
+            record = try #require(controller.miniPeeks.records[tabs[0].id])
+            #expect(!record.isSuspended && record.isShown)
+            #expect(peek.isDockShown)
+            #expect(controller.root.miniPeekDim != nil)
+            // Lent again without a reload: the same web view, now in the Peek.
+            #expect(content.pageHolder?.window === peek.window)
+            #expect(content.webView === webView)
+            controller.miniPeeks.windowClosing()
+        }
+    }
+
+    @Test func bothSplitPeeksOnlyActiveShown() async throws {
+        try await inWindow { controller, tabs in
+            controller.tabManager.makeSplit(tabs[0], with: tabs[1])
+            controller.tabManager.select(tabs[0])
+            #expect(open("https://example.com/a", in: controller, from: tabs[0]))
+            let first = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+
+            controller.tabManager.select(tabs[1])
+            #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == false)
+            #expect(open("https://example.com/b", in: controller, from: tabs[1]))
+            let second = try #require(controller.miniPeeks.records[tabs[1].id]?.controller)
+            #expect(first.window?.isVisible == false)
+            #expect(second.window?.isVisible == true)
+
+            controller.tabManager.select(tabs[0])
+            #expect(controller.miniPeeks.records[tabs[1].id]?.isShown == false)
+            #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == true)
+            #expect(first.window?.isVisible == true)
+            #expect(second.window?.isVisible == false)
+            controller.miniPeeks.windowClosing()
+        }
+    }
+
+    @Test func keepURLInsertsAfterTheOpener() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/keep", in: controller, from: tabs[0]))
+            let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
+            controller.miniPeeks.keep(hostTabID: tabs[0].id)
+            for _ in 0..<200 where !controller.tabManager.tabs(in: controller.tabManager.currentSpaceID).contains(where: { $0 === page }) {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            let list = controller.tabManager.tabs(in: controller.tabManager.currentSpaceID)
+            let at = try #require(list.firstIndex { $0 === tabs[0] })
+            #expect(list.indices.contains(at + 1) && list[at + 1] === page)
+            #expect(controller.tabManager.selectedTab === page)
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(!page.isClosed)
+        }
+    }
+
+    @Test func keepBorrowedSelectsTheExistingTab() async throws {
+        try await inWindow { controller, tabs in
+            #expect(controller.listPeek(tabs[1]))
+            let count = controller.tabManager.tabs(in: controller.tabManager.currentSpaceID).count
+            let content = tabs[1]
+            controller.miniPeeks.keep(hostTabID: tabs[0].id)
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(controller.tabManager.selectedTab === content)
+            #expect(controller.tabManager.tabs(in: controller.tabManager.currentSpaceID).count == count)
+            #expect(!content.isClosed)
+            #expect(content.pageHolder?.window === controller.window)
+        }
+    }
+
+    @Test func contentExclusiveAndHostCloseReturnsIt() async throws {
+        try await inWindow { controller, tabs in
+            // A page borrowed into one tab's Peek, then into another's: only the second record holds it.
+            #expect(controller.listPeek(tabs[1]))
+            controller.tabManager.select(tabs[2])
+            #expect(controller.listPeek(tabs[1]))
+            #expect(controller.miniPeeks.records[tabs[0].id] == nil)
+            let record = try #require(controller.miniPeeks.records[tabs[2].id])
+            #expect(record.content.tab === tabs[1])
+
+            // Closing the host returns the borrowed page to its tab; the tab survives.
+            controller.tabManager.close(tabs[2])
+            controller.miniPeeks.tabsChanged()
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(!tabs[1].isClosed)
+            #expect(tabs[1].pageHolder?.window === controller.window)
+        }
+    }
+
     /// A user move, with the delegate call the window server posts; deterministic in the test host.
     private func move(_ mini: MiniWindowController, to origin: NSPoint) {
         mini.window?.setFrameOrigin(origin)

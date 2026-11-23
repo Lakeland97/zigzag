@@ -163,7 +163,14 @@ final class MiniPeekHost {
                 guard var record = records[id], record.isShown else { continue }
                 record.lastFrame = record.controller.window?.frame ?? record.lastFrame
                 record.lastPane = browser.flatMap { Self.pane(of: $0) } ?? record.lastPane
-                record.controller.hideDock()
+                switch record.content {
+                case .url:
+                    record.controller.hideDock()
+                case .borrowed:
+                    // The page goes back to its tab while the record waits: no blank tab, no reload on return.
+                    record.controller.suspendDock()
+                    record.isSuspended = true
+                }
                 record.isShown = false
                 records[id] = record
             }
@@ -173,8 +180,14 @@ final class MiniPeekHost {
     /// After the new page is in its card: the new selected tab's record comes back, without taking the keyboard.
     func didSelect(_ tab: Tab?) {
         guard mode == .keep, let tab, var record = records[tab.id], !record.isShown else { return }
-        record.controller.showDock(focus: .leavesKeyboard)
+        switch record.content {
+        case .url:
+            record.controller.showDock(focus: .leavesKeyboard)
+        case .borrowed:
+            record.controller.resumeDock(focus: .leavesKeyboard)
+        }
         record.isShown = true
+        record.isSuspended = false
         record.lastFrame = record.controller.window?.frame ?? record.lastFrame
         if let browser, let pane = Self.pane(of: browser) { record.lastPane = pane }
         records[tab.id] = record

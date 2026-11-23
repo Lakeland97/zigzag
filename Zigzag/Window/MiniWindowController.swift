@@ -165,6 +165,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         var frame: NSRect
         var wasSelected: Bool
     }
+    /// Whether this Mini's page is a tab lent from a browser, whether it is in the Mini now or back in its tab while
+    /// the Peek is hidden. It decides Return and window close; `borrowedOrigin` says where the page is right now.
+    private let isBorrowedPage: Bool
     private var borrowedOrigin: BorrowedOrigin?
     /// Called when a borrowed Mini closes, however it closes: the edge sidebar lets its row go.
     var onBorrowedClose: (() -> Void)?
@@ -523,6 +526,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         self.isPeekPresentation = dockedIn != nil
         self.usesFullChrome = MiniChromePolicy.usesFullChrome(fromAnotherApp: fromAnotherApp)
         self.borrowedOrigin = borrowedOrigin
+        self.isBorrowedPage = borrowedOrigin != nil
         self.dockedBrowser = dockedIn
         // A borrowed tab is already a real tab in the sidebar; it must stay one. A page opened here is shown outside a
         // tab list, and becomes a full tab once it moves into a browser window.
@@ -853,8 +857,28 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// Brings a hidden docked Peek back: the same live page, re-fitted to the page, with no refade and no key steal
     /// unless the caller asks for it.
     func showDock(focus: MiniPeekFocus = .leavesKeyboard) {
-        guard isDockedPeek, !isDockShown, let browser = dock?.browser,
-              let browserWindow = browser.window, let window else { return }
+        guard isDockedPeek, !isDockShown else { return }
+        presentDock(focus: focus)
+    }
+
+    /// A borrowed Peek is coming back: its page returns from its tab to the Mini first, no reload, then the docked
+    /// presentation is placed again. The content tab's card is left empty behind the dim.
+    func resumeDock(focus: MiniPeekFocus = .leavesKeyboard) {
+        guard isDockedPeek, !isDockShown, let browser = dockedBrowser ?? dock?.browser else { return }
+        if borrowedOrigin == nil {
+            let pane = tab.pageHolder?.superview
+            let frame = tab.pageHolder?.frame ?? .zero
+            borrowedOrigin = BorrowedOrigin(browser: browser, pane: pane, frame: frame,
+                                            wasSelected: browser.tabManager.selectedTab === tab)
+            tab.pageHolder?.removeFromSuperview()
+        }
+        showPage()
+        presentDock(focus: focus)
+    }
+
+    /// Puts the docked presentation on screen at the page's current geometry. The page is already in the Mini.
+    private func presentDock(focus: MiniPeekFocus) {
+        guard let browser = dock?.browser, let browserWindow = browser.window, let window else { return }
         let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
         guard pane.width > 1, pane.height > 1 else { return }
         if let old = dock?.paneScreen, old.width > 1, old.height > 1 {
@@ -885,6 +909,20 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             window.orderFront(nil)
         }
         installDockObservers()
+    }
+
+    /// A borrowed Peek's page goes back to its tab while the record waits: no blank tab, no reload later. The window
+    /// orders out and stays docked; the record's content tab shows the page again.
+    func suspendDock() {
+        guard isDockedPeek, isDockShown, let origin = borrowedOrigin else { return }
+        if window?.isKeyWindow == true { dock?.browser?.window?.makeKey() }
+        // Let the Mini's card go of the page first, so showing it again on resume puts the same holder back.
+        root.card.show(nil)
+        restoreBorrowed(origin, bringForward: false)
+        hideDockDim(animated: false)
+        removeDockObservers()
+        window?.orderOut(nil)
+        isDockShown = false
     }
 
     /// The browser laid its page out again: follow it, whether the Peek is shown or waiting.
@@ -1417,23 +1455,29 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// Moves the page, live, into a browser window as its selected tab, in the space chosen on the strip: this window
     /// fades away first, then the page is there.
     @objc func openInZigzag(_ sender: Any? = nil) {
-        if isBorrowed { returnToBrowser() } else { moveOut() }
+        if isBorrowedPage { returnToBrowser() } else { moveOut() }
     }
 
     /// A borrowed tab's page goes back into the tab and window it came from, and that window comes forward. No new
-    /// tab, no space routing, no reload.
+    /// tab, no space routing, no reload. A hidden, suspended Peek's page is already in its tab: this selects it.
     private func returnToBrowser() {
-        guard let origin = borrowedOrigin, !movedOut, !isLeaving, !tab.isClosed else { return }
+        guard isBorrowedPage, !movedOut, !isLeaving, !tab.isClosed else { return }
+        let browser = borrowedOrigin?.browser ?? dockedBrowser
         commandBar.dismiss(restoringFocus: false)
         linkStatus.hide()
-        restoreBorrowed(origin, bringForward: true)
+        if let origin = borrowedOrigin {
+            restoreBorrowed(origin, bringForward: true)
+        } else if let browser, browser.window != nil {
+            browser.tabManager.select(tab)
+            browser.bringForwardHere()
+        }
         movedOut = true
         window?.close()
         // From the edge overlay, Return accepts the browser for this display: the panel goes, the browser takes the
         // screen, and the app that was underneath keeps its own Space beside it.
         if isEdgePopout {
             EdgeSidebar.shared.hide(animated: false)
-            origin.browser?.takeOverFromEdgeOverlay()
+            browser?.takeOverFromEdgeOverlay()
         }
     }
 
@@ -1705,7 +1749,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             tokens.removeAll()
             if let origin = borrowedOrigin {
                 restoreBorrowed(origin, bringForward: false)
-            } else {
+            } else if !isBorrowedPage {
                 if #available(macOS 15.4, *) { ExtensionCenter.tabClosed(tab, windowClosing: true) }
                 tab.close()
             }
