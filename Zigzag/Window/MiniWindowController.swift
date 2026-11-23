@@ -145,6 +145,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// The Mini is presented in the page, the old Peek's place: dimmed page, click-out and Esc, no chrome until the
     /// pointer reaches the top. It stays one Mini; only its presentation changed.
     private(set) var isDockedPeek = false
+    /// The Mini's root lives in the browser's page, not in its own panel. Drag-out moves that same root into the
+    /// panel; nothing is recreated.
+    private(set) var isEmbeddedPeek = false
     /// The docked presentation is on screen now. A `keep` Peek hides without ending; its record stays.
     private(set) var isDockShown = false
     /// What the docked presentation did with the keyboard: the first open takes it, a tab switch back leaves it.
@@ -202,6 +205,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// A Mini presented in the page: the browser it belongs to, the dim under it, and the watchers that end it.
     private struct Dock {
         weak var browser: BrowserWindowController?
+        /// The page card in the browser root's own coordinates, where the Mini's root is framed.
+        var pane: NSRect
         var paneScreen: NSRect
         var dim: MiniPeekDimView?
         var moveToken: NSObjectProtocol?
@@ -595,7 +600,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         window.setFrame(frame, display: false)
         super.init(window: window)
         window.delegate = self
-        window.contentView = root
+        // A docked Peek's root lives in the browser's page; the panel is only the stand-in it moves into on drag-out.
+        if dockedIn == nil { window.contentView = root }
         // A docked panel has no window frame to round its page: the Mini's own layer does. A standalone panel keeps
         // the edge popout's square page.
         if dockedIn != nil {
@@ -801,14 +807,15 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
 
     // MARK: In the page
 
-    /// The Mini came in over the page, the old Peek's presentation: a child of the browser, so it moves and resizes
-    /// with it, over a dimmed page, and one click away or one Esc from gone. The first open takes the keyboard; a
-    /// tab switch back leaves it where the switch put it.
+    /// The Mini came in over the page, the old Peek's presentation: its own root inside the browser, over a dimmed
+    /// page, so it moves and resizes with it, one click away or one Esc from gone. The first open takes the keyboard;
+    /// a tab switch back leaves it where the switch put it.
     private func attachDocked(focus: MiniPeekFocus = .takesKeyboard) {
-        guard let browser = dockedBrowser ?? borrowedOrigin?.browser, let browserWindow = browser.window, let window else { return }
-        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
-        guard pane.width > 1, pane.height > 1 else { return }
-        dock = Dock(browser: browser, paneScreen: pane)
+        guard let browser = dockedBrowser ?? borrowedOrigin?.browser, let browserWindow = browser.window else { return }
+        let pane = browser.root.cardFrame
+        let paneScreen = browserWindow.convertToScreen(browser.root.convert(pane, to: nil))
+        guard paneScreen.width > 1, paneScreen.height > 1 else { return }
+        dock = Dock(browser: browser, pane: pane, paneScreen: paneScreen)
         isDockedPeek = true
         isDockShown = true
         peekFocus = focus
@@ -817,33 +824,53 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         if browserWindow.isMiniaturized { browserWindow.deminiaturize(nil) }
 
         let dim = MiniPeekDimView(color: Tokens.Color.peekScrim)
-        dim.frame = browser.root.cardFrame
         dim.onClick = { [weak self] in self?.closePeek() }
-        browser.root.showMiniPeekDim(dim)
         dock?.dim = dim
-        browserWindow.addChildWindow(window, ordered: .above)
+        embed(in: browser, pane: MiniDockLayout.frame(in: pane))
 
         switch focus {
         case .takesKeyboard:
             browserWindow.makeKeyAndOrderFront(nil)
             dim.alphaValue = 0
-            window.alphaValue = 0
-            window.makeKeyAndOrderFront(nil)
-            if let webView = tab.webView { window.makeFirstResponder(webView) }
+            root.alphaValue = 0
+            if let webView = tab.webView { browserWindow.makeFirstResponder(webView) }
             Tokens.Motion.fadeBackdrop(dim, entering: true)
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = Tokens.Motion.enter * Tokens.Motion.debugSlowdown
                 context.timingFunction = Tokens.Motion.easeOut
-                window.animator().alphaValue = 1
+                root.animator().alphaValue = 1
             }
         case .leavesKeyboard:
             // Back from a tab switch: same frame, same live page, no refade, and the browser keeps the keyboard.
             dim.alphaValue = 1
-            window.alphaValue = 1
-            window.orderFront(nil)
+            root.alphaValue = 1
         }
 
         installDockObservers()
+    }
+
+    /// Puts the Mini's root in the browser's page, over its dim, in the browser root's coordinates. The panel stays
+    /// hidden; it is only where the same root goes when the person drags the Mini out.
+    func embed(in browser: BrowserWindowController, pane: NSRect) {
+        guard let dim = dock?.dim else { return }
+        dockedBrowser = browser
+        isEmbeddedPeek = true
+        root.frame = pane
+        browser.root.onMiniPeekLayout = { [weak self, weak browser] pane in
+            guard let self, let browser, self.isEmbeddedPeek else { return }
+            self.refit(to: pane, in: browser)
+        }
+        browser.root.showMiniPeek(root, dim: dim, frame: pane)
+    }
+
+    /// Takes the root out of the browser's page, leaving the panel hidden.
+    func unembed() {
+        guard isEmbeddedPeek else { return }
+        isEmbeddedPeek = false
+        dock?.browser?.root.onMiniPeekLayout = nil
+        dock?.browser?.root.hideMiniPeek()
+        dock?.dim = nil
+        root.removeFromSuperview()
     }
 
     /// Installs the page's follow, close, and click-out watchers once, whether the Peek is opening or coming back.
@@ -865,14 +892,12 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         if dock?.clickGlobal == nil { watchDockedOutside() }
     }
 
-    /// Takes a docked Peek off screen without ending it: the dim goes, the window orders out, and the live page waits
-    /// for its tab to come back. It stays the browser's child and stays docked.
+    /// Takes a docked Peek off screen without ending it: its root and dim go, and the live page waits for its tab to
+    /// come back. It stays docked, and the panel stays hidden.
     func hideDock() {
-        guard isDockedPeek, isDockShown, let window else { return }
-        if window.isKeyWindow { dock?.browser?.window?.makeKey() }
-        hideDockDim(animated: false)
+        guard isDockedPeek, isDockShown else { return }
+        unembed()
         removeDockObservers()
-        window.orderOut(nil)
         isDockShown = false
     }
 
@@ -883,52 +908,41 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         presentDock(focus: focus)
     }
 
-    /// A borrowed Peek is coming back: its page returns from its tab to the Mini first, no reload, then the docked
-    /// presentation is placed again. The content tab's card is left empty behind the dim.
+    /// Brings a hidden docked Peek back: the same live page, placed in the page again with no reload or refade.
     func resumeDock(focus: MiniPeekFocus = .leavesKeyboard) {
-        guard isDockedPeek, !isDockShown, let browser = dockedBrowser ?? dock?.browser else { return }
-        if borrowedOrigin == nil {
-            let pane = tab.pageHolder?.superview
-            let frame = tab.pageHolder?.frame ?? .zero
-            borrowedOrigin = BorrowedOrigin(browser: browser, pane: pane, frame: frame,
-                                            wasSelected: browser.tabManager.selectedTab === tab)
-            tab.pageHolder?.removeFromSuperview()
-        }
+        guard isDockedPeek, !isDockShown else { return }
         showPage()
         presentDock(focus: focus)
     }
 
     /// Puts the docked presentation on screen at the page's current geometry. The page is already in the Mini.
     private func presentDock(focus: MiniPeekFocus) {
-        guard let browser = dock?.browser, let browserWindow = browser.window, let window else { return }
-        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
-        guard pane.width > 1, pane.height > 1 else { return }
-        if let old = dock?.paneScreen, old.width > 1, old.height > 1 {
-            let resized = MiniDockLayout.resized(window.frame, from: old, to: pane)
-            if resized != window.frame {
-                isAdjustingDock = true
-                window.setFrame(resized, display: false)
-                isAdjustingDock = false
-            }
-        }
-        dock?.paneScreen = pane
+        guard let browser = dock?.browser, let browserWindow = browser.window else { return }
+        let pane = browser.root.cardFrame
+        let paneScreen = browserWindow.convertToScreen(browser.root.convert(pane, to: nil))
+        guard paneScreen.width > 1, paneScreen.height > 1 else { return }
+        let old = dock?.pane ?? pane
+        var frame = MiniDockLayout.resized(root.frame, from: old, to: pane)
+        if frame.isEmpty { frame = MiniDockLayout.frame(in: pane) }
+        dock?.pane = pane
+        dock?.paneScreen = paneScreen
+        dock?.dim?.onClick = nil
+        dock?.dim?.removeFromSuperview()
+        dock?.dim = nil
 
         let dim = MiniPeekDimView(color: Tokens.Color.peekScrim)
-        dim.frame = browser.root.cardFrame
         dim.alphaValue = 1
         dim.onClick = { [weak self] in self?.closePeek() }
-        browser.root.showMiniPeekDim(dim)
         dock?.dim = dim
-        if window.parent !== browserWindow { browserWindow.addChildWindow(window, ordered: .above) }
+        embed(in: browser, pane: frame)
         isDockShown = true
         peekFocus = focus
         switch focus {
         case .takesKeyboard:
             browserWindow.makeKeyAndOrderFront(nil)
-            window.makeKeyAndOrderFront(nil)
-            if let webView = tab.webView { window.makeFirstResponder(webView) }
+            if let webView = tab.webView { browserWindow.makeFirstResponder(webView) }
         case .leavesKeyboard:
-            window.orderFront(nil)
+            break
         }
         installDockObservers()
     }
@@ -950,52 +964,42 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// The browser laid its page out again: follow it, whether the Peek is shown or waiting.
     func dockLayoutChanged() { paneResized() }
 
-    /// Full screen, a Space change, or a minimize moved the child: parent it again and put it back at the page's
-    /// geometry. The frame is clamped inside, never treated as the person dragging it out.
+    /// Full screen, a Space change, or a minimize: put the embedded root back at the page's current geometry.
     func redock() {
-        guard isDockedPeek, isDockShown, let browser = dock?.browser,
-              let browserWindow = browser.window, let window else { return }
-        let wasKey = window.isKeyWindow
-        browserWindow.removeChildWindow(window)
-        browserWindow.addChildWindow(window, ordered: .above)
-        browserWindow.contentView?.layoutSubtreeIfNeeded()
-        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
-        guard pane.width > 1, pane.height > 1 else { return }
-        refit(window, to: pane, in: browser)
-        if wasKey { window.makeKey() } else { window.orderFront(nil) }
+        guard isDockedPeek, isDockShown, let browser = dock?.browser else { return }
+        browser.window?.contentView?.layoutSubtreeIfNeeded()
+        paneResized()
     }
 
     /// The browser's page changed size: the Mini keeps its share and place in it, and never grows past it. During a
     /// live resize this runs every frame, so the two move together rather than the Mini lagging behind.
     private func paneResized() {
-        guard isDockedPeek, let window, let browser = dock?.browser, let browserWindow = browser.window else { return }
+        guard isDockedPeek, isDockShown, let browser = dock?.browser, let browserWindow = browser.window else { return }
         // The page's new size is read now, not after the next layout pass, so the two track each other during a live
         // resize instead of the Mini lagging a frame behind.
         browserWindow.contentView?.layoutSubtreeIfNeeded()
-        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
-        refit(window, to: pane, in: browser)
+        let pane = browser.root.cardFrame
+        let paneScreen = browserWindow.convertToScreen(browser.root.convert(pane, to: nil))
+        guard paneScreen.width > 1, paneScreen.height > 1 else { return }
+        refit(to: pane, in: browser)
     }
 
-    /// The browser window moved: keep the pane the drag is measured against in screen coordinates. The child moved
-    /// with its parent, so this is a refit at the same place, not a detach.
+    /// The browser window moved: the Mini is inside it now, so its frame in the page is unchanged.
     private func dockPaneChanged() {
-        guard isDockedPeek, let window, let browser = dock?.browser, let browserWindow = browser.window else { return }
-        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
-        guard pane.width > 1, pane.height > 1 else { return }
-        refit(window, to: pane, in: browser)
+        guard isDockedPeek, isDockShown else { return }
+        paneResized()
     }
 
     /// The dim follows the page exactly; the Mini keeps its share and relative place in it, and never grows past it.
-    private func refit(_ window: NSWindow, to pane: NSRect, in browser: BrowserWindowController) {
-        let old = dock?.paneScreen ?? pane
-        dock?.paneScreen = pane
+    private func refit(to pane: NSRect, in browser: BrowserWindowController) {
+        let old = dock?.pane ?? pane
+        dock?.pane = pane
+        dock?.paneScreen = browser.window.map { $0.convertToScreen(browser.root.convert(pane, to: nil)) } ?? pane
         dock?.dim?.frame = browser.root.cardFrame
         guard old.width > 1, old.height > 1, pane.width > 1, pane.height > 1 else { return }
-        let resized = MiniDockLayout.resized(window.frame, from: old, to: pane)
-        guard resized != window.frame else { return }
-        isAdjustingDock = true
-        window.setFrame(resized, display: true)
-        isAdjustingDock = false
+        let resized = MiniDockLayout.resized(root.frame, from: old, to: pane)
+        guard resized != root.frame else { return }
+        root.frame = resized
     }
 
     /// The page's bounds on screen, read live: the browser may have moved or changed size under the stored frame.
@@ -1066,6 +1070,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             guard event.window === browserWindow else { return event }
             // The dimmed page is the click that puts it away, and the click does not reach the page behind it.
             let point = browser.root.convert(event.locationInWindow, from: nil)
+            // The Mini itself is live: its page, its links and its chrome take the click, not the dim behind them.
+            if self.isEmbeddedPeek, self.root.frame.contains(point) { return event }
             // The sidebar, docked or just slid out, is still live: the click picks its tab and the Mini goes.
             if (browser.root.sidebarVisible || browser.root.sidebarRevealed),
                browser.root.sidebarFrame.contains(point) {
@@ -1098,7 +1104,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private func installChromePointerMonitor() {
         guard chromePointerToken == nil else { return }
         chromePointerToken = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
-            guard let self, !self.isLeaving, let window = self.window, event.window === window else { return event }
+            guard let self, !self.isLeaving else { return event }
+            let host = self.isEmbeddedPeek ? self.dock?.browser?.window : self.window
+            guard event.window === host else { return event }
             if self.strip.isEditing {
                 self.root.setChromeRevealed(true, animated: false)
             } else {
@@ -1186,7 +1194,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = Tokens.Motion.exit * Tokens.Motion.debugSlowdown
             context.timingFunction = Tokens.Motion.easeOut
-            window.animator().alphaValue = 0
+            if isEmbeddedPeek { root.animator().alphaValue = 0 } else { window.animator().alphaValue = 0 }
         }, completionHandler: Tokens.Motion.completion(done))
     }
 
@@ -1421,11 +1429,18 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     }
 
     var debugState: [String: Any] {
-        let frame = window?.frame ?? .zero
+        let hostWindow = isEmbeddedPeek ? dock?.browser?.window : window
+        let frame: NSRect
+        if isEmbeddedPeek, let hostWindow {
+            frame = hostWindow.convertToScreen(root.convert(root.bounds, to: nil))
+        } else {
+            frame = window?.frame ?? .zero
+        }
         let pane = dock?.paneScreen ?? .zero
         let dim = dock?.dim?.frame ?? .zero
         return ["editing": commandBar.isVisible, "private": isPrivate, "fromPage": fromPage,
-                "docked": isDockedPeek, "dockShown": isDockShown, "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
+                "docked": isDockedPeek, "dockShown": isDockShown, "embedded": isEmbeddedPeek,
+                "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
                 "fullChrome": usesFullChrome, "focus": peekFocus == .takesKeyboard ? "takesKeyboard" : "leavesKeyboard",
                 "pinEnabled": strip.pinButton.isEnabled, "pinTip": strip.pinButton.toolTip ?? "",
                 "peekMode": MiniPeekSettings.mode.rawValue, "hostTab": peekHostTab?.id.uuidString ?? "",
@@ -1435,12 +1450,12 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
                 "store": tab.webView?.configuration.websiteDataStore.identifier?.uuidString ?? (tab.webView == nil ? "no page" : "default"),
                 "open": strip.openButton.title, "openEnabled": strip.openButton.isEnabled,
                 "backEnabled": strip.backButton.isEnabled, "forwardEnabled": strip.forwardButton.isEnabled, "reload": strip.reloadButton.symbol,
-                "strip": strip.debugFrames, "webViewHere": tab.webView?.window === window, "movedOut": movedOut,
-                "loading": tab.isLoading, "alpha": window?.alphaValue ?? 0,
+                "strip": strip.debugFrames, "webViewHere": tab.webView?.window === hostWindow, "movedOut": movedOut,
+                "loading": tab.isLoading, "alpha": isEmbeddedPeek ? root.alphaValue : (window?.alphaValue ?? 0),
                 "pane": [pane.minX, pane.minY, pane.width, pane.height],
                 "frame": [frame.minX, frame.minY, frame.width, frame.height],
                 "childWindow": window?.parent != nil, "dim": dock?.dim != nil ? [dim.minX, dim.minY, dim.width, dim.height] : [],
-                "isKey": window?.isKeyWindow == true,
+                "isKey": hostWindow?.isKeyWindow == true,
                 "fullScreenAuxiliary": window?.collectionBehavior.contains(.fullScreenAuxiliary) == true, "glass": root.debugGlass]
     }
     #endif
@@ -1542,7 +1557,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         } else {
             isDockedPeek = false
             isDockShown = false
-            if let window { browserWindow?.removeChildWindow(window) }
+            unembed()
             removeDockObservers()
             window?.close()
         }
@@ -1784,6 +1799,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             isDockedPeek = false
             if let browserWindow = dock?.browser?.window, let window { browserWindow.removeChildWindow(window) }
         }
+        unembed()
         isDockShown = false
         hideDockDim(animated: false)
         removeDockObservers()

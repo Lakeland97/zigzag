@@ -555,18 +555,20 @@ struct MiniFromPageTests {
 
     // MARK: Docked in the page
 
-    @Test func dockedURLPeekIsAChildPanelAtTheOldGeometry() async throws {
+    @Test func dockedURLPeekLivesInTheBrowserPage() async throws {
         try await inWindow { controller, source in
             let mini = dockedPeek(in: controller, opener: source)
             defer { mini.closePeek(focusBack: false, animated: false) }
-            let window = try #require(controller.window)
-            let pane = window.convertToScreen(controller.root.convert(controller.root.cardFrame, to: nil))
-            #expect(mini.window is MiniPanel)
-            #expect(window.childWindows?.contains { $0 === mini.window } == true)
-            #expect(mini.window?.frame == MiniDockLayout.frame(in: pane))
-            #expect(controller.root.miniPeekDim != nil)
-            #expect(mini.fromPage && mini.source === controller)
+            let browserWindow = try #require(controller.window)
+            #expect(mini.isEmbeddedPeek)
             #expect(mini.isDockedPeek && !mini.isEdgePopout)
+            #expect(mini.overlay.isDescendant(of: controller.root))
+            #expect(mini.overlay.window === browserWindow)
+            #expect(mini.overlay.superview?.frame == MiniDockLayout.frame(in: controller.root.cardFrame))
+            #expect(controller.root.miniPeekDim != nil)
+            #expect(mini.window?.isVisible == false)
+            #expect(mini.tab.pageHolder?.window === browserWindow)
+            #expect(mini.fromPage && mini.source === controller)
         }
     }
 
@@ -585,12 +587,12 @@ struct MiniFromPageTests {
             let mini = dockedPeek(in: controller, opener: source)
             defer { mini.closePeek(focusBack: false, animated: false) }
             // The test host runs behind another app, so it cannot make a window key. Everything the Peek controls is
-            // checked: the page is first responder, the panel can take key, and it is in front.
-            #expect(mini.window?.canBecomeKey == true)
-            #expect(mini.window?.firstResponder === mini.tab.webView)
-            #expect(mini.window?.isVisible == true)
+            // checked: the page in the browser is first responder, and the hidden panel stays behind it.
+            let browserWindow = try #require(controller.window)
+            #expect(mini.isEmbeddedPeek)
+            #expect(browserWindow.firstResponder === mini.tab.webView)
+            #expect(mini.window?.isVisible == false)
             #expect(mini.debugState["focus"] as? String == "takesKeyboard")
-            #expect(mini.window?.firstResponder === mini.tab.webView)
         }
     }
 
@@ -598,8 +600,11 @@ struct MiniFromPageTests {
         try await inWindow { controller, source in
             let mini = dockedPeek(in: controller, opener: source, focus: .leavesKeyboard)
             defer { mini.closePeek(focusBack: false, animated: false) }
-            // The tab switch's focus stays in the browser; the Peek is visible but does not take it.
-            #expect(mini.window?.isVisible == true)
+            // The tab switch's focus stays in the browser; the live page is in the page but does not take it.
+            let browserWindow = try #require(controller.window)
+            #expect(mini.isEmbeddedPeek)
+            #expect(browserWindow.firstResponder !== mini.tab.webView)
+            #expect(mini.window?.isVisible == false)
             #expect(mini.debugState["focus"] as? String == "leavesKeyboard")
         }
     }
@@ -608,11 +613,10 @@ struct MiniFromPageTests {
         try await inWindow { controller, source in
             let mini = dockedPeek(in: controller, opener: source)
             let page = mini.tab
-            let child = try #require(mini.window)
             mini.closePeek(focusBack: false, animated: false)
             #expect(page.isClosed)
+            #expect(mini.overlay.window == nil)
             #expect(controller.root.miniPeekDim == nil)
-            #expect(controller.window?.childWindows?.contains { $0 === child } != true)
             #expect(!MiniWindowController.all.contains { $0 === mini })
         }
     }

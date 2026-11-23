@@ -88,23 +88,23 @@ struct MiniPeekHostTests {
             #expect(open("https://example.com/a", in: controller, from: tabs[0]))
             let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
             let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
-            let frame = try #require(peek.window?.frame)
-            #expect(peek.isDockShown)
+            let frame = try #require(peek.debugState["frame"] as? [CGFloat])
+            #expect(peek.isDockShown && peek.isEmbeddedPeek)
 
             controller.tabManager.select(tabs[1])
             #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == false)
             #expect(peek.isDockShown == false)
-            #expect(peek.window?.isVisible == false)
+            #expect(peek.overlay.window == nil)
             #expect(controller.root.miniPeekDim == nil)
             #expect(MiniWindowController.all.contains { $0 === peek })
 
             controller.tabManager.select(tabs[0])
             #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == true)
-            #expect(peek.isDockShown && peek.window?.isVisible == true)
+            #expect(peek.isDockShown && peek.isEmbeddedPeek && peek.overlay.window === controller.window)
             #expect(controller.root.miniPeekDim != nil)
             // The same live page, at the same place: no reload, no jump.
             #expect(peek.tab === page)
-            #expect(peek.window?.frame == frame)
+            #expect(peek.debugState["frame"] as? [CGFloat] == frame)
             #expect(peek.debugState["focus"] as? String == "leavesKeyboard")
             controller.miniPeeks.windowClosing()
         }
@@ -157,14 +157,14 @@ struct MiniPeekHostTests {
             #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == false)
             #expect(open("https://example.com/b", in: controller, from: tabs[1]))
             let second = try #require(controller.miniPeeks.records[tabs[1].id]?.controller)
-            #expect(first.window?.isVisible == false)
-            #expect(second.window?.isVisible == true)
+            #expect(first.overlay.window == nil)
+            #expect(second.overlay.window === controller.window)
 
             controller.tabManager.select(tabs[0])
             #expect(controller.miniPeeks.records[tabs[1].id]?.isShown == false)
             #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == true)
-            #expect(first.window?.isVisible == true)
-            #expect(second.window?.isVisible == false)
+            #expect(first.overlay.window === controller.window)
+            #expect(second.overlay.window == nil)
             controller.miniPeeks.windowClosing()
         }
     }
@@ -194,8 +194,8 @@ struct MiniPeekHostTests {
 
             controller.windowWillEnterFullScreen(notification)
             controller.windowDidEnterFullScreen(notification)
-            #expect(mini.isDockedPeek && mini.isDockShown)
-            #expect(controller.window?.childWindows?.contains { $0 === mini.window } == true)
+            #expect(mini.isDockedPeek && mini.isDockShown && mini.isEmbeddedPeek)
+            #expect(mini.overlay.isDescendant(of: controller.root))
             #expect(controller.miniPeeks.records[tabs[0].id] != nil)
 
             // The full-screen page is larger: the Peek re-fits inside it, still docked.
@@ -204,9 +204,8 @@ struct MiniPeekHostTests {
             controller.window?.setFrame(frame, display: false)
             controller.root.needsLayout = true
             controller.root.layoutSubtreeIfNeeded()
-            let pane = try #require(MiniPeekHost.pane(of: controller))
-            let peekFrame = try #require(mini.window?.frame)
-            #expect(pane.contains(peekFrame))
+            let rootFrame = try #require(mini.overlay.superview?.frame)
+            #expect(controller.root.cardFrame.contains(rootFrame))
 
             controller.windowWillExitFullScreen(notification)
             controller.windowDidExitFullScreen(notification)
@@ -266,7 +265,7 @@ struct MiniPeekHostTests {
             #expect(state["contentTab"] as? String == (controller.miniPeeks.records[tabs[0].id]?.content.tab.id.uuidString ?? ""))
             #expect(state["borrowed"] as? Bool == false)
             #expect(state["suspended"] as? Bool == false)
-            #expect(state["childWindow"] as? Bool == true)
+            #expect(state["embedded"] as? Bool == true)
             #expect((state["pane"] as? [CGFloat])?.count == 4)
             #expect((state["frame"] as? [CGFloat])?.count == 4)
             #expect((state["dim"] as? [CGFloat])?.count == 4)
@@ -370,10 +369,9 @@ struct MiniPeekHostTests {
             controller.root.sidebarVisible = true
             controller.root.needsLayout = true
             controller.root.layoutSubtreeIfNeeded()
-            let pane = try #require(MiniPeekHost.pane(of: controller))
-            let frame = try #require(mini.window?.frame)
+            let rootFrame = try #require(mini.overlay.superview?.frame)
             #expect(mini.isDockedPeek)
-            #expect(pane.contains(frame))
+            #expect(controller.root.cardFrame.contains(rootFrame))
             #expect(controller.root.miniPeekDim?.frame == controller.root.cardFrame)
             controller.miniPeeks.windowClosing()
         }

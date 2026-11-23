@@ -594,12 +594,35 @@ final class BrowserRootView: SpaceFrameView {
     let overlay = PassthroughView()
     /// The dim under a Mini docked in the page, kept in step with the page it covers.
     weak var miniPeekDim: NSView?
+    /// The Mini's own root while it lives in the page. It is the same view that becomes the standalone window on
+    /// drag-out; embedding never makes a second one.
+    weak var miniPeek: NSView?
+    /// The page card changed size: the embedded Mini re-fits to it, keeping its share and place.
+    var onMiniPeekLayout: ((NSRect) -> Void)?
 
     /// Puts the dim over the page but below the sidebar and the bar, so both stay live while the Mini is out.
     func showMiniPeekDim(_ dim: NSView) {
         miniPeekDim = dim
         dim.frame = cardFrame
         addSubview(dim, positioned: .below, relativeTo: sidebarContainer)
+    }
+
+    /// Puts the Mini's own root over its dim, in the page's coordinates, under the sidebar and the bar.
+    func showMiniPeek(_ view: NSView, dim: NSView, frame: NSRect) {
+        showMiniPeekDim(dim)
+        miniPeek = view
+        view.frame = frame
+        if view.superview !== self {
+            addSubview(view, positioned: .below, relativeTo: sidebarContainer)
+        }
+    }
+
+    /// Takes the Mini and its dim out together: the page behind is never left dimmed.
+    func hideMiniPeek() {
+        miniPeek?.removeFromSuperview()
+        miniPeek = nil
+        miniPeekDim?.removeFromSuperview()
+        miniPeekDim = nil
     }
     /// An extension's side panel, docked right of the page while open.
     let sidePanel = ExtensionSidePanelView()
@@ -1369,6 +1392,7 @@ final class BrowserRootView: SpaceFrameView {
         // The dim under a docked Mini covers exactly the page, and follows the page through a resize, a sidebar
         // slide, or a split.
         miniPeekDim?.frame = cardFrame
+        if miniPeek != nil { onMiniPeekLayout?(cardFrame) }
         onLayoutChange?()
     }
 
