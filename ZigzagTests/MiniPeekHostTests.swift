@@ -366,6 +366,20 @@ struct MiniPeekHostTests {
             // Keep on Top would lift the child off its browser: the pin says so and cannot be used.
             #expect(state["pinEnabled"] as? Bool == false)
             #expect(state["pinTip"] as? String == String(localized: "Not while docked", comment: "Tooltip on Zigzag Mini's Keep on Top pin while the Mini is docked over a page: the pin can't be used there."))
+            // The debug bridge can see the record and the window it lives in.
+            #expect(state["peekMode"] as? String != nil)
+            #expect(state["hostTab"] as? String == tabs[0].id.uuidString)
+            #expect(state["contentTab"] as? String == (controller.miniPeeks.records[tabs[0].id]?.content.tab.id.uuidString ?? ""))
+            #expect(state["borrowed"] as? Bool == false)
+            #expect(state["suspended"] as? Bool == false)
+            #expect(state["childWindow"] as? Bool == true)
+            #expect((state["pane"] as? [CGFloat])?.count == 4)
+            #expect((state["frame"] as? [CGFloat])?.count == 4)
+            #expect((state["dim"] as? [CGFloat])?.count == 4)
+            let record = try #require(controller.miniPeeks.debugState.first)
+            #expect(record["hostTab"] as? String == tabs[0].id.uuidString)
+            #expect(record["shown"] as? Bool == true)
+            #expect(record["borrowed"] as? Bool == false)
             let window = try #require(peek.window)
             let level = window.level
             peek.toggleKeepOnTop()

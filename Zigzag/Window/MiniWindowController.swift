@@ -238,6 +238,10 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private(set) weak var source: BrowserWindowController?
     private weak var sourceTab: Tab?
     private(set) var fromPage = false
+    /// The tab whose page a docked Peek is shown over; the host owns the record. Diagnostics only.
+    weak var peekHostTab: Tab?
+    /// A borrowed Peek's page is back in its tab while the record waits.
+    var isPeekSuspended = false
     /// From a private window: its own store, nothing written down.
     var isPrivate: Bool { tab.isPrivate }
 
@@ -1000,6 +1004,11 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         return window.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
     }
 
+    #if DEBUG
+    /// The pane the Peek is fitted to, for `minipeekstate`.
+    var debugDockPane: NSRect? { dock?.paneScreen }
+    #endif
+
     /// The drag crossed the page's edge: it is a full Mini now, at exactly the frame it had. Nothing moves, resizes,
     /// or fades in the hand-off; the dim goes and the window simply stays where the pointer left it.
     private func detachFromPane() {
@@ -1412,18 +1421,27 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     }
 
     var debugState: [String: Any] {
-        ["editing": commandBar.isVisible, "private": isPrivate, "fromPage": fromPage,
-         "docked": isDockedPeek, "dockShown": isDockShown, "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
-         "fullChrome": usesFullChrome, "focus": peekFocus == .takesKeyboard ? "takesKeyboard" : "leavesKeyboard",
-         "pinEnabled": strip.pinButton.isEnabled, "pinTip": strip.pinButton.toolTip ?? "",
-         "sourceWindow": source?.window?.windowNumber ?? 0, "titleShown": !strip.title.isHidden, "title": strip.title.text,
-         "space": space.name, "profile": Library.shared.directory.profile(tab.profile.id)?.name ?? "",
-         "store": tab.webView?.configuration.websiteDataStore.identifier?.uuidString ?? (tab.webView == nil ? "no page" : "default"),
-         "open": strip.openButton.title, "openEnabled": strip.openButton.isEnabled,
-         "backEnabled": strip.backButton.isEnabled, "forwardEnabled": strip.forwardButton.isEnabled, "reload": strip.reloadButton.symbol,
-         "strip": strip.debugFrames, "webViewHere": tab.webView?.window === window, "movedOut": movedOut,
-         "loading": tab.isLoading, "alpha": window?.alphaValue ?? 0,
-         "fullScreenAuxiliary": window?.collectionBehavior.contains(.fullScreenAuxiliary) == true, "glass": root.debugGlass]
+        let frame = window?.frame ?? .zero
+        let pane = dock?.paneScreen ?? .zero
+        let dim = dock?.dim?.frame ?? .zero
+        return ["editing": commandBar.isVisible, "private": isPrivate, "fromPage": fromPage,
+                "docked": isDockedPeek, "dockShown": isDockShown, "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
+                "fullChrome": usesFullChrome, "focus": peekFocus == .takesKeyboard ? "takesKeyboard" : "leavesKeyboard",
+                "pinEnabled": strip.pinButton.isEnabled, "pinTip": strip.pinButton.toolTip ?? "",
+                "peekMode": MiniPeekSettings.mode.rawValue, "hostTab": peekHostTab?.id.uuidString ?? "",
+                "contentTab": tab.id.uuidString, "borrowed": isBorrowedPage, "suspended": isPeekSuspended,
+                "sourceWindow": source?.window?.windowNumber ?? 0, "titleShown": !strip.title.isHidden, "title": strip.title.text,
+                "space": space.name, "profile": Library.shared.directory.profile(tab.profile.id)?.name ?? "",
+                "store": tab.webView?.configuration.websiteDataStore.identifier?.uuidString ?? (tab.webView == nil ? "no page" : "default"),
+                "open": strip.openButton.title, "openEnabled": strip.openButton.isEnabled,
+                "backEnabled": strip.backButton.isEnabled, "forwardEnabled": strip.forwardButton.isEnabled, "reload": strip.reloadButton.symbol,
+                "strip": strip.debugFrames, "webViewHere": tab.webView?.window === window, "movedOut": movedOut,
+                "loading": tab.isLoading, "alpha": window?.alphaValue ?? 0,
+                "pane": [pane.minX, pane.minY, pane.width, pane.height],
+                "frame": [frame.minX, frame.minY, frame.width, frame.height],
+                "childWindow": window?.parent != nil, "dim": dock?.dim != nil ? [dim.minX, dim.minY, dim.width, dim.height] : [],
+                "isKey": window?.isKeyWindow == true,
+                "fullScreenAuxiliary": window?.collectionBehavior.contains(.fullScreenAuxiliary) == true, "glass": root.debugGlass]
     }
     #endif
 

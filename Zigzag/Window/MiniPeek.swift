@@ -120,7 +120,7 @@ final class MiniPeekHost {
             controller.window?.close()
             return false
         }
-        record(host: host.id, content: .url(controller.tab), controller: controller, pane: pane)
+        record(host: host, content: .url(controller.tab), controller: controller, pane: pane)
         return true
     }
 
@@ -145,7 +145,7 @@ final class MiniPeekHost {
             controller.window?.close()
             return false
         }
-        record(host: host.id, content: .borrowed(content), controller: controller, pane: pane)
+        record(host: host, content: .borrowed(content), controller: controller, pane: pane)
         return true
     }
 
@@ -178,6 +178,7 @@ final class MiniPeekHost {
                     // The page goes back to its tab while the record waits: no blank tab, no reload on return.
                     record.controller.suspendDock()
                     record.isSuspended = true
+                    record.controller.isPeekSuspended = true
                 }
                 record.isShown = false
                 records[id] = record
@@ -193,6 +194,7 @@ final class MiniPeekHost {
             record.controller.showDock(focus: .leavesKeyboard)
         case .borrowed:
             record.controller.resumeDock(focus: .leavesKeyboard)
+            record.controller.isPeekSuspended = false
         }
         record.isShown = true
         record.isSuspended = false
@@ -314,6 +316,21 @@ final class MiniPeekHost {
         records[hostTabID]?.controller.openInZigzag()
     }
 
+    /// The one record on screen: only the selected host tab's Peek is shown.
+    var shown: Record? { records.values.first { $0.isShown } }
+
+    /// Closes whatever Peek is on screen, key or not, as ⌘W or the debug bridge asks.
+    func closeShown(animated: Bool = true) {
+        guard let shown else { return }
+        close(hostTabID: shown.hostTabID, animated: animated)
+    }
+
+    /// Keeps whatever Peek is on screen, as ⌘O does.
+    func keepShown() {
+        guard let shown else { return }
+        keep(hostTabID: shown.hostTabID)
+    }
+
     /// Esc reaching the browser first: the shown Peek, left visible but not key by a tab switch, still goes.
     /// The monitor that calls this has already checked the event belongs to this browser window.
     func escapePressed() -> Bool {
@@ -329,7 +346,8 @@ final class MiniPeekHost {
         remove(controller)
     }
 
-    private func record(host: UUID, content: Content, controller: MiniWindowController, pane: NSRect) {
+    private func record(host: Tab, content: Content, controller: MiniWindowController, pane: NSRect) {
+        controller.peekHostTab = host
         controller.onPeekClosed = { [weak self, weak controller] in
             guard let self, let controller else { return }
             self.remove(controller)
@@ -338,8 +356,8 @@ final class MiniPeekHost {
             guard let self, let controller else { return }
             self.remove(controller)
         }
-        records[host] = Record(hostTabID: host, content: content, controller: controller, isShown: true,
-                               isSuspended: false, lastFrame: controller.window?.frame ?? .zero, lastPane: pane)
+        records[host.id] = Record(hostTabID: host.id, content: content, controller: controller, isShown: true,
+                                  isSuspended: false, lastFrame: controller.window?.frame ?? .zero, lastPane: pane)
     }
 
     private func remove(_ controller: MiniWindowController) {
@@ -354,4 +372,20 @@ final class MiniPeekHost {
         guard pane.width > 1, pane.height > 1 else { return nil }
         return pane
     }
+
+    #if DEBUG
+    /// `minipeekstate`: every record this window owns, with the Mini's own state inside.
+    var debugState: [[String: Any]] {
+        func rect(_ r: NSRect) -> [CGFloat] { [r.minX, r.minY, r.width, r.height] }
+        return records.values.map { record in
+            let frame = record.controller.window?.frame ?? .zero
+            let pane = record.controller.debugDockPane ?? record.lastPane
+            let borrowed: Bool
+            if case .borrowed = record.content { borrowed = true } else { borrowed = false }
+            return ["hostTab": record.hostTabID.uuidString, "contentTab": record.content.tab.id.uuidString,
+                    "borrowed": borrowed, "shown": record.isShown, "suspended": record.isSuspended,
+                    "frame": rect(frame), "pane": rect(pane), "mini": record.controller.debugState]
+        }
+    }
+    #endif
 }

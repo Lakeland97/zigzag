@@ -59,6 +59,8 @@ enum DebugBridge {
     /// allow|always|alternate|deny|notnow|<action>, minisave save|notnow, minieval <path> <script>, miniswipe <dx> [slow]
     /// [noend], miniborderless on|off, miniclick x y [real] (a click in its page; real counts it for
     /// pop-ups), minikey on|off (taken for the key window), miniprompts on|off (questions show though it isn't key). Without a mini window, miniask and minianswer use the front browser window.
+    /// minipeek off|close|keep (the mode and kill switch), minipeekopen <url>, minipeekborrow <title>,
+    /// minipeekclose, minipeekkeep, minipeekdim, minipeekstate <path> (JSON: every window's Peek records).
     /// pageprobe <path> [mark]: each tab's page state as JSON; `mark` tags live pages so a later probe shows which
     /// reloaded.
     /// capture [area|element|full|visible] (Capture begun in that mode, or switched to it), capture toggle (⇧⌘2),
@@ -229,9 +231,60 @@ enum DebugBridge {
         }
     }
 
+    /// The browser the Peek commands act on: the one in front, else the first open one.
+    private static func peekBrowser() -> BrowserWindowController? {
+        WindowManager.shared.keyController
+            ?? WindowManager.shared.controllers.first { $0.window?.isVisible == true }
+            ?? WindowManager.shared.controllers.first
+    }
+
     private static func runMini(_ name: String, _ arg: String) {
         let mini = MiniWindowController.all.last
         switch name {
+        case "minipeek":
+            if let mode = MiniPeekMode(rawValue: arg) {
+                MiniPeekSettings.mode = mode
+                WindowManager.shared.controllers.forEach { $0.miniPeeks.modeChanged() }
+                debugLog("minipeek \(mode.rawValue)")
+            } else {
+                debugLog("minipeek \(MiniPeekSettings.mode.rawValue)")
+            }
+        case "minipeekopen":
+            guard let browser = peekBrowser(), !arg.isEmpty, let url = URL(string: arg),
+                  let host = browser.tabManager.selectedTab else { debugLog("minipeekopen: no browser or url"); break }
+            let opened = browser.miniPeeks.openURL(url: url, configuration: nil, opener: host, by: .page)
+            debugLog("minipeekopen \(arg): \(opened ? "opened" : "not opened")")
+        case "minipeekborrow":
+            guard !arg.isEmpty, let browser = peekBrowser(), let host = browser.tabManager.selectedTab,
+                  let content = browser.tabManager.allTabs.first(where: {
+                      $0 !== host && $0.displayTitle.localizedCaseInsensitiveContains(arg)
+                  }) else { debugLog("minipeekborrow \(arg): no tab"); break }
+            let opened = browser.miniPeeks.openBorrowed(content, host: host)
+            debugLog("minipeekborrow \(arg): \(opened ? "opened" : "not opened")")
+        case "minipeekclose":
+            peekBrowser()?.miniPeeks.closeShown()
+        case "minipeekkeep":
+            peekBrowser()?.miniPeeks.keepShown()
+        case "minipeekdim":
+            if let dim = peekBrowser()?.root.miniPeekDim {
+                let f = dim.frame
+                debugLog("minipeekdim [\(f.minX), \(f.minY), \(f.width), \(f.height)]")
+            } else {
+                debugLog("minipeekdim none")
+            }
+        case "minipeekstate":
+            let windows: [[String: Any]] = WindowManager.shared.controllers.map { controller in
+                ["windowNumber": controller.window?.windowNumber ?? 0,
+                 "key": controller.window?.isKeyWindow == true,
+                 "selected": controller.tabManager.selectedTab?.id.uuidString ?? "",
+                 "records": controller.miniPeeks.debugState]
+            }
+            let json: [String: Any] = ["mode": MiniPeekSettings.mode.rawValue, "windows": windows]
+            guard !arg.isEmpty, let data = try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted]) else {
+                debugLog("minipeekstate: no path")
+                break
+            }
+            try? data.write(to: URL(fileURLWithPath: arg))
         case "mini":
             if let url = URL(string: arg), !arg.isEmpty { MiniWindowController.open(url: url) } else { MiniQuickOpen.toggle() }
         case "miniquick":
