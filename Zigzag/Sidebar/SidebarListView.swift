@@ -66,9 +66,6 @@ protocol SidebarListDelegate: AnyObject {
     func listJoinSplit(_ page: TabManager.RowPage, onto target: TabManager.RowPage, onRight: Bool)
     /// ⇧-clicked a part of the row of the pages on screen: that pane zooms over the rest, or goes back (#160).
     func listZoomPane(_ tab: Tab)
-    /// A ⇧-click on a tab or pinned page asks for the docked Peek. True when it became one; false lets the old
-    /// zoom/range-selection run.
-    func listPeek(_ tab: Tab) -> Bool
     /// A tab dropped on a pinned page's middle: a pinned split.
     func listPinSplit(_ tab: Tab, onto bookmarkID: UUID, tabOnRight: Bool)
     /// A pinned page dropped on a tab's middle: a split of tabs.
@@ -90,7 +87,6 @@ extension SidebarListDelegate {
     func listMove(_ tab: Tab, to index: Int, in spaceID: UUID) { listMove(tab, to: index, in: spaceID, nesting: .fit, grouping: .fit) }
     func listUnbookmark(_ bookmarkID: UUID, to index: Int) { listUnbookmark(bookmarkID, to: index, under: nil, group: nil) }
     func listMenu(for item: SidebarItem, page: Tab?) -> NSMenu? { listMenu(for: item) }
-    func listPeek(_ tab: Tab) -> Bool { false }
 }
 
 enum SidebarItem: Hashable {
@@ -224,8 +220,6 @@ final class SidebarListView: NSView {
     var onHoverTab: ((Tab?, NSRect?) -> Void)?
     /// Whether rows can be dragged out. The edge sidebar's list can't: a drag would leave the panel.
     var allowsDragging = true
-    /// Whether ⇧-click on a row can open the docked Peek. The edge mirror says no: its ⇧ keeps its old meaning.
-    var allowsPeek = true
     /// Rows picked with ⌘-click or ⇧-click, in list order, to drag or act on together.
     private(set) var marked: [SidebarItem] = [] {
         didSet {
@@ -1067,8 +1061,6 @@ final class SidebarListView: NSView {
             let row = TabRowView()
             row.onClick = { [weak self, weak row] event in
                 guard let self, let row, let tab = row.tab else { return }
-                // ⇧-click asks for the docked Peek first. With Peek off the delegate says no, and ⇧ means what it did.
-                if self.peeksRow(row, with: event) { return }
                 // ⇧-click a part of the row of the pages on screen: that pane zooms over the rest, or goes back (#160).
                 // Anywhere else ⇧ picks rows, as always.
                 if self.zoomsPart(of: row, with: event) { return }
@@ -1125,9 +1117,6 @@ final class SidebarListView: NSView {
             }
             row.onClick = { [weak self, weak row] event in
                 guard let self, let row else { return }
-                // A pinned page's live tab can be lent to the Peek, as a tab's can. Not open in this window: the
-                // delegate says no, and ⇧ keeps its old meaning.
-                if self.peeksRow(row, with: event, pinned: id) { return }
                 if self.zoomsPart(of: row, with: event) { return }
                 if self.mark(item, with: event) { return }
                 // A pinned split's or group's row: each part opens its own page, and all open side by side.
@@ -1281,16 +1270,6 @@ final class SidebarListView: NSView {
               let page = row.partPage(at: row.convert(event.locationInWindow, from: nil)) else { return false }
         delegate?.listZoomPane(page)
         return true
-    }
-
-    /// A plain ⇧-click asks the window for the docked Peek before any old shift meaning. `pinned`: the pinned page
-    /// the row is for, whose live tab is the page when the part under the pointer is a pin itself.
-    private func peeksRow(_ row: TabRowView, with event: NSEvent, pinned: UUID? = nil) -> Bool {
-        guard allowsPeek, event.modifierFlags.intersection([.shift, .command, .option, .control]) == .shift else { return false }
-        let point = row.convert(event.locationInWindow, from: nil)
-        let page = row.partPage(at: point) ?? pinned.flatMap { manager?.bookmarkTab(for: $0) }
-        guard let page else { return false }
-        return delegate?.listPeek(page) == true
     }
 
     // MARK: Picking several

@@ -2800,13 +2800,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         return MiniWindowController.open(fromPage: url, configuration: configuration, opener: opener, in: self, by: sender).tab.webView
     }
 
-    /// A ⇧-click on a sidebar tab or pinned page: its live page docked over the selected tab's viewport. False when
-    /// the mode is off, there is no page to lend, or the window cannot hold a Peek; the old ⇧ meaning then runs.
-    func listPeek(_ tab: Tab) -> Bool {
-        guard let host = tabManager.selectedTab else { return false }
-        return miniPeeks.openBorrowed(tab, host: host)
-    }
-
     private func sidebarContains(_ event: NSEvent) -> Bool {
         let container = root.sidebarContainer
         guard root.sidebarVisible || root.isSidebarFloatingVisible,
@@ -3965,8 +3958,6 @@ extension BrowserWindowController {
         mirror.delegate = self
         // A click picks a tab; a drag would leave the panel, so its rows stay put.
         mirror.list.allowsDragging = false
-        // The panel's ⇧-click keeps its old meaning: the docked Peek is the window's sidebar's.
-        mirror.list.allowsPeek = false
         // Zigzag's own pages (Settings, History, the archive) have no page to lend the panel: their rows grey out and
         // do nothing, rather than open a blank card. Their star and Site Controls hide here, not in the window.
         mirror.list.refusesSystemPages = true

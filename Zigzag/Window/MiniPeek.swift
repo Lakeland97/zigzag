@@ -72,11 +72,10 @@ enum MiniPeekPolicy {
 final class MiniPeekHost {
     enum Content {
         case url(Tab)
-        case borrowed(Tab)
 
         var tab: Tab {
             switch self {
-            case .url(let tab), .borrowed(let tab): tab
+            case .url(let tab): tab
             }
         }
     }
@@ -86,8 +85,6 @@ final class MiniPeekHost {
         let content: Content
         let controller: MiniWindowController
         var isShown: Bool
-        /// A borrowed page is back in its own tab while the record is hidden.
-        var isSuspended: Bool
         var lastFrame: NSRect
         var lastPane: NSRect
     }
@@ -124,31 +121,6 @@ final class MiniPeekHost {
         return true
     }
 
-    /// A tab or pinned page lent to `host`'s viewport. The page stays a tab; the record's close returns it.
-    @discardableResult
-    func openBorrowed(_ content: Tab, host: Tab) -> Bool {
-        guard mode != .off, let browser, browser.window != nil, !browser.tabManager.isPrivate,
-              !content.isClosed, let url = content.url, !HistoryPage.isInternal(url),
-              let pane = Self.pane(of: browser) else { return false }
-        startObserving()
-        // ⇧-clicking the tab the window is already on has nothing to lend.
-        guard content !== host else { return true }
-        // A page can only be in one Peek: another record holding it goes first.
-        for id in records.filter({ $0.value.content.tab === content }).map(\.key) {
-            close(hostTabID: id, animated: false)
-        }
-        close(hostTabID: host.id, animated: false)
-        _ = content.ensureWebView()
-        guard content.pageHolder != nil else { return false }
-        let controller = MiniWindowController.open(borrowing: content, from: browser, dockedIn: browser)
-        guard controller.isDockedPeek else {
-            controller.window?.close()
-            return false
-        }
-        record(host: host, content: .borrowed(content), controller: controller, pane: pane)
-        return true
-    }
-
     /// Puts `new` in place of a record that is going away. The caller closes the old controller.
     func replace(_ record: Record, with new: Record) {
         guard records[record.hostTabID]?.controller === record.controller else { return }
@@ -171,15 +143,7 @@ final class MiniPeekHost {
                 guard var record = records[id], record.isShown else { continue }
                 record.lastFrame = record.controller.window?.frame ?? record.lastFrame
                 record.lastPane = browser.flatMap { Self.pane(of: $0) } ?? record.lastPane
-                switch record.content {
-                case .url:
-                    record.controller.hideDock()
-                case .borrowed:
-                    // The page goes back to its tab while the record waits: no blank tab, no reload on return.
-                    record.controller.suspendDock()
-                    record.isSuspended = true
-                    record.controller.isPeekSuspended = true
-                }
+                record.controller.hideDock()
                 record.isShown = false
                 records[id] = record
             }
@@ -189,15 +153,8 @@ final class MiniPeekHost {
     /// After the new page is in its card: the new selected tab's record comes back, without taking the keyboard.
     func didSelect(_ tab: Tab?) {
         guard mode == .keep, let tab, var record = records[tab.id], !record.isShown else { return }
-        switch record.content {
-        case .url:
-            record.controller.showDock(focus: .leavesKeyboard)
-        case .borrowed:
-            record.controller.resumeDock(focus: .leavesKeyboard)
-            record.controller.isPeekSuspended = false
-        }
+        record.controller.showDock(focus: .leavesKeyboard)
         record.isShown = true
-        record.isSuspended = false
         record.lastFrame = record.controller.window?.frame ?? record.lastFrame
         if let browser, let pane = Self.pane(of: browser) { record.lastPane = pane }
         records[tab.id] = record
@@ -357,7 +314,7 @@ final class MiniPeekHost {
             self.remove(controller)
         }
         records[host.id] = Record(hostTabID: host.id, content: content, controller: controller, isShown: true,
-                                  isSuspended: false, lastFrame: controller.window?.frame ?? .zero, lastPane: pane)
+                                  lastFrame: controller.window?.frame ?? .zero, lastPane: pane)
     }
 
     private func remove(_ controller: MiniWindowController) {
@@ -380,10 +337,8 @@ final class MiniPeekHost {
         return records.values.map { record in
             let frame = record.controller.window?.frame ?? .zero
             let pane = record.controller.debugDockPane ?? record.lastPane
-            let borrowed: Bool
-            if case .borrowed = record.content { borrowed = true } else { borrowed = false }
             return ["hostTab": record.hostTabID.uuidString, "contentTab": record.content.tab.id.uuidString,
-                    "borrowed": borrowed, "shown": record.isShown, "suspended": record.isSuspended,
+                    "borrowed": false, "shown": record.isShown, "suspended": false,
                     "frame": rect(frame), "pane": rect(pane), "mini": record.controller.debugState]
         }
     }

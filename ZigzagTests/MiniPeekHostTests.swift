@@ -110,51 +110,6 @@ struct MiniPeekHostTests {
         }
     }
 
-    @Test func modeOffLeavesTheShiftMeaningAlone() async throws {
-        try await inWindow { controller, tabs in
-            controller.miniPeeks.modeProvider = { .off }
-            #expect(!controller.listPeek(tabs[1]))
-            #expect(controller.miniPeeks.records.isEmpty)
-            #expect(controller.tabManager.selectedTab === tabs[0])
-        }
-    }
-
-    @Test func sidebarShiftOpensBorrowedPeek() async throws {
-        try await inWindow { controller, tabs in
-            #expect(controller.listPeek(tabs[1]))
-            let record = try #require(controller.miniPeeks.records[tabs[0].id])
-            guard case .borrowed(let content) = record.content else {
-                Issue.record("The sidebar Peek should borrow the tab")
-                return
-            }
-            #expect(content === tabs[1])
-            #expect(record.isShown && record.controller.isDockedPeek)
-            #expect(controller.root.miniPeekDim != nil)
-            // The selected tab does not change, and the page is in the Peek, not its card.
-            #expect(controller.tabManager.selectedTab === tabs[0])
-            #expect(content.pageHolder?.window === record.controller.window)
-            controller.miniPeeks.windowClosing()
-        }
-    }
-
-    @Test func pinnedPageShiftOpensBorrowedPeek() async throws {
-        try await inWindow { controller, tabs in
-            let bookmark = try #require(Library.shared.addBookmark(url: URL(string: "https://example.com/pin")!,
-                                                                   title: "Pin", to: controller.tabManager.currentSpaceID))
-            controller.tabManager.openBookmark(bookmark)
-            let pinned = try #require(controller.tabManager.bookmarkTab(for: bookmark.id))
-            controller.tabManager.select(tabs[0])
-            #expect(controller.listPeek(pinned))
-            guard case .borrowed(let content)? = controller.miniPeeks.records[tabs[0].id]?.content else {
-                Issue.record("The pinned page should be borrowed")
-                return
-            }
-            #expect(content === pinned)
-            #expect(controller.tabManager.selectedTab === tabs[0])
-            controller.miniPeeks.windowClosing()
-        }
-    }
-
     @Test func explicitMiniStaysStandalone() async throws {
         try await inWindow { controller, tabs in
             let page = controller.openInMini(URL(string: "https://example.com/menu"), configuration: nil, opener: tabs[0])
@@ -188,34 +143,6 @@ struct MiniPeekHostTests {
             #expect(page.isClosed)
             #expect(!MiniWindowController.all.contains { $0 === peek })
             #expect(controller.root.miniPeekDim == nil)
-        }
-    }
-
-    @Test func keepModeBorrowedSuspendResume() async throws {
-        try await inWindow { controller, tabs in
-            #expect(controller.listPeek(tabs[1]))
-            let content = tabs[1]
-            let webView = content.webView
-            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
-
-            controller.tabManager.select(tabs[1])
-            var record = try #require(controller.miniPeeks.records[tabs[0].id])
-            #expect(record.isSuspended && !record.isShown)
-            #expect(!peek.isDockShown)
-            #expect(controller.root.miniPeekDim == nil)
-            // The page is back in its own tab, live, not blank.
-            #expect(content.pageHolder?.window === controller.window)
-            #expect(content.webView === webView)
-
-            controller.tabManager.select(tabs[0])
-            record = try #require(controller.miniPeeks.records[tabs[0].id])
-            #expect(!record.isSuspended && record.isShown)
-            #expect(peek.isDockShown)
-            #expect(controller.root.miniPeekDim != nil)
-            // Lent again without a reload: the same web view, now in the Peek.
-            #expect(content.pageHolder?.window === peek.window)
-            #expect(content.webView === webView)
-            controller.miniPeeks.windowClosing()
         }
     }
 
@@ -256,39 +183,6 @@ struct MiniPeekHostTests {
             #expect(controller.tabManager.selectedTab === page)
             #expect(controller.miniPeeks.records.isEmpty)
             #expect(!page.isClosed)
-        }
-    }
-
-    @Test func keepBorrowedSelectsTheExistingTab() async throws {
-        try await inWindow { controller, tabs in
-            #expect(controller.listPeek(tabs[1]))
-            let count = controller.tabManager.tabs(in: controller.tabManager.currentSpaceID).count
-            let content = tabs[1]
-            controller.miniPeeks.keep(hostTabID: tabs[0].id)
-            #expect(controller.miniPeeks.records.isEmpty)
-            #expect(controller.tabManager.selectedTab === content)
-            #expect(controller.tabManager.tabs(in: controller.tabManager.currentSpaceID).count == count)
-            #expect(!content.isClosed)
-            #expect(content.pageHolder?.window === controller.window)
-        }
-    }
-
-    @Test func contentExclusiveAndHostCloseReturnsIt() async throws {
-        try await inWindow { controller, tabs in
-            // A page borrowed into one tab's Peek, then into another's: only the second record holds it.
-            #expect(controller.listPeek(tabs[1]))
-            controller.tabManager.select(tabs[2])
-            #expect(controller.listPeek(tabs[1]))
-            #expect(controller.miniPeeks.records[tabs[0].id] == nil)
-            let record = try #require(controller.miniPeeks.records[tabs[2].id])
-            #expect(record.content.tab === tabs[1])
-
-            // Closing the host returns the borrowed page to its tab; the tab survives.
-            controller.tabManager.close(tabs[2])
-            controller.miniPeeks.tabsChanged()
-            #expect(controller.miniPeeks.records.isEmpty)
-            #expect(!tabs[1].isClosed)
-            #expect(tabs[1].pageHolder?.window === controller.window)
         }
     }
 

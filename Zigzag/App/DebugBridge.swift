@@ -59,7 +59,7 @@ enum DebugBridge {
     /// allow|always|alternate|deny|notnow|<action>, minisave save|notnow, minieval <path> <script>, miniswipe <dx> [slow]
     /// [noend], miniborderless on|off, miniclick x y [real] (a click in its page; real counts it for
     /// pop-ups), minikey on|off (taken for the key window), miniprompts on|off (questions show though it isn't key). Without a mini window, miniask and minianswer use the front browser window.
-    /// minipeek off|close|keep (the mode and kill switch), minipeekopen <url>, minipeekborrow <title>,
+    /// minipeek off|close|keep (the mode and kill switch), minipeekopen <url>,
     /// minipeekclose, minipeekkeep, minipeekdim, minipeekstate <path> (JSON: every window's Peek records).
     /// pageprobe <path> [mark]: each tab's page state as JSON; `mark` tags live pages so a later probe shows which
     /// reloaded.
@@ -254,13 +254,6 @@ enum DebugBridge {
                   let host = browser.tabManager.selectedTab else { debugLog("minipeekopen: no browser or url"); break }
             let opened = browser.miniPeeks.openURL(url: url, configuration: nil, opener: host, by: .page)
             debugLog("minipeekopen \(arg): \(opened ? "opened" : "not opened")")
-        case "minipeekborrow":
-            guard !arg.isEmpty, let browser = peekBrowser(), let host = browser.tabManager.selectedTab,
-                  let content = browser.tabManager.allTabs.first(where: {
-                      $0 !== host && $0.displayTitle.localizedCaseInsensitiveContains(arg)
-                  }) else { debugLog("minipeekborrow \(arg): no tab"); break }
-            let opened = browser.miniPeeks.openBorrowed(content, host: host)
-            debugLog("minipeekborrow \(arg): \(opened ? "opened" : "not opened")")
         case "minipeekclose":
             peekBrowser()?.miniPeeks.closeShown()
         case "minipeekkeep":
