@@ -815,16 +815,73 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             window.orderFront(nil)
         }
 
-        dock?.resizeToken = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification,
-                                                                    object: browserWindow, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.paneResized() }
-        }
-        dock?.closeToken = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification,
-                                                                   object: browserWindow, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.window?.close() }
-        }
-        watchDockedOutside()
+        installDockObservers()
     }
+
+    /// Installs the page's follow, close, and click-out watchers once, whether the Peek is opening or coming back.
+    private func installDockObservers() {
+        guard let browserWindow = dock?.browser?.window else { return }
+        if dock?.resizeToken == nil {
+            dock?.resizeToken = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification,
+                                                                        object: browserWindow, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.paneResized() }
+            }
+        }
+        if dock?.closeToken == nil {
+            dock?.closeToken = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification,
+                                                                       object: browserWindow, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.window?.close() }
+            }
+        }
+        if dock?.clickGlobal == nil { watchDockedOutside() }
+    }
+
+    /// Takes a docked Peek off screen without ending it: the dim goes, the window orders out, and the live page waits
+    /// for its tab to come back. It stays the browser's child and stays docked.
+    func hideDock() {
+        guard isDockedPeek, isDockShown, let window else { return }
+        if window.isKeyWindow { dock?.browser?.window?.makeKey() }
+        hideDockDim(animated: false)
+        removeDockObservers()
+        window.orderOut(nil)
+        isDockShown = false
+    }
+
+    /// Brings a hidden docked Peek back: the same live page, re-fitted to the page, with no refade and no key steal
+    /// unless the caller asks for it.
+    func showDock(focus: MiniPeekFocus = .leavesKeyboard) {
+        guard isDockedPeek, !isDockShown, let browser = dock?.browser,
+              let browserWindow = browser.window, let window else { return }
+        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        guard pane.width > 1, pane.height > 1 else { return }
+        if let old = dock?.paneScreen, old.width > 1, old.height > 1 {
+            let resized = MiniDockLayout.resized(window.frame, from: old, to: pane)
+            if resized != window.frame { window.setFrame(resized, display: false) }
+        }
+        dock?.paneScreen = pane
+
+        let dim = MiniPeekDimView(color: Tokens.Color.peekScrim)
+        dim.frame = browser.root.cardFrame
+        dim.alphaValue = 1
+        dim.onClick = { [weak self] in self?.closePeek() }
+        browser.root.showMiniPeekDim(dim)
+        dock?.dim = dim
+        if window.parent !== browserWindow { browserWindow.addChildWindow(window, ordered: .above) }
+        isDockShown = true
+        peekFocus = focus
+        switch focus {
+        case .takesKeyboard:
+            browserWindow.makeKeyAndOrderFront(nil)
+            window.makeKeyAndOrderFront(nil)
+            if let webView = tab.webView { window.makeFirstResponder(webView) }
+        case .leavesKeyboard:
+            window.orderFront(nil)
+        }
+        installDockObservers()
+    }
+
+    /// The browser laid its page out again: follow it, whether the Peek is shown or waiting.
+    func dockLayoutChanged() { paneResized() }
 
     /// The browser's page changed size: the Mini keeps its share and place in it, and never grows past it. During a
     /// live resize this runs every frame, so the two move together rather than the Mini lagging behind.

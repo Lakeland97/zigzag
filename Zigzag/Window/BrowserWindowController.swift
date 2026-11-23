@@ -22,6 +22,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
 
     let tabManager: TabManager
     let sidebar = SidebarView()
+    /// The Peeks docked in this window's tabs: at most one per host tab, each hidden while its tab is not selected.
+    let miniPeeks = MiniPeekHost()
     /// The live second sidebar the hot screen edge shows (#363), made the first time it comes out.
     private(set) var edgeSidebar: SidebarView?
     /// The floating sidebar container the edge panel shows, if it has been made.
@@ -83,6 +85,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         super.init(window: window)
         window.delegate = self
         window.contentView = root
+        miniPeeks.browser = self
         window.sidebar = sidebar
         window.setFrame(rect, display: false)
         root.sidebarVisible = sidebarVisible
@@ -104,6 +107,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             Toast.reposition(in: self)
             self.newTabNote.reposition()
             AgentControl.shared.reposition(in: self)
+            self.miniPeeks.browserLayoutChanged()
             if self.floatingDownloads.superview != nil {
                 if self.root.sidebarVisible { self.hideFloatingDownloads() } else { self.showFloatingDownloads() }
             }
@@ -411,6 +415,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case .structure:
             // Many at once (`TabManager.together`): once, when they're all done.
             if tabManager.isBatching { break }
+            miniPeeks.tabsChanged()
             bothSidebars { $0.list.reload(animated: window?.isVisible == true) }
             newTabNote.listChanged()
             // A favorite opened or closed: its tile shows it.
@@ -475,6 +480,9 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         applySpaceColor(animated: true, crossFadesMode: false)
         desk.spaceChanged()
         CATransaction.flush()
+        // The new space's selection is settled: a Peek owned by a tab that is no longer on screen goes dormant.
+        miniPeeks.willSelect(tabManager.selectedTab)
+        miniPeeks.didSelect(tabManager.selectedTab)
     }
 
     /// A favorite held over another space's dot opens that space after a beat, so it can be dropped among that
@@ -756,8 +764,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func showSelectedTab() {
-        previews.hide()
         let tab = tabManager.selectedTab
+        // Before the new page draws: the outgoing Peek's dim is gone, and its record hidden or closed first.
+        miniPeeks.willSelect(tab)
+        previews.hide()
         // The site panel describes one page; another tab coming forward takes it away.
         if SitePanel.isOpen(in: window), SitePanel.shown?.describes(tab) == false { SitePanel.closeCurrent() }
         updateHandoff()
@@ -778,6 +788,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             }
         }
         showPages()
+        // After the new page is in its card: the selected tab's dormant Peek comes back, without the keyboard.
+        miniPeeks.didSelect(tab)
         // A space switch's page is on its card now: the edge panel takes it here, before the frame draws, rather
         // than a turn later when it would have shown at window size first.
         EdgePeek.shared.spaceSelectionShown(tab)
@@ -2677,6 +2689,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private(set) var windowClosed = false
 
     func windowWillClose(_ notification: Notification) {
+        miniPeeks.windowClosing()
         EdgeSidebar.shared.windowClosed(self)
         windowClosed = true
         fadeTimer?.invalidate()
