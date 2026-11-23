@@ -15,8 +15,16 @@ enum MiniPeekSettings {
     static var defaults: UserDefaults = .standard
 
     static var mode: MiniPeekMode {
-        get { MiniPeekMode(rawValue: defaults.string(forKey: key) ?? "") ?? .off }
-        set { defaults.set(newValue.rawValue, forKey: key) }
+        get { mode(in: defaults) }
+        set { setMode(newValue, in: defaults) }
+    }
+
+    static func mode(in defaults: UserDefaults) -> MiniPeekMode {
+        MiniPeekMode(rawValue: defaults.string(forKey: key) ?? "") ?? .off
+    }
+
+    static func setMode(_ mode: MiniPeekMode, in defaults: UserDefaults) {
+        defaults.set(mode.rawValue, forKey: key)
     }
 }
 

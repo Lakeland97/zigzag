@@ -2749,9 +2749,19 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case .mini:
             openInMini(url, configuration: nil, opener: opener ?? tabManager.selectedTab, by: sender)
         case .miniPeek:
-            // The per-tab Peek arrives in the host store; until then, and with the mode off, a ⇧-click is today's
-            // standalone Mini.
-            openInMini(url, configuration: nil, opener: opener ?? tabManager.selectedTab, by: sender)
+            // The ⇧-click Peek: a Peek record for the opener's tab when the window can hold one; otherwise the
+            // standalone Mini, exactly as today.
+            let host = opener ?? tabManager.selectedTab
+            let mode = MiniPeekSettings.mode
+            if mode != .off,
+               MiniPeekPolicy.shouldDock(mode: mode, windowIsKey: window?.isKeyWindow == true,
+                                         windowIsVisible: window?.isVisible == true,
+                                         windowIsMiniaturized: window?.isMiniaturized == true,
+                                         windowIsOnActiveSpace: window?.isOnActiveSpace == true),
+               miniPeeks.openURL(url: url, configuration: nil, opener: host, by: sender) {
+                return
+            }
+            openInMini(url, configuration: nil, opener: host, by: sender)
         case .newWindow:
             // A private window's links stay private.
             WindowManager.shared.newWindow(url: url, isPrivate: tabManager.isPrivate)
@@ -2768,6 +2778,13 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     func openInMini(_ url: URL?, configuration: WKWebViewConfiguration?, opener: Tab?, by sender: Tab.LoadSender = .zigzag) -> WKWebView? {
         commandBar.dismiss(restoringFocus: false)
         return MiniWindowController.open(fromPage: url, configuration: configuration, opener: opener, in: self, by: sender).tab.webView
+    }
+
+    /// A ⇧-click on a sidebar tab or pinned page: its live page docked over the selected tab's viewport. False when
+    /// the mode is off, there is no page to lend, or the window cannot hold a Peek; the old ⇧ meaning then runs.
+    func listPeek(_ tab: Tab) -> Bool {
+        guard let host = tabManager.selectedTab else { return false }
+        return miniPeeks.openBorrowed(tab, host: host)
     }
 
     private func sidebarContains(_ event: NSEvent) -> Bool {
@@ -3928,6 +3945,8 @@ extension BrowserWindowController {
         mirror.delegate = self
         // A click picks a tab; a drag would leave the panel, so its rows stay put.
         mirror.list.allowsDragging = false
+        // The panel's ⇧-click keeps its old meaning: the docked Peek is the window's sidebar's.
+        mirror.list.allowsPeek = false
         // Zigzag's own pages (Settings, History, the archive) have no page to lend the panel: their rows grey out and
         // do nothing, rather than open a blank card. Their star and Site Controls hide here, not in the window.
         mirror.list.refusesSystemPages = true

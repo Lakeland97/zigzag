@@ -8,35 +8,30 @@ import Testing
 struct MiniPeekPolicyTests {
     private let suiteName = "wang.zigao.zigzag.tests.minipeek"
 
-    /// Runs `body` with a defaults suite of its own, put back afterwards: no test writes the build's settings.
+    /// Runs `body` with a defaults suite of its own: no test writes the build's settings, or another suite's.
     private func withDefaults(_ body: (UserDefaults) throws -> Void) rethrows {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
-        let before = MiniPeekSettings.defaults
-        MiniPeekSettings.defaults = defaults
-        defer {
-            MiniPeekSettings.defaults = before
-            defaults.removePersistentDomain(forName: suiteName)
-        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
         try body(defaults)
     }
 
     @Test func modeDefaultsOff() {
-        withDefaults { _ in
-            #expect(MiniPeekSettings.mode == .off)
+        withDefaults { defaults in
+            #expect(MiniPeekSettings.mode(in: defaults) == .off)
         }
     }
 
     @Test func modeRoundTrips() {
         withDefaults { defaults in
             for mode in MiniPeekMode.allCases {
-                MiniPeekSettings.mode = mode
+                MiniPeekSettings.setMode(mode, in: defaults)
                 #expect(defaults.string(forKey: MiniPeekSettings.key) == mode.rawValue)
-                #expect(MiniPeekSettings.mode == mode)
+                #expect(MiniPeekSettings.mode(in: defaults) == mode)
             }
             // Anything else in the setting is the safe default, not a crash or a hidden Peek.
             defaults.set("something else", forKey: MiniPeekSettings.key)
-            #expect(MiniPeekSettings.mode == .off)
+            #expect(MiniPeekSettings.mode(in: defaults) == .off)
         }
     }
 
