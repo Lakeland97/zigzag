@@ -2266,7 +2266,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         view.onOptions = { [weak self] in self?.toggleReaderOptions() }
         // The article's links are the page's, wherever they open.
         view.onOpenLink = { [weak self] link in self?.closeReader(); tab.load(link, by: .page) }
-        view.onPeekLink = { [weak self] link in self?.open(link, disposition: .mini, opener: tab, by: .page) }
+        view.onPeekLink = { [weak self] link in self?.open(link, disposition: .miniPeek, opener: tab, by: .page) }
         view.onBackgroundLink = { [weak self] link in self?.open(link, disposition: .backgroundTab, opener: tab, by: .page) }
         view.onForegroundLink = { [weak self] link in self?.open(link, disposition: .foregroundTab, opener: tab, allowSwitch: false, by: .page) }
         view.currentSpace = { [weak self] in self?.tabManager.currentSpace }
@@ -2734,6 +2734,10 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             // Background link with the sidebar hidden: show a note. Not for tabs Zigzag opened itself (guide, restore).
             if sender == .page { newTabNote.show(tab) }
         case .mini:
+            openInMini(url, configuration: nil, opener: opener ?? tabManager.selectedTab, by: sender)
+        case .miniPeek:
+            // The per-tab Peek arrives in the host store; until then, and with the mode off, a ⇧-click is today's
+            // standalone Mini.
             openInMini(url, configuration: nil, opener: opener ?? tabManager.selectedTab, by: sender)
         case .newWindow:
             // A private window's links stay private.

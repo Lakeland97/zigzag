@@ -69,6 +69,18 @@ struct PageLinkTests {
         #expect(guardScript.contains("zigzagLinkClick"))
     }
 
+    /// A ⇧-click is still `LinkActivation.mini`; only the host boundary turns it into the docked Peek. Every explicit
+    /// Mini entry point keeps naming `.mini`, so it stays the standalone Mini.
+    @Test func shiftClickBecomesThePeekDisposition() {
+        #expect(Tab.linkActivation(type: .linkActivated, isMainFrame: true, modifiers: .shift, buttonNumber: 0) == .mini)
+        #expect(Tab.disposition(for: .mini) == .miniPeek)
+        #expect(Tab.disposition(for: .newTab(inFront: true)) == .foregroundTab)
+        #expect(Tab.disposition(for: .newTab(inFront: false)) == .backgroundTab)
+        #expect(Tab.disposition(for: .page) == nil)
+        #expect(Tab.disposition(for: .download) == nil)
+        #expect(OpenDisposition.mini != .miniPeek)
+    }
+
     /// A ⇧-click on a link the page then sends this tab to opens Zigzag Mini, taken once: the same link, within the window.
     @Test func aShiftClickThePageFollowsOpensMiniOnce() {
         let tab = Tab(url: URL(string: "https://example.com/")!, spaceID: UUID())

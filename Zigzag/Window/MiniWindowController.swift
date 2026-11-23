@@ -1764,7 +1764,7 @@ extension MiniWindowController: TabHost {
     func tab(_ tab: Tab, openURL url: URL, disposition: OpenDisposition, by sender: Tab.LoadSender = .page) {
         // A page's link (Tab sends only links to the web here): the page's doing wherever it opens.
         switch disposition {
-        case .currentTab, .mini:
+        case .currentTab, .mini, .miniPeek:
             tab.load(url, by: sender)
         case .newWindow, .privateWindow:
             WindowManager.shared.newWindow(url: url, showCommandBar: false, isPrivate: isPrivate || disposition == .privateWindow, by: sender)

@@ -27,12 +27,15 @@ extension TabHost {
     }
 }
 
-enum OpenDisposition {
+enum OpenDisposition: Equatable {
     case currentTab
     case foregroundTab
     case backgroundTab
     /// Zigzag Mini over the window (⇧-click, Open Link in Zigzag Mini).
     case mini
+    /// The ⇧-click Peek: a Mini docked over the page, owned by the tab it came from. With the mode off it falls
+    /// back to the standalone Mini.
+    case miniPeek
     case newWindow
     case privateWindow
 }
@@ -1874,7 +1877,7 @@ extension Tab: WKNavigationDelegate {
                 host?.tab(self, openURL: url, disposition: inFront ? .foregroundTab : .backgroundTab)
                 return (.cancel, preferences)
             case .mini:
-                host?.tab(self, openURL: url, disposition: .mini)
+                host?.tab(self, openURL: url, disposition: .miniPeek)
                 return (.cancel, preferences)
             case .download:
                 return (.download, preferences)
@@ -1940,6 +1943,16 @@ extension Tab: WKNavigationDelegate {
             return .page
         }
         return followed ?? .page
+    }
+
+    /// Where a link activation opens, when it is not the page's own navigation. The pure seam between the click
+    /// rules and the host boundary: a ⇧-click is the docked Peek; an explicit Mini is still `.mini`.
+    nonisolated static func disposition(for activation: LinkActivation) -> OpenDisposition? {
+        switch activation {
+        case .mini: .miniPeek
+        case .newTab(let inFront): inFront ? .foregroundTab : .backgroundTab
+        case .page, .download: nil
+        }
     }
 
     /// How long after a ⇧ or ⌥ click the page's navigation still counts as that click's.
