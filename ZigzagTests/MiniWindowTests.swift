@@ -653,8 +653,10 @@ struct MiniFromPageTests {
             #expect(tab.webView === webView)
             #expect(tab.pageHolder === holder)
             #expect(holder?.window === promoted)
+            // The same place on screen: the page keeps its frame, and the window adds its strip above it.
             #expect(abs(promoted.frame.midX - embedded.midX) <= 1)
-            #expect(abs(promoted.frame.midY - embedded.midY) <= 1)
+            #expect(abs(promoted.frame.minY - embedded.minY) <= 1)
+            #expect(abs(promoted.frame.height - embedded.height - Tokens.Metric.miniStripHeight) <= 1)
             // It is no longer the browser's Peek; the controller and its page live on.
             #expect(!mini.isEmbeddedPeek && !mini.isDockedPeek && !mini.isDockShown)
             #expect(controller.miniPeeks.records.isEmpty)
@@ -672,6 +674,86 @@ struct MiniFromPageTests {
             #expect(promoted.isVisible)
             #expect(!tab.isClosed)
             #expect(controller.miniPeeks.records.isEmpty)
+        }
+    }
+
+    @Test func expandKeepsThePagesFrameAndScrollPosition() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            defer { mini.window?.close() }
+            let webView = try #require(mini.tab.webView)
+            for _ in 0..<300 where webView.url == nil || mini.tab.isLoading {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            _ = try await webView.evaluateJavaScript("document.body.style.height = '4000px'; window.scrollTo(0, 500)")
+            for _ in 0..<100 where (try await webView.evaluateJavaScript("window.scrollY") as? Double ?? 0) < 1 {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            let before = try #require(try await webView.evaluateJavaScript("window.scrollY") as? Double)
+            #expect(before > 0)
+
+            // The page's card on screen, in the Peek: the whole root, under the hidden strip.
+            let browserWindow = try #require(controller.window)
+            let root = try #require(mini.overlay.superview)
+            let strip = Tokens.Metric.miniStripHeight
+            let pageBefore = browserWindow.convertToScreen(
+                root.convert(MiniChromeLayout.cardFrame(in: root.bounds, stripHeight: strip, overlays: true), to: nil))
+
+            mini.debugExpand()
+            let promoted = try #require(mini.window)
+            for _ in 0..<100 {
+                if let now = try await webView.evaluateJavaScript("window.scrollY") as? Double, abs(now - before) <= 1 { break }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            let after = try #require(try await webView.evaluateJavaScript("window.scrollY") as? Double)
+            #expect(abs(after - before) <= 1)
+
+            // The page keeps the same viewport, in the same place: the window grows upward for its strip instead.
+            let content = try #require(promoted.contentView)
+            let pageAfter = promoted.convertToScreen(
+                content.convert(MiniChromeLayout.cardFrame(in: content.bounds, stripHeight: strip, overlays: false), to: nil))
+            #expect(abs(pageAfter.minX - pageBefore.minX) <= 1)
+            #expect(abs(pageAfter.minY - pageBefore.minY) <= 1)
+            #expect(abs(pageAfter.width - pageBefore.width) <= 1)
+            #expect(abs(pageAfter.height - pageBefore.height) <= 1)
+        }
+    }
+
+    @Test func sideButtonsGoToThePeekUnderThePointer() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let first = folder.appendingPathComponent("first.html"), second = folder.appendingPathComponent("second.html")
+        try "<p>First</p>".write(to: first, atomically: true, encoding: .utf8)
+        try "<p>Second</p>".write(to: second, atomically: true, encoding: .utf8)
+        try await inWindow { controller, source in
+            // The browser has its own two pages, so a wrong route would visibly move it.
+            source.load(first)
+            for _ in 0..<200 where source.isLoading || source.url != first { try await Task.sleep(for: .milliseconds(20)) }
+            source.load(second)
+            for _ in 0..<200 where source.isLoading || !source.canGoBack { try await Task.sleep(for: .milliseconds(20)) }
+            controller.miniPeeks.modeProvider = { .keep }
+            #expect(controller.miniPeeks.openURL(url: first, configuration: nil, opener: source, by: .page))
+            let mini = try #require(controller.miniPeeks.shown)
+            defer { mini.closePeek(focusBack: false, animated: false) }
+            let page = mini.tab
+            for _ in 0..<200 where page.isLoading || page.url != first { try await Task.sleep(for: .milliseconds(20)) }
+            page.load(second)
+            for _ in 0..<200 where page.isLoading || !page.canGoBack { try await Task.sleep(for: .milliseconds(20)) }
+            #expect(controller.miniPeeks.shown === mini)
+
+            let window = try #require(controller.window)
+            let root = try #require(mini.overlay.superview)
+            // Over the Peek: its history goes back, the browser's stays put.
+            #expect(controller.peekHandlesSideButton(.back, at: root.convert(NSPoint(x: 40, y: 40), to: nil)))
+            for _ in 0..<200 where page.url != first { try await Task.sleep(for: .milliseconds(20)) }
+            #expect(page.url == first)
+            #expect(source.url == second)
+
+            // Beside it, in the sidebar: not the Peek's, so the browser's own history still takes it.
+            let sidebar = NSPoint(x: 10, y: window.contentView?.bounds.midY ?? 0)
+            #expect(!controller.peekHandlesSideButton(.back, at: sidebar))
+            #expect(source.url == second)
         }
     }
 

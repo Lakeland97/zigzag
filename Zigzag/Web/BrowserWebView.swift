@@ -98,8 +98,23 @@ final class BrowserWebView: WKWebView {
 
     override func mouseDown(with event: NSEvent) {
         owner?.scrolledSinceSave = true
+        noteClick(shiftHeld: event.modifierFlags.contains(.shift))
         if event.modifierFlags.contains(.control) { readSelectionForMenu() }
         super.mouseDown(with: event)
+    }
+
+    /// The last click's ⇧, for a page that handles the click itself: YouTube and parts of Google call
+    /// `window.open` from a ⇧-click, and the new window's request carries no modifiers of its own.
+    private var shiftClickAt: TimeInterval = -.infinity
+
+    /// Records a click's ⇧ at `uptime`; the real click and its test share the rule.
+    func noteClick(shiftHeld: Bool, at uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+        shiftClickAt = shiftHeld ? uptime : -.infinity
+    }
+
+    /// Whether a ⇧-click just happened in this page, within the time its own navigation still counts as that click's.
+    var tookShiftClickRecently: Bool {
+        ProcessInfo.processInfo.systemUptime - shiftClickAt < Tab.followedClickWindow
     }
 
     override func rightMouseDown(with event: NSEvent) {

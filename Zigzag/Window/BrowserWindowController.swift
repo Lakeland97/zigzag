@@ -2769,15 +2769,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             // The ⇧-click Peek: a Peek record for the opener's tab when the window can hold one; otherwise the
             // standalone Mini, exactly as today.
             let host = opener ?? tabManager.selectedTab
-            let mode = MiniPeekSettings.mode
-            if mode != .off,
-               MiniPeekPolicy.shouldDock(mode: mode, windowIsKey: window?.isKeyWindow == true,
-                                         windowIsVisible: window?.isVisible == true,
-                                         windowIsMiniaturized: window?.isMiniaturized == true,
-                                         windowIsOnActiveSpace: window?.isOnActiveSpace == true),
-               miniPeeks.openURL(url: url, configuration: nil, opener: host, by: sender) {
-                return
-            }
+            if let host, openPeek(url: url, configuration: nil, opener: host, by: sender) { return }
             openInMini(url, configuration: nil, opener: host, by: sender)
         case .newWindow:
             // A private window's links stay private.
@@ -2785,6 +2777,36 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         case .privateWindow:
             WindowManager.shared.newWindow(url: url, showCommandBar: false, isPrivate: true)
         }
+    }
+
+    /// A side button over a docked Peek goes to the Peek's own history: it is the page in front, even though the
+    /// window's controller is this browser. Anywhere else the browser's Back and Forward still take it.
+    func peekHandlesSideButton(_ side: BrowserWindow.SideButton, at point: NSPoint) -> Bool {
+        guard side != .press, let peek = miniPeeks.shown, peek.isDockedPeek, peek.isDockShown,
+              let peekRoot = peek.overlay.superview else { return false }
+        guard peekRoot.frame.contains(root.convert(point, from: nil)) else { return false }
+        if side == .back { peek.goBack(nil) } else { peek.goForward(nil) }
+        return true
+    }
+
+    /// The ⇧-click Peek when this window can hold one. One source for the native click and for a page that opens
+    /// the window itself (`window.open`), which arrives with no modifiers of its own.
+    func openPeek(url: URL, configuration: WKWebViewConfiguration?, opener: Tab, by sender: Tab.LoadSender = .page) -> Bool {
+        let mode = MiniPeekSettings.mode
+        guard mode != .off,
+              MiniPeekPolicy.shouldDock(mode: mode, windowIsKey: window?.isKeyWindow == true,
+                                        windowIsVisible: window?.isVisible == true,
+                                        windowIsMiniaturized: window?.isMiniaturized == true,
+                                        windowIsOnActiveSpace: window?.isOnActiveSpace == true) else { return false }
+        return miniPeeks.openURL(url: url, configuration: configuration, opener: opener, by: sender)
+    }
+
+    /// Whether a new-window request began as a ⇧-click: WebKit kept the modifier, or the page handled the click and
+    /// called `window.open` itself. A sized pop-up is still a sign-in or payment window, and nowhere to go is no Peek.
+    nonisolated static func isPeekShiftClick(modifiers: NSEvent.ModifierFlags, recentShiftClick: Bool,
+                                             sized: Bool, url: URL?) -> Bool {
+        guard !sized, let url, ["http", "https", "file"].contains(url.scheme?.lowercased() ?? "") else { return false }
+        return modifiers.contains(.shift) || recentShiftClick
     }
 
     /// Whether a Zigzag Mini opened from this window's pages is up, for the getting-started guide.
@@ -2874,6 +2896,18 @@ extension BrowserWindowController: TabHost {
             if let url = action.request.url, ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
                 saveLinkToPins(url, title: tab.hoveredLink == url ? tab.hoveredLinkTitle ?? "" : "", shiftHeld: shiftHeld)
             }
+            return nil
+        }
+        // A ⇧-click the page handles itself (YouTube, parts of Google) arrives as its own `window.open`, whose
+        // request carries no modifiers: the click we saw on the page is what says Peek. An explicit menu choice
+        // still wins, and a sized pop-up is still a sign-in or payment window.
+        if BrowserWebView.pendingDisposition(for: tab.webView) == nil,
+           Self.isPeekShiftClick(modifiers: action.modifierFlags,
+                                 recentShiftClick: tab.webView?.tookShiftClickRecently == true,
+                                 sized: features.width != nil || features.height != nil,
+                                 url: action.request.url),
+           let url = action.request.url,
+           openPeek(url: url, configuration: configuration, opener: tab) {
             return nil
         }
         // Site routes (#286) apply to Open Link in New Tab and clicked new-tab links. Sized windows (sign-in pop-ups)

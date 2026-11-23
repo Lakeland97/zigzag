@@ -69,6 +69,21 @@ struct MiniPeekPolicyTests {
         #expect(!MiniPeekPolicy.closesOnSelectionChange(mode: .off))
     }
 
+    @Test func aShiftClickThePageHandlesIsStillThePeek() {
+        let youtube = URL(string: "https://www.youtube.com/watch?v=dQw4w9WgXcQ")!
+        // WebKit kept the modifier, or the page called window.open itself: either way it was a ⇧-click.
+        #expect(BrowserWindowController.isPeekShiftClick(modifiers: [.shift], recentShiftClick: false, sized: false, url: youtube))
+        #expect(BrowserWindowController.isPeekShiftClick(modifiers: [], recentShiftClick: true, sized: false, url: youtube))
+        #expect(BrowserWindowController.isPeekShiftClick(modifiers: [.command], recentShiftClick: true, sized: false,
+                                                         url: URL(string: "file:///tmp/a.html")))
+        // A plain click, a sized sign-in pop-up, or nowhere to go is not the Peek's.
+        #expect(!BrowserWindowController.isPeekShiftClick(modifiers: [], recentShiftClick: false, sized: false, url: youtube))
+        #expect(!BrowserWindowController.isPeekShiftClick(modifiers: [], recentShiftClick: true, sized: true, url: youtube))
+        #expect(!BrowserWindowController.isPeekShiftClick(modifiers: [], recentShiftClick: true, sized: false,
+                                                          url: URL(string: "about:blank")))
+        #expect(!BrowserWindowController.isPeekShiftClick(modifiers: [], recentShiftClick: true, sized: false, url: nil))
+    }
+
     @Test func spaceChangePolicy() {
         // The old Peek closed on a real Space change, but not on the one entering or leaving full screen brings.
         #expect(MiniPeekPolicy.spaceChangeCloses(mode: .close, phase: .windowed))

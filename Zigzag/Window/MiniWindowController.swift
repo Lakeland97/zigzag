@@ -890,14 +890,17 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         peekFocus = .takesKeyboard
 
         // A standalone Mini's window, in the same controller: same root, same tab, same page.
-        var frame = screenFrame
+        let stripHeight = Tokens.Metric.miniStripHeight
         let minSize = Tokens.Metric.miniWindowMinSize
         let area = (browserWindow.screen ?? NSScreen.main)?.visibleFrame ?? screenFrame
-        let size = NSSize(width: min(max(frame.width, minSize.width), area.width),
-                          height: min(max(frame.height, minSize.height), area.height))
-        frame = NSRect(x: min(max(area.minX, round(frame.midX - size.width / 2)), area.maxX - size.width),
-                       y: min(max(area.minY, round(frame.midY - size.height / 2)), area.maxY - size.height),
-                       width: size.width, height: size.height)
+        // The page keeps the viewport it had in the page. The window's strip goes above it, so the window is one
+        // strip taller and its top one strip higher; the page itself neither resizes nor moves.
+        let width = min(max(screenFrame.width, minSize.width), area.width)
+        let height = min(max(screenFrame.height + stripHeight, minSize.height), area.height)
+        var frame = NSRect(x: screenFrame.minX, y: screenFrame.maxY + stripHeight - height,
+                           width: width, height: height)
+        frame.origin.x = min(max(area.minX, round(frame.minX)), area.maxX - frame.width)
+        frame.origin.y = min(max(area.minY, round(frame.minY)), area.maxY - frame.height)
         let promoted = BrowserWindow(contentRect: frame)
         promoted.collectionBehavior.remove(.fullScreenPrimary)
         if browserWindow.styleMask.contains(.fullScreen) { promoted.collectionBehavior.insert(.fullScreenAuxiliary) }
@@ -2014,6 +2017,17 @@ extension MiniWindowController: TabHost {
             } else {
                 tab.openFromPage(url, isClick: true, asker: action.sourceFrame.securityOrigin)
             }
+            return nil
+        }
+        // A ⇧-click the page handles itself opens right here, as a ⇧-click on a link does; a sized pop-up below
+        // still gets its own window.
+        if pending == nil,
+           BrowserWindowController.isPeekShiftClick(modifiers: action.modifierFlags,
+                                                    recentShiftClick: tab.webView?.tookShiftClickRecently == true,
+                                                    sized: features.width != nil || features.height != nil,
+                                                    url: action.request.url),
+           let url = action.request.url {
+            tab.load(url, by: .page)
             return nil
         }
         // Sized window.open() calls are sign-in and payment popups: their own small window, over this one.

@@ -83,6 +83,9 @@ final class MiniPeekHost {
 
     weak var browser: BrowserWindowController?
     private(set) var record: Record?
+
+    /// The Mini the window is showing, if one is open.
+    var shown: MiniWindowController? { record?.controller }
     /// The one Peek, keyed by its host tab, for the debug bridge and the tests.
     var records: [UUID: Record] { record.map { [$0.hostTabID: $0] } ?? [:] }
     /// The one switch, read at each decision. Tests inject it; production reads `MiniPeekSettings.mode`.

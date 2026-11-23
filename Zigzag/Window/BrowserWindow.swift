@@ -222,7 +222,12 @@ final class BrowserWindow: NSWindow {
         }
         if let eventInterceptor, eventInterceptor(event) { return }
         if let side = SideButton(event.type, button: event.buttonNumber) {
-            if let action = side.action { windowController?.tryToPerform(action, with: nil) }
+            if let action = side.action {
+                // A Peek under the pointer takes the side button: the page behind it is not the page in front.
+                if let browser = windowController as? BrowserWindowController,
+                   browser.peekHandlesSideButton(side, at: event.locationInWindow) { return }
+                windowController?.tryToPerform(action, with: nil)
+            }
             return
         }
         if movesWindow(for: event) { return }
