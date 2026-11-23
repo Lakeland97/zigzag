@@ -292,6 +292,64 @@ struct MiniPeekHostTests {
         }
     }
 
+    @Test func fullscreenRedocksThePeek() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/full", in: controller, from: tabs[0]))
+            let mini = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            let notification = Notification(name: NSWindow.willEnterFullScreenNotification, object: controller.window)
+
+            controller.windowWillEnterFullScreen(notification)
+            controller.windowDidEnterFullScreen(notification)
+            #expect(mini.isDockedPeek && mini.isDockShown)
+            #expect(controller.window?.childWindows?.contains { $0 === mini.window } == true)
+            #expect(controller.miniPeeks.records[tabs[0].id] != nil)
+
+            // The full-screen page is larger: the Peek re-fits inside it, still docked.
+            var frame = try #require(controller.window?.frame)
+            frame.size = NSSize(width: 1400, height: 900)
+            controller.window?.setFrame(frame, display: false)
+            controller.root.needsLayout = true
+            controller.root.layoutSubtreeIfNeeded()
+            let pane = try #require(MiniPeekHost.pane(of: controller))
+            let peekFrame = try #require(mini.window?.frame)
+            #expect(pane.contains(peekFrame))
+
+            controller.windowWillExitFullScreen(notification)
+            controller.windowDidExitFullScreen(notification)
+            #expect(mini.isDockedPeek && mini.isDockShown)
+            controller.miniPeeks.windowClosing()
+        }
+    }
+
+    @Test func spaceMinimizeAndAppSwitchKeepRecords() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/space", in: controller, from: tabs[0]))
+            let mini = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+
+            NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+            NotificationCenter.default.post(name: NSWindow.didDeminiaturizeNotification, object: controller.window)
+            NotificationCenter.default.post(name: NSApplication.didBecomeActiveNotification, object: nil)
+
+            #expect(controller.miniPeeks.records[tabs[0].id] != nil)
+            #expect(mini.isDockedPeek)
+            #expect(MiniWindowController.all.contains { $0 === mini })
+            controller.miniPeeks.windowClosing()
+        }
+    }
+
+    @Test func windowCloseClosesAllRecords() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/a", in: controller, from: tabs[0]))
+            controller.tabManager.select(tabs[1])
+            #expect(open("https://example.com/b", in: controller, from: tabs[1]))
+            #expect(controller.miniPeeks.records.count == 2)
+            let controllers = controller.miniPeeks.records.values.map(\.controller)
+            controller.window?.close()
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(controllers.allSatisfy { peek in !MiniWindowController.all.contains { $0 === peek } })
+        }
+    }
+
     /// A user move, with the delegate call the window server posts; deterministic in the test host.
     private func move(_ mini: MiniWindowController, to origin: NSPoint) {
         mini.window?.setFrameOrigin(origin)

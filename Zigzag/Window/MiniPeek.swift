@@ -96,6 +96,12 @@ final class MiniPeekHost {
     private(set) var records: [UUID: Record] = [:]
     /// The one switch, read at each decision. Tests inject it; production reads `MiniPeekSettings.mode`.
     var modeProvider: () -> MiniPeekMode = { MiniPeekSettings.mode }
+    /// App activation, the window's deminiaturize, and the active Space's changes: the host re-docks or closes.
+    private var appTokens: [NSObjectProtocol] = []
+    private var spaceTokens: [NSObjectProtocol] = []
+    private var isObserving = false
+    /// Entering or leaving full screen changes Space as it goes: that one is the transition's, not the person's.
+    private var isFullScreenTransitioning = false
 
     private var mode: MiniPeekMode { modeProvider() }
 
@@ -106,6 +112,7 @@ final class MiniPeekHost {
         guard mode != .off, let browser, browser.window != nil,
               let host = opener ?? browser.tabManager.selectedTab,
               let pane = Self.pane(of: browser) else { return false }
+        startObserving()
         close(hostTabID: host.id, animated: false)
         let controller = MiniWindowController.open(fromPage: url, configuration: configuration, opener: host,
                                                    in: browser, by: sender, dockedIn: browser)
@@ -123,6 +130,7 @@ final class MiniPeekHost {
         guard mode != .off, let browser, browser.window != nil, !browser.tabManager.isPrivate,
               !content.isClosed, let url = content.url, !HistoryPage.isInternal(url),
               let pane = Self.pane(of: browser) else { return false }
+        startObserving()
         // ⇧-clicking the tab the window is already on has nothing to lend.
         guard content !== host else { return true }
         // A page can only be in one Peek: another record holding it goes first.
@@ -225,6 +233,71 @@ final class MiniPeekHost {
     /// The window is going: every page goes back or closes with it.
     func windowClosing() {
         for id in Array(records.keys) { close(hostTabID: id, animated: false) }
+        stopObserving()
+    }
+
+    /// Full screen moving: remember the transition's Space change, then re-dock once it lands. A failed transition is
+    /// the windowed state and re-docks too.
+    func fullScreenChanged(_ phase: FullScreenPhase) {
+        switch phase {
+        case .entering, .exiting:
+            isFullScreenTransitioning = true
+        case .fullScreen, .windowed:
+            isFullScreenTransitioning = false
+            redockShown()
+        }
+    }
+
+    /// The Space in front changed. Under `keep` records stay and come back on their desktop; under `close` the old
+    /// Peek goes when its browser is left behind. The transition's own Space change is ignored.
+    private func activeSpaceChanged() {
+        guard !isFullScreenTransitioning, let browser, let window = browser.window else { return }
+        if window.isOnActiveSpace {
+            redockShown()
+        } else if MiniPeekPolicy.spaceChangeCloses(mode: mode, phase: browser.browserWindow.fullScreenPhase) {
+            for (id, record) in Array(records) where record.isShown { close(hostTabID: id, animated: false) }
+        }
+    }
+
+    /// Zigzag came back. The Peek was behind its window all along: put it back on the page, no refade.
+    private func appBecameActive() {
+        guard let browser, browser.window?.isOnActiveSpace == true else { return }
+        redockShown()
+    }
+
+    /// Puts every shown Peek back as the browser's child at the page's current frame. Hidden records stay hidden.
+    private func redockShown() {
+        guard mode != .off else { return }
+        for record in records.values where record.isShown { record.controller.redock() }
+    }
+
+    private func startObserving() {
+        guard !isObserving, let browser, let window = browser.window else { return }
+        isObserving = true
+        appTokens = [
+            NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification,
+                                                   object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.appBecameActive() }
+            },
+            NotificationCenter.default.addObserver(forName: NSWindow.didDeminiaturizeNotification,
+                                                   object: window, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.redockShown() }
+            },
+        ]
+        spaceTokens = [
+            NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,
+                                                              object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.activeSpaceChanged() }
+            },
+        ]
+    }
+
+    private func stopObserving() {
+        appTokens.forEach { NotificationCenter.default.removeObserver($0) }
+        appTokens = []
+        spaceTokens.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+        spaceTokens = []
+        isObserving = false
     }
 
     func close(hostTabID: UUID, animated: Bool) {

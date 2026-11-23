@@ -2661,6 +2661,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
     private func fullScreenChanged(_ event: FullScreenPhase.Event) {
         let phase = browserWindow.fullScreenPhase.after(event)
         browserWindow.fullScreenPhase = phase
+        // The Peek's child window follows the browser through the transition; re-dock once it lands.
+        miniPeeks.fullScreenChanged(phase)
         if browserWindow.titlebarAppearsTransparent != phase.titlebarAppearsTransparent {
             browserWindow.titlebarAppearsTransparent = phase.titlebarAppearsTransparent
         }

@@ -186,9 +186,6 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         var closeToken: NSObjectProtocol?
         var clickGlobal: Any?
         var clickLocal: Any?
-        var appToken: NSObjectProtocol?
-        var spaceToken: NSObjectProtocol?
-        var resignToken: NSObjectProtocol?
     }
     private var dock: Dock?
     /// A programmatic frame change while refitting: the move it causes is ours, not the person dragging the Peek out.
@@ -928,6 +925,21 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// The browser laid its page out again: follow it, whether the Peek is shown or waiting.
     func dockLayoutChanged() { paneResized() }
 
+    /// Full screen, a Space change, or a minimize moved the child: parent it again and put it back at the page's
+    /// geometry. The frame is clamped inside, never treated as the person dragging it out.
+    func redock() {
+        guard isDockedPeek, isDockShown, let browser = dock?.browser,
+              let browserWindow = browser.window, let window else { return }
+        let wasKey = window.isKeyWindow
+        browserWindow.removeChildWindow(window)
+        browserWindow.addChildWindow(window, ordered: .above)
+        browserWindow.contentView?.layoutSubtreeIfNeeded()
+        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        guard pane.width > 1, pane.height > 1 else { return }
+        refit(window, to: pane, in: browser)
+        if wasKey { window.makeKey() } else { window.orderFront(nil) }
+    }
+
     /// The browser's page changed size: the Mini keeps its share and place in it, and never grows past it. During a
     /// live resize this runs every frame, so the two move together rather than the Mini lagging behind.
     private func paneResized() {
@@ -1003,8 +1015,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         Tokens.Motion.fadeBackdrop(dim, entering: false) { dim.removeFromSuperview() }
     }
 
-    /// A click anywhere but the Mini puts it back, as the old Peek's dim did. The keyboard going elsewhere and a
-    /// change of app or Space are the same leaving.
+    /// A click anywhere but the Mini puts it back, as the old Peek's dim did. App, Space, and fullscreen changes are
+    /// the host's to re-dock or close; these watchers are only the click-out.
     private func watchDockedOutside() {
         guard let browser = dock?.browser, let browserWindow = browser.window else { return }
         dock?.clickGlobal = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
@@ -1036,22 +1048,6 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             self.closePeek()
             return event
         }
-        dock?.appToken = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification,
-                                                                           object: nil, queue: .main) { [weak self] note in
-            let pid = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
-            MainActor.assumeIsolated {
-                guard let self, self.isDockedPeek, !self.isLeaving else { return }
-                if pid != NSRunningApplication.current.processIdentifier { self.closePeek(focusBack: false) }
-            }
-        }
-        dock?.spaceToken = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,
-                                                                             object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.closePeek(focusBack: false) }
-        }
-        dock?.resignToken = NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification,
-                                                                    object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.closePeek(focusBack: false) }
-        }
     }
 
     private func removeDockObservers() {
@@ -1063,12 +1059,6 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         dock?.clickGlobal = nil
         if let token = dock?.clickLocal { NSEvent.removeMonitor(token) }
         dock?.clickLocal = nil
-        if let token = dock?.appToken { NSWorkspace.shared.notificationCenter.removeObserver(token) }
-        dock?.appToken = nil
-        if let token = dock?.spaceToken { NSWorkspace.shared.notificationCenter.removeObserver(token) }
-        dock?.spaceToken = nil
-        if let token = dock?.resignToken { NotificationCenter.default.removeObserver(token) }
-        dock?.resignToken = nil
     }
 
     /// The pointer over the window: near the top the strip comes down; away from it, it goes back up. The page never
