@@ -69,24 +69,6 @@ struct MiniPeekPolicyTests {
         #expect(!MiniPeekPolicy.closesOnSelectionChange(mode: .off))
     }
 
-    @Test func detachesOnAnyExit() {
-        let pane = NSRect(x: 100, y: 50, width: 1000, height: 700)
-        #expect(!MiniPeekPolicy.detaches(frame: NSRect(x: 180, y: 100, width: 840, height: 600), viewport: pane, isAdjusting: false))
-        // Touching the page's edge is still inside it.
-        #expect(!MiniPeekPolicy.detaches(frame: pane, viewport: pane, isAdjusting: false))
-        for frame in [
-            NSRect(x: 99, y: 100, width: 400, height: 300),
-            NSRect(x: 500, y: 49, width: 400, height: 300),
-            NSRect(x: 700, y: 100, width: 401, height: 300),
-            NSRect(x: 500, y: 600, width: 400, height: 151),
-            NSRect(x: 2000, y: 2000, width: 100, height: 100),
-        ] {
-            #expect(MiniPeekPolicy.detaches(frame: frame, viewport: pane, isAdjusting: false))
-        }
-        // A re-fit while the page changes size is not the person moving it.
-        #expect(!MiniPeekPolicy.detaches(frame: NSRect(x: 99, y: 100, width: 400, height: 300), viewport: pane, isAdjusting: true))
-    }
-
     @Test func spaceChangePolicy() {
         // The old Peek closed on a real Space change, but not on the one entering or leaving full screen brings.
         #expect(MiniPeekPolicy.spaceChangeCloses(mode: .close, phase: .windowed))

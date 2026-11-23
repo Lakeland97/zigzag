@@ -52,12 +52,6 @@ enum MiniPeekPolicy {
     /// The old Peek's rule: a selection change ends it. `keep` is the old setting's name, not a second rule now.
     static func closesOnSelectionChange(mode: MiniPeekMode) -> Bool { mode != .off }
 
-    /// Any part of the Mini outside the page takes it out of the page. A re-fit while the page changes size is not
-    /// the person moving it, so it never detaches.
-    static func detaches(frame: NSRect, viewport: NSRect, isAdjusting: Bool) -> Bool {
-        !isAdjusting && !viewport.contains(frame)
-    }
-
     /// A real Space change ends the old Peek. The Space change that comes with entering or leaving full screen is the
     /// transition's, not the person's.
     static func spaceChangeCloses(mode: MiniPeekMode, phase: FullScreenPhase) -> Bool {
@@ -240,11 +234,6 @@ final class MiniPeekHost {
     func escapePressed() -> Bool {
         guard mode != .off, record != nil else { return false }
         return closeShown(animated: true)
-    }
-
-    /// The person dragged the Peek out of the page. Per-tab ownership ends; the Mini lives on as it is.
-    func detach(_ controller: MiniWindowController) {
-        remove(controller)
     }
 
     private func record(host: Tab, content: Content, controller: MiniWindowController) {

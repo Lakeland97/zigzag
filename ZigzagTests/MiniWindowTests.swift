@@ -403,6 +403,7 @@ struct MiniFromPageTests {
             #expect(mini.debugState["chromeOverlay"] as? Bool == false)
             #expect(mini.debugState["chromeRevealed"] as? Bool == true)
             #expect(mini.debugState["pinEnabled"] as? Bool == true)
+            #expect(mini.debugState["expandShown"] as? Bool == false)
             // A standalone Mini's pin still works.
             let window = try #require(mini.window)
             mini.toggleKeepOnTop()
@@ -606,6 +607,71 @@ struct MiniFromPageTests {
             #expect(browserWindow.firstResponder !== mini.tab.webView)
             #expect(mini.window?.isVisible == false)
             #expect(mini.debugState["focus"] as? String == "leavesKeyboard")
+        }
+    }
+
+    @Test func peekShowsExpandBeforeNavigation() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            defer { mini.closePeek(focusBack: false, animated: false) }
+            #expect(mini.debugState["expandShown"] as? Bool == true)
+            mini.overlay.superview?.layoutSubtreeIfNeeded()
+            let frames = try #require(mini.debugState["strip"] as? [String: [CGFloat]])
+            let expand = try #require(frames["expand"])
+            // The left corner, before the navigation group, where the window's own controls start.
+            for name in ["back", "forward", "reload"] {
+                let frame = try #require(frames[name], "\(name)")
+                #expect(expand[0] < frame[0], "\(name)")
+            }
+        }
+    }
+
+    @Test func expandPromotesTheSameMiniAndPageToAWindow() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            defer { mini.window?.close() }
+            let browserWindow = try #require(controller.window)
+            let panel = try #require(mini.window)
+            let root = try #require(mini.overlay.superview)
+            let tab = mini.tab
+            let webView = try #require(tab.webView)
+            let holder = tab.pageHolder
+            let embedded = browserWindow.convertToScreen(controller.root.convert(root.frame, to: nil))
+
+            mini.debugExpand()
+
+            let promoted = try #require(mini.window)
+            #expect(promoted !== panel)
+            // A window of its own: titled, with traffic lights, not the borderless panel it was docked in.
+            #expect(promoted is BrowserWindow)
+            #expect(promoted.styleMask.contains(.titled))
+            #expect((promoted as? BrowserWindow)?.trafficLightOrigin != nil)
+            // The same root, tab and page, put in the new window without a reload.
+            #expect(promoted.contentView === root)
+            #expect(mini.overlay.superview === root)
+            #expect(mini.tab === tab)
+            #expect(tab.webView === webView)
+            #expect(tab.pageHolder === holder)
+            #expect(holder?.window === promoted)
+            #expect(abs(promoted.frame.midX - embedded.midX) <= 1)
+            #expect(abs(promoted.frame.midY - embedded.midY) <= 1)
+            // It is no longer the browser's Peek; the controller and its page live on.
+            #expect(!mini.isEmbeddedPeek && !mini.isDockedPeek && !mini.isDockShown)
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(controller.root.miniPeekDim == nil)
+            #expect(!panel.isVisible)
+            #expect(promoted.isVisible)
+            #expect(promoted.firstResponder === webView)
+            // A window's full strip: chrome down, the corner's expand gone.
+            #expect(mini.debugState["chromeOverlay"] as? Bool == false)
+            #expect(mini.debugState["chromeRevealed"] as? Bool == true)
+            #expect(mini.debugState["expandShown"] as? Bool == false)
+
+            // A tab switch no longer owns it, and its page keeps running.
+            controller.tabManager.select(source)
+            #expect(promoted.isVisible)
+            #expect(!tab.isClosed)
+            #expect(controller.miniPeeks.records.isEmpty)
         }
     }
 

@@ -145,14 +145,14 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// The Mini is presented in the page, the old Peek's place: dimmed page, click-out and Esc, no chrome until the
     /// pointer reaches the top. It stays one Mini; only its presentation changed.
     private(set) var isDockedPeek = false
-    /// The Mini's root lives in the browser's page, not in its own panel. Drag-out moves that same root into the
-    /// panel; nothing is recreated.
+    /// The Mini's root lives in the browser's page, not in its own panel. Expand moves that same root into a window
+    /// of its own; nothing is recreated.
     private(set) var isEmbeddedPeek = false
     /// The docked presentation is on screen now. A `keep` Peek hides without ending; its record stays.
     private(set) var isDockShown = false
     /// What the docked presentation did with the keyboard: the first open takes it, a tab switch back leaves it.
     private(set) var peekFocus: MiniPeekFocus = .takesKeyboard
-    /// It began as a docked Peek. Even after it is dragged out, its page is a tab already, so an update's restart must
+    /// It began as a docked Peek. Even after it is expanded, its page is a tab already, so an update's restart must
     /// not make a second Mini for it.
     private(set) var isPeekPresentation: Bool
     /// Only a link another app opened keeps the full strip. Every other Mini wears the page and drops its chrome in
@@ -160,6 +160,20 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     let usesFullChrome: Bool
     private let root = MiniRootView()
     private var strip: MiniStripView { root.strip }
+    /// Takes an event before the page sees it: a link's note, a status-bar panel's ⌘O, and Esc.
+    private lazy var eventInterceptor: (NSEvent) -> Bool = { [weak self] event in
+        guard let self else { return false }
+        if self.linksNote?.takes(event) == true { return true }
+        // A status-bar panel gets no menu key equivalents while another app is in front: ⌘O, the Return button's
+        // shortcut, is read here.
+        if self.isEdgePopout, event.type == .keyDown, !event.isARepeat,
+           EdgePopoutPolicy.isReturnKey(command: event.modifierFlags.contains(.command),
+                                         key: event.charactersIgnoringModifiers) {
+            self.openInZigzag()
+            return true
+        }
+        return self.noteEscape(event)
+    }
     /// Where floating things go over the page: the link under the pointer, a site's question, a toast.
     var overlay: PassthroughView { root.overlay }
     private lazy var linkStatus = LinkStatusController(overlay: overlay)
@@ -215,8 +229,6 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         var clickLocal: Any?
     }
     private var dock: Dock?
-    /// A programmatic frame change while refitting: the move it causes is ours, not the person dragging the Peek out.
-    private var isAdjustingDock = false
     /// The pointer watcher that brings the overlay chrome down.
     private var chromePointerToken: Any?
     /// Whether this Mini is showing a tab borrowed from a browser, not a page it owns.
@@ -606,19 +618,6 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             root.layer?.cornerRadius = Tokens.Radius.large
             root.layer?.masksToBounds = true
         }
-        let eventInterceptor: (NSEvent) -> Bool = { [weak self] event in
-            guard let self else { return false }
-            if self.linksNote?.takes(event) == true { return true }
-            // A status-bar panel gets no menu key equivalents while another app is in front: ⌘O, the Return
-            // button's shortcut, is read here.
-            if self.isEdgePopout, event.type == .keyDown, !event.isARepeat,
-               EdgePopoutPolicy.isReturnKey(command: event.modifierFlags.contains(.command),
-                                             key: event.charactersIgnoringModifiers) {
-                self.openInZigzag()
-                return true
-            }
-            return self.noteEscape(event)
-        }
         if let browserWindow = window as? BrowserWindow {
             browserWindow.eventInterceptor = eventInterceptor
         } else if let panel = window as? MiniPanel {
@@ -637,6 +636,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         }
 
         strip.openButton.onClick = { [weak self] _ in self?.openInZigzag() }
+        strip.expandButton.onClick = { [weak self] _ in self?.promoteToWindow() }
         strip.title.onClick = { [weak self] _ in self?.openLocation(nil) }
         strip.title.drop.onDrop = { [weak self] destination in
             guard let self else { return false }
@@ -853,6 +853,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         guard let dim = dock?.dim else { return }
         dockedBrowser = browser
         isEmbeddedPeek = true
+        // The strip's left corner gains the expand button as the root enters the page.
+        refreshStrip()
         root.frame = pane
         browser.root.onMiniPeekLayout = { [weak self, weak browser] pane in
             guard let self, let browser, self.isEmbeddedPeek else { return }
@@ -869,6 +871,70 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         dock?.browser?.root.hideMiniPeek()
         dock?.dim = nil
         root.removeFromSuperview()
+    }
+
+    /// The expand button went down: the same live Mini and page leave the browser's page for a window of their own,
+    /// at the same place on screen, with a title bar and traffic lights. Nothing is recreated, reloaded, or faded.
+    func promoteToWindow() {
+        guard isEmbeddedPeek, let browser = dock?.browser, let browserWindow = browser.window,
+              let oldWindow = window else { return }
+        let screenFrame = browserWindow.convertToScreen(browser.root.convert(root.frame, to: nil))
+        // The page goes back to itself first: no dim, no click-out, no follow.
+        removeDockObservers()
+        hideDockDim(animated: false)
+        unembed()
+        dock = nil
+        isDockedPeek = false
+        isDockShown = false
+        isPeekPresentation = false
+        peekFocus = .takesKeyboard
+
+        // A standalone Mini's window, in the same controller: same root, same tab, same page.
+        var frame = screenFrame
+        let minSize = Tokens.Metric.miniWindowMinSize
+        let area = (browserWindow.screen ?? NSScreen.main)?.visibleFrame ?? screenFrame
+        let size = NSSize(width: min(max(frame.width, minSize.width), area.width),
+                          height: min(max(frame.height, minSize.height), area.height))
+        frame = NSRect(x: min(max(area.minX, round(frame.midX - size.width / 2)), area.maxX - size.width),
+                       y: min(max(area.minY, round(frame.midY - size.height / 2)), area.maxY - size.height),
+                       width: size.width, height: size.height)
+        let promoted = BrowserWindow(contentRect: frame)
+        promoted.collectionBehavior.remove(.fullScreenPrimary)
+        if browserWindow.styleMask.contains(.fullScreen) { promoted.collectionBehavior.insert(.fullScreenAuxiliary) }
+        promoted.minSize = minSize
+        promoted.setFrame(frame, display: false)
+        promoted.trafficLightOrigin = NSPoint(x: Tokens.Sidebar.lightsX,
+                                               y: round((Tokens.Metric.miniStripHeight - promoted.trafficLightHeight) / 2))
+        strip.trafficLightsWidth = promoted.trafficLightsWidth
+        // The strip is a window's own now, not the page's: it comes down, and its lights take the corner.
+        root.chromeOverlay = false
+        root.layer?.cornerRadius = 0
+        root.layer?.masksToBounds = false
+        root.alphaValue = 1
+        root.setChromeRevealed(true, animated: false)
+        if let chromePointerToken { NSEvent.removeMonitor(chromePointerToken) }
+        chromePointerToken = nil
+
+        promoted.contentView = root
+        oldWindow.delegate = nil
+        keepOnTopToken.map(NotificationCenter.default.removeObserver)
+        self.window = promoted
+        promoted.delegate = self
+        promoted.eventInterceptor = eventInterceptor
+        promoted.setAccessibilityTitle(Self.name)
+        keepOnTopToken = NotificationCenter.default.addObserver(forName: KeepOnTop.changed, object: promoted, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshStrip() }
+        }
+        strip.needsLayout = true
+        refreshStrip()
+        refreshBar(animated: false)
+        oldWindow.orderOut(nil)
+        oldWindow.close()
+        promoted.makeKeyAndOrderFront(nil)
+        if let webView = tab.webView { promoted.makeFirstResponder(webView) }
+        // It is no longer its browser's Peek: the host forgets it, but the controller and its page live on.
+        onPeekDetached?()
+        onPeekDetached = nil
     }
 
     /// Installs the page's follow, close, and click-out watchers once, whether the Peek is opening or coming back.
@@ -931,43 +997,10 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         root.frame = resized
     }
 
-    /// The page's bounds on screen, read live: the browser may have moved or changed size under the stored frame.
-    private func dockedPaneScreen() -> NSRect? {
-        guard let browser = dock?.browser, let window = browser.window else { return nil }
-        return window.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
-    }
-
     #if DEBUG
     /// The pane the Peek is fitted to, for `minipeekstate`.
     var debugDockPane: NSRect? { dock?.paneScreen }
     #endif
-
-    /// The drag crossed the page's edge: it is a full Mini now, at exactly the frame it had. Nothing moves, resizes,
-    /// or fades in the hand-off; the dim goes and the window simply stays where the pointer left it.
-    private func detachFromPane() {
-        guard isDockedPeek, let window else { return }
-        isDockedPeek = false
-        isDockShown = false
-        refreshStrip()
-        let browserWindow = dock?.browser?.window
-        browserWindow?.removeChildWindow(window)
-        let size = window.frame.size
-        window.minSize = NSSize(width: min(size.width, Tokens.Metric.miniWindowMinSize.width),
-                                height: min(size.height, Tokens.Metric.miniWindowMinSize.height))
-        window.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
-        window.level = .normal
-        hideDockDim(animated: false)
-        removeDockObservers()
-        dock = nil
-        // A detached URL Peek is a standalone Mini now and may be restored as one. A borrowed page is already a
-        // tab, so its Mini must not come back as a second window for it.
-        if borrowedOrigin == nil { isPeekPresentation = false }
-        // The detached Mini keeps the keyboard and stays above its browser, at exactly the frame it had.
-        window.makeKey()
-        window.orderFront(nil)
-        onPeekDetached?()
-        onPeekDetached = nil
-    }
 
     /// The dim under the page goes as the Mini does; the page behind is never left dimmed.
     private func hideDockDim(animated: Bool) {
@@ -1191,6 +1224,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         strip.pinButton.isEnabled = !isDockedPeek
         strip.pinButton.toolTip = isDockedPeek ? Self.dockedPinTooltip : KeepOnTop.title
         KeepOnTop.refresh(strip.pinButton, for: window)
+        // The left corner's expand belongs to the Peek in the page; a window of its own already is one.
+        strip.expandButton.isHidden = !isEmbeddedPeek
         strip.needsLayout = true
     }
 
@@ -1351,6 +1386,13 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
 
     func debugHoverStrip(_ name: String) { strip.debugHover(name) }
 
+    /// Presses the Peek's expand button, as a click does.
+    func debugExpand() {
+        guard let event = NSEvent.mouseEvent(with: .leftMouseUp, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0,
+                                             context: nil, eventNumber: 0, clickCount: 1, pressure: 1) else { return }
+        strip.expandButton.onClick?(event)
+    }
+
     func debugEscape() {
         if commandBar.isVisible { commandBar.debugEscape() }
         else if isDockedPeek { closePeek() }
@@ -1371,7 +1413,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
                 "docked": isDockedPeek, "dockShown": isDockShown, "embedded": isEmbeddedPeek,
                 "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
                 "fullChrome": usesFullChrome, "focus": peekFocus == .takesKeyboard ? "takesKeyboard" : "leavesKeyboard",
-                "pinEnabled": strip.pinButton.isEnabled, "pinTip": strip.pinButton.toolTip ?? "",
+                "pinEnabled": strip.pinButton.isEnabled, "pinTip": strip.pinButton.toolTip ?? "", "expandShown": !strip.expandButton.isHidden,
                 "peekMode": MiniPeekSettings.mode.rawValue, "hostTab": peekHostTab?.id.uuidString ?? "",
                 "contentTab": tab.id.uuidString, "borrowed": isBorrowedPage, "suspended": false,
                 "sourceWindow": source?.window?.windowNumber ?? 0, "titleShown": !strip.title.isHidden, "title": strip.title.text,
@@ -1773,14 +1815,6 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         DispatchQueue.main.async { MainActor.assumeIsolated { self.edgePopoutLostKey() } }
     }
 
-    /// A docked Mini dragged past the page's edge becomes a full Mini. The check is the page itself, so a window
-    /// moved because the browser moved stays docked, and only the hand that leaves the page takes it out.
-    func windowDidMove(_ notification: Notification) {
-        guard isDockedPeek, !isAdjustingDock, let window, let pane = dockedPaneScreen() else { return }
-        guard MiniPeekPolicy.detaches(frame: window.frame, viewport: pane, isAdjusting: isAdjustingDock) else { return }
-        detachFromPane()
-    }
-
     /// The popout lost the keyboard: the panel that opened it and our own menus keep it out; anything else closes
     /// it, as with the Peek.
     private func edgePopoutLostKey() {
@@ -2160,6 +2194,9 @@ final class MiniStripView: NSView {
     let backButton = MiniStripView.button("chevron.left", toolTip: Shortcuts.tooltip(String(localized: "Back", comment: "Tooltip of the sidebar's back button."), for: #selector(MiniWindowController.goBack(_:))))
     let forwardButton = MiniStripView.button("chevron.right", toolTip: Shortcuts.tooltip(String(localized: "Forward", comment: "Tooltip of the sidebar's forward button."), for: #selector(MiniWindowController.goForward(_:))))
     let reloadButton = MiniStripView.button("arrow.clockwise", toolTip: SidebarView.reloadTip(loading: false))
+    /// The Peek's first control, in the strip's left corner: the same live Mini and page become a window of their own.
+    let expandButton = MiniStripView.button("arrow.up.left.and.arrow.down.right",
+                                            toolTip: String(localized: "Open in Window", comment: "Tooltip of the button in a Peek's top strip, the Mini shown over a page: it turns the same Mini into a window of its own."))
     let spaceChip = MiniSpaceChip()
     let title = MiniTitleView()
     let copyButton = MiniStripView.button("link", toolTip: Shortcuts.tooltip(String(localized: "Copy Link", comment: "Edit menu item."),
@@ -2184,7 +2221,8 @@ final class MiniStripView: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         anchor.isHidden = true
-        [anchor, backButton, forwardButton, reloadButton, spaceChip, title, siteButton, pinButton, copyButton, openButton].forEach(addSubview)
+        [anchor, expandButton, backButton, forwardButton, reloadButton, spaceChip, title, siteButton, pinButton, copyButton, openButton].forEach(addSubview)
+        expandButton.isHidden = true
         setAccessibilityElement(false)
     }
 
@@ -2206,7 +2244,7 @@ final class MiniStripView: NSView {
 
     #if DEBUG
     var debugFrames: [String: [CGFloat]] {
-        let views: [(String, NSView)] = [("back", backButton), ("forward", forwardButton), ("reload", reloadButton), ("space", spaceChip),
+        let views: [(String, NSView)] = [("expand", expandButton), ("back", backButton), ("forward", forwardButton), ("reload", reloadButton), ("space", spaceChip),
                                          ("title", title), ("site", siteButton), ("pin", pinButton), ("copy", copyButton), ("open", openButton)]
         return Dictionary(uniqueKeysWithValues: views.map { ($0.0, [$0.1.frame.minX, $0.1.frame.width]) })
     }
@@ -2220,9 +2258,9 @@ final class MiniStripView: NSView {
         // Every button and pill is the address's height, as far from the strip's top and bottom as from each other.
         let h = Tokens.Pane.addressHeight, b = Tokens.Pane.stripButton, gap = Tokens.Pane.stripGap
         let y = round((bounds.height - h) / 2)
-        // Back, forward and reload right after the lights, as in an installed app's strip.
+        // The Peek's expand, then back, forward and reload right after the lights, as in an installed app's strip.
         var x = Tokens.Sidebar.lightsX + trafficLightsWidth + Tokens.Space.x2
-        for button in [backButton, forwardButton, reloadButton] {
+        for button in [expandButton, backButton, forwardButton, reloadButton] where !button.isHidden {
             button.frame = NSRect(x: x, y: y, width: b, height: b)
             x += b + gap
         }
