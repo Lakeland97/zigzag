@@ -33,22 +33,19 @@ struct TopBarTests {
         #expect(controller.sidebar.holdsAddress)
     }
 
-    /// Zigzag's own pages have nothing to pin and no site to control: the panel's mirror offers neither. The window's
-    /// own sidebar keeps main's behavior and leaves Site Controls in place.
-    @Test func systemPagesHideTheStarAndSiteControlsInTheMirror() {
-        let mirror = SidebarView(frame: NSRect(x: 0, y: 0, width: 240, height: 600))
-        mirror.hidesSystemPageControls = true
+    /// Zigzag's own pages have nothing to pin and no site to control: neither the star nor Site Controls is offered.
+    @Test func systemPagesHideTheStarAndSiteControls() {
+        let sidebar = SidebarView(frame: NSRect(x: 0, y: 0, width: 240, height: 600))
+        // Hiding a system page's star and Site Controls is the edge mirror's opt-in (#365); the window's sidebar
+        // keeps main's behaviour. This tests the opt-in itself.
+        sidebar.hidesSystemPageControls = true
         let space = UUID()
-        mirror.update(tab: Tab(url: URL(string: "https://example.com")!, title: "Example", spaceID: space))
-        #expect(!mirror.address.saveButton.isHidden)
-        #expect(!mirror.address.siteControlsButton.isHidden)
-        mirror.update(tab: Tab(url: SettingsPage.url, title: "Settings", spaceID: space))
-        #expect(mirror.address.saveButton.isHidden)
-        #expect(mirror.address.siteControlsButton.isHidden)
-
-        let windowSidebar = SidebarView(frame: NSRect(x: 0, y: 0, width: 240, height: 600))
-        windowSidebar.update(tab: Tab(url: SettingsPage.url, title: "Settings", spaceID: space))
-        #expect(!windowSidebar.address.siteControlsButton.isHidden)
+        sidebar.update(tab: Tab(url: URL(string: "https://example.com")!, title: "Example", spaceID: space))
+        #expect(!sidebar.address.saveButton.isHidden)
+        #expect(!sidebar.address.siteControlsButton.isHidden)
+        sidebar.update(tab: Tab(url: SettingsPage.url, title: "Settings", spaceID: space))
+        #expect(sidebar.address.saveButton.isHidden)
+        #expect(sidebar.address.siteControlsButton.isHidden)
     }
 
     @Test func barSitsOnTheTrafficLightsLine() {
