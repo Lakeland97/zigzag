@@ -481,9 +481,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
         applySpaceColor(animated: true, crossFadesMode: false)
         desk.spaceChanged()
         CATransaction.flush()
-        // The new space's selection is settled: a Peek owned by a tab that is no longer on screen goes dormant.
+        // The new space's selection is settled: a Peek owned by a tab that is no longer on screen goes.
         miniPeeks.willSelect(tabManager.selectedTab)
-        miniPeeks.didSelect(tabManager.selectedTab)
     }
 
     /// A favorite held over another space's dot opens that space after a beat, so it can be dropped among that
@@ -789,8 +788,6 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate {
             }
         }
         showPages()
-        // After the new page is in its card: the selected tab's dormant Peek comes back, without the keyboard.
-        miniPeeks.didSelect(tab)
         // A space switch's page is on its card now: the edge panel takes it here, before the frame draws, rather
         // than a turn later when it would have shown at window size first.
         EdgePeek.shared.spaceSelectionShown(tab)
@@ -3890,6 +3887,8 @@ extension BrowserWindowController: CommandBarHost {
     func commandBarWillShow() {
         // A choice from an older bar never reaches a tab made by this one.
         edgeBarChoosing = false
+        // The old Peek goes before the bar: typing is no time for two floating surfaces.
+        miniPeeks.closeShown(animated: false)
         if desk.isVisible { desk.hide(openingTab: nil) }
         // Typing goes to the bar, not to Capture's keys.
         capture.cancel()

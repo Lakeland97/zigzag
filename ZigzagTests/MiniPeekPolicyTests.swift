@@ -63,9 +63,9 @@ struct MiniPeekPolicyTests {
         #expect(!MiniPeekPolicy.isVisible(hostTabID: nil, selectedTabID: nil))
     }
 
-    @Test func closeModeClosesOnSelectionChange() {
+    @Test func everyModeWithAPeekClosesOnSelectionChange() {
         #expect(MiniPeekPolicy.closesOnSelectionChange(mode: .close))
-        #expect(!MiniPeekPolicy.closesOnSelectionChange(mode: .keep))
+        #expect(MiniPeekPolicy.closesOnSelectionChange(mode: .keep))
         #expect(!MiniPeekPolicy.closesOnSelectionChange(mode: .off))
     }
 
@@ -93,7 +93,7 @@ struct MiniPeekPolicyTests {
         #expect(MiniPeekPolicy.spaceChangeCloses(mode: .close, phase: .fullScreen))
         #expect(!MiniPeekPolicy.spaceChangeCloses(mode: .close, phase: .entering))
         #expect(!MiniPeekPolicy.spaceChangeCloses(mode: .close, phase: .exiting))
-        #expect(!MiniPeekPolicy.spaceChangeCloses(mode: .keep, phase: .windowed))
+        #expect(MiniPeekPolicy.spaceChangeCloses(mode: .keep, phase: .windowed))
         #expect(!MiniPeekPolicy.spaceChangeCloses(mode: .off, phase: .windowed))
     }
 }

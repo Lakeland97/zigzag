@@ -29,6 +29,8 @@ extension BrowserWindowController: NSMenuItemValidation {
     }
     @objc func closeTab(_ sender: Any?) {
         if commandBar.isVisible { commandBar.dismiss(); return }
+        // The old Peek goes first: ⌘W closes it, not the tab under it.
+        if miniPeeks.closeShown() { return }
         // On the desk, the card you're on.
         if desk.isVisible { desk.closeFocused(); return }
         // Rows picked in the sidebar, with the keys still there: all of them, as one step.

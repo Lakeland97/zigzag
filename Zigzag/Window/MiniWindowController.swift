@@ -245,8 +245,6 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private(set) var fromPage = false
     /// The tab whose page a docked Peek is shown over; the host owns the record. Diagnostics only.
     weak var peekHostTab: Tab?
-    /// A borrowed Peek's page is back in its tab while the record waits.
-    var isPeekSuspended = false
     /// From a private window: its own store, nothing written down.
     var isPrivate: Bool { tab.isPrivate }
 
@@ -892,76 +890,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         if dock?.clickGlobal == nil { watchDockedOutside() }
     }
 
-    /// Takes a docked Peek off screen without ending it: its root and dim go, and the live page waits for its tab to
-    /// come back. It stays docked, and the panel stays hidden.
-    func hideDock() {
-        guard isDockedPeek, isDockShown else { return }
-        unembed()
-        removeDockObservers()
-        isDockShown = false
-    }
-
-    /// Brings a hidden docked Peek back: the same live page, re-fitted to the page, with no refade and no key steal
-    /// unless the caller asks for it.
-    func showDock(focus: MiniPeekFocus = .leavesKeyboard) {
-        guard isDockedPeek, !isDockShown else { return }
-        presentDock(focus: focus)
-    }
-
-    /// Brings a hidden docked Peek back: the same live page, placed in the page again with no reload or refade.
-    func resumeDock(focus: MiniPeekFocus = .leavesKeyboard) {
-        guard isDockedPeek, !isDockShown else { return }
-        showPage()
-        presentDock(focus: focus)
-    }
-
-    /// Puts the docked presentation on screen at the page's current geometry. The page is already in the Mini.
-    private func presentDock(focus: MiniPeekFocus) {
-        guard let browser = dock?.browser, let browserWindow = browser.window else { return }
-        let pane = browser.root.cardFrame
-        let paneScreen = browserWindow.convertToScreen(browser.root.convert(pane, to: nil))
-        guard paneScreen.width > 1, paneScreen.height > 1 else { return }
-        let old = dock?.pane ?? pane
-        var frame = MiniDockLayout.resized(root.frame, from: old, to: pane)
-        if frame.isEmpty { frame = MiniDockLayout.frame(in: pane) }
-        dock?.pane = pane
-        dock?.paneScreen = paneScreen
-        dock?.dim?.onClick = nil
-        dock?.dim?.removeFromSuperview()
-        dock?.dim = nil
-
-        let dim = MiniPeekDimView(color: Tokens.Color.peekScrim)
-        dim.alphaValue = 1
-        dim.onClick = { [weak self] in self?.closePeek() }
-        dock?.dim = dim
-        embed(in: browser, pane: frame)
-        isDockShown = true
-        peekFocus = focus
-        switch focus {
-        case .takesKeyboard:
-            browserWindow.makeKeyAndOrderFront(nil)
-            if let webView = tab.webView { browserWindow.makeFirstResponder(webView) }
-        case .leavesKeyboard:
-            break
-        }
-        installDockObservers()
-    }
-
-    /// A borrowed Peek's page goes back to its tab while the record waits: no blank tab, no reload later. The window
-    /// orders out and stays docked; the record's content tab shows the page again.
-    func suspendDock() {
-        guard isDockedPeek, isDockShown, let origin = borrowedOrigin else { return }
-        if window?.isKeyWindow == true { dock?.browser?.window?.makeKey() }
-        // Let the Mini's card go of the page first, so showing it again on resume puts the same holder back.
-        root.card.show(nil)
-        restoreBorrowed(origin, bringForward: false)
-        hideDockDim(animated: false)
-        removeDockObservers()
-        window?.orderOut(nil)
-        isDockShown = false
-    }
-
-    /// The browser laid its page out again: follow it, whether the Peek is shown or waiting.
+    /// The browser laid its page out again: follow it.
     func dockLayoutChanged() { paneResized() }
 
     /// Full screen, a Space change, or a minimize: put the embedded root back at the page's current geometry.
@@ -1444,7 +1373,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
                 "fullChrome": usesFullChrome, "focus": peekFocus == .takesKeyboard ? "takesKeyboard" : "leavesKeyboard",
                 "pinEnabled": strip.pinButton.isEnabled, "pinTip": strip.pinButton.toolTip ?? "",
                 "peekMode": MiniPeekSettings.mode.rawValue, "hostTab": peekHostTab?.id.uuidString ?? "",
-                "contentTab": tab.id.uuidString, "borrowed": isBorrowedPage, "suspended": isPeekSuspended,
+                "contentTab": tab.id.uuidString, "borrowed": isBorrowedPage, "suspended": false,
                 "sourceWindow": source?.window?.windowNumber ?? 0, "titleShown": !strip.title.isHidden, "title": strip.title.text,
                 "space": space.name, "profile": Library.shared.directory.profile(tab.profile.id)?.name ?? "",
                 "store": tab.webView?.configuration.websiteDataStore.identifier?.uuidString ?? (tab.webView == nil ? "no page" : "default"),

@@ -4,7 +4,7 @@ import Testing
 import WebKit
 @testable import Zigzag
 
-/// The Peeks one window owns: one record per host tab, hidden with its tab and gone with its pages.
+/// The one Peek a window owns: replaced by a second ⇧-click, closed by its tab or Space, and gone with its pages.
 @MainActor
 struct MiniPeekHostTests {
     private func inWindow(_ titles: [String] = ["A", "B", "C"],
@@ -28,7 +28,7 @@ struct MiniPeekHostTests {
         controller.miniPeeks.openURL(url: URL(string: url), configuration: nil, opener: host, by: .page)
     }
 
-    @Test func oneRecordPerHostAndReplace() async throws {
+    @Test func onePeekReplacesThePrevious() async throws {
         try await inWindow { controller, tabs in
             #expect(open("https://example.com/first", in: controller, from: tabs[0]))
             let first = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
@@ -68,45 +68,51 @@ struct MiniPeekHostTests {
         }
     }
 
-    @Test func modeOffClosesAll() async throws {
-        try await inWindow { controller, tabs in
-            #expect(open("https://example.com/a", in: controller, from: tabs[0]))
-            controller.tabManager.select(tabs[1])
-            #expect(open("https://example.com/b", in: controller, from: tabs[1]))
-            #expect(controller.miniPeeks.records.count == 2)
-            let controllers = controller.miniPeeks.records.values.map(\.controller)
-            controller.miniPeeks.modeProvider = { .off }
-            controller.miniPeeks.modeChanged()
-            #expect(controller.miniPeeks.records.isEmpty)
-            #expect(controllers.allSatisfy { peek in !MiniWindowController.all.contains { $0 === peek } })
-            #expect(controller.root.miniPeekDim == nil)
-        }
-    }
-
-    @Test func willSelectHidesAndDidSelectShows() async throws {
+    @Test func modeOffClosesThePeek() async throws {
         try await inWindow { controller, tabs in
             #expect(open("https://example.com/a", in: controller, from: tabs[0]))
             let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
             let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
-            let frame = try #require(peek.debugState["frame"] as? [CGFloat])
+            controller.miniPeeks.modeProvider = { .off }
+            controller.miniPeeks.modeChanged()
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(page.isClosed)
+            #expect(!MiniWindowController.all.contains { $0 === peek })
+            #expect(controller.root.miniPeekDim == nil)
+        }
+    }
+
+    @Test func selectingAnotherTabClosesThePeek() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/a", in: controller, from: tabs[0]))
+            let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
+            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
             #expect(peek.isDockShown && peek.isEmbeddedPeek)
 
             controller.tabManager.select(tabs[1])
-            #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == false)
-            #expect(peek.isDockShown == false)
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(page.isClosed)
+            #expect(!MiniWindowController.all.contains { $0 === peek })
             #expect(peek.overlay.window == nil)
             #expect(controller.root.miniPeekDim == nil)
-            #expect(MiniWindowController.all.contains { $0 === peek })
+            // The host tab's own page is still there; only the Peek's URL tab went with it.
+            #expect(!tabs[0].isClosed)
+            // The outgoing Peek's page no longer has the keyboard; the browser keeps it for the new tab.
+            #expect(controller.tabManager.selectedTab === tabs[1])
+            #expect(controller.window?.firstResponder !== peek.tab.webView)
+            #expect(!tabs[1].isClosed)
+        }
+    }
 
-            controller.tabManager.select(tabs[0])
-            #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == true)
-            #expect(peek.isDockShown && peek.isEmbeddedPeek && peek.overlay.window === controller.window)
-            #expect(controller.root.miniPeekDim != nil)
-            // The same live page, at the same place: no reload, no jump.
-            #expect(peek.tab === page)
-            #expect(peek.debugState["frame"] as? [CGFloat] == frame)
-            #expect(peek.debugState["focus"] as? String == "leavesKeyboard")
-            controller.miniPeeks.windowClosing()
+    @Test func aSpaceChangeWithNoHostTabClosesThePeek() async throws {
+        try await inWindow { controller, tabs in
+            #expect(open("https://example.com/space", in: controller, from: tabs[0]))
+            let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
+            // A Space change settles on no tab from the old Space: the Peek goes before the new page draws.
+            controller.miniPeeks.willSelect(nil)
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(page.isClosed)
+            #expect(!tabs[0].isClosed)
         }
     }
 
@@ -141,31 +147,33 @@ struct MiniPeekHostTests {
             controller.tabManager.select(tabs[1])
             #expect(controller.miniPeeks.records.isEmpty)
             #expect(page.isClosed)
+            #expect(!tabs[0].isClosed)
             #expect(!MiniWindowController.all.contains { $0 === peek })
             #expect(controller.root.miniPeekDim == nil)
         }
     }
 
-    @Test func bothSplitPeeksOnlyActiveShown() async throws {
+    @Test func aSecondClickInAnotherPaneReplacesTheFirst() async throws {
         try await inWindow { controller, tabs in
             controller.tabManager.makeSplit(tabs[0], with: tabs[1])
             controller.tabManager.select(tabs[0])
             #expect(open("https://example.com/a", in: controller, from: tabs[0]))
             let first = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
+            let firstPage = first.tab
 
             controller.tabManager.select(tabs[1])
-            #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == false)
+            // The selection change closes the first Peek, as the old Peek did.
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(firstPage.isClosed)
+            #expect(!MiniWindowController.all.contains { $0 === first })
             #expect(open("https://example.com/b", in: controller, from: tabs[1]))
             let second = try #require(controller.miniPeeks.records[tabs[1].id]?.controller)
-            #expect(first.overlay.window == nil)
-            #expect(second.overlay.window === controller.window)
+            #expect(controller.miniPeeks.records.count == 1)
+            #expect(second.isEmbeddedPeek && second.overlay.window === controller.window)
 
             controller.tabManager.select(tabs[0])
-            #expect(controller.miniPeeks.records[tabs[1].id]?.isShown == false)
-            #expect(controller.miniPeeks.records[tabs[0].id]?.isShown == true)
-            #expect(first.overlay.window === controller.window)
-            #expect(second.overlay.window == nil)
-            controller.miniPeeks.windowClosing()
+            #expect(controller.miniPeeks.records.isEmpty)
+            #expect(!MiniWindowController.all.contains { $0 === second })
         }
     }
 
@@ -173,7 +181,7 @@ struct MiniPeekHostTests {
         try await inWindow { controller, tabs in
             #expect(open("https://example.com/keep", in: controller, from: tabs[0]))
             let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
-            controller.miniPeeks.keep(hostTabID: tabs[0].id)
+            controller.miniPeeks.keepShown()
             for _ in 0..<200 where !controller.tabManager.tabs(in: controller.tabManager.currentSpaceID).contains(where: { $0 === page }) {
                 try await Task.sleep(for: .milliseconds(10))
             }
@@ -214,12 +222,11 @@ struct MiniPeekHostTests {
         }
     }
 
-    @Test func spaceMinimizeAndAppSwitchKeepRecords() async throws {
+    @Test func minimizeAndAppSwitchKeepThePeek() async throws {
         try await inWindow { controller, tabs in
             #expect(open("https://example.com/space", in: controller, from: tabs[0]))
             let mini = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
 
-            NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
             NotificationCenter.default.post(name: NSWindow.didDeminiaturizeNotification, object: controller.window)
             NotificationCenter.default.post(name: NSApplication.didBecomeActiveNotification, object: nil)
 
@@ -230,16 +237,15 @@ struct MiniPeekHostTests {
         }
     }
 
-    @Test func windowCloseClosesAllRecords() async throws {
+    @Test func windowCloseClosesThePeek() async throws {
         try await inWindow { controller, tabs in
             #expect(open("https://example.com/a", in: controller, from: tabs[0]))
-            controller.tabManager.select(tabs[1])
-            #expect(open("https://example.com/b", in: controller, from: tabs[1]))
-            #expect(controller.miniPeeks.records.count == 2)
-            let controllers = controller.miniPeeks.records.values.map(\.controller)
+            let page = try #require(controller.miniPeeks.records[tabs[0].id]?.content.tab)
+            let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
             controller.window?.close()
             #expect(controller.miniPeeks.records.isEmpty)
-            #expect(controllers.allSatisfy { peek in !MiniWindowController.all.contains { $0 === peek } })
+            #expect(page.isClosed)
+            #expect(!MiniWindowController.all.contains { $0 === peek })
         }
     }
 
@@ -300,16 +306,15 @@ struct MiniPeekHostTests {
         }
     }
 
-    @Test func escapeWithTheBrowserKeyboardClosesAShownPeek() async throws {
+    @Test func escapeClosesThePeek() async throws {
         try await inWindow { controller, tabs in
             #expect(open("https://example.com/escape", in: controller, from: tabs[0]))
             let peek = try #require(controller.miniPeeks.records[tabs[0].id]?.controller)
-            // Back from another tab: visible, but the browser kept the keyboard.
-            controller.tabManager.select(tabs[1])
-            controller.tabManager.select(tabs[0])
-            #expect(peek.debugState["focus"] as? String == "leavesKeyboard")
+            let page = peek.tab
             #expect(controller.miniPeeks.escapePressed())
-            #expect(controller.miniPeeks.records[tabs[0].id] == nil)
+            #expect(controller.miniPeeks.records.isEmpty)
+            for _ in 0..<200 where !page.isClosed { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(page.isClosed)
             #expect(!controller.miniPeeks.escapePressed())
         }
     }
