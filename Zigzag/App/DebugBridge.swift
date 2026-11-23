@@ -257,6 +257,12 @@ enum DebugBridge {
                   let tab = browser.tabManager.selectedTab, browser.canOpenInMini(tab)
             else { break }
             MiniWindowController.open(borrowing: tab, from: browser)
+        case "edgeexpand":
+            // The sidebar card's corner button, without needing to find it with the pointer.
+            EdgePeek.shared.expandToBrowser()
+        case "edgeforce":
+            // Verification only: bring the panel out while the browser is on this desktop.
+            EdgeSidebar.shared.debugShow()
         case "mininote": mini?.debugLinksNote(arg)
         case "minispace": mini?.debugSpace(arg)
         case "minicopy": mini?.copyPageURL(nil)

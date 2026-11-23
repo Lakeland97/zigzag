@@ -849,6 +849,16 @@ final class SidebarView: NSView {
     let backButton = SidebarView.chromeButton("chevron.left", toolTip: String(localized: "Back", comment: "Tooltip of the sidebar's back button."))
     let forwardButton = SidebarView.chromeButton("chevron.right", toolTip: String(localized: "Forward", comment: "Tooltip of the sidebar's forward button."))
     let reloadButton = SidebarView.chromeButton("arrow.clockwise", toolTip: String(localized: "Reload", comment: "Tooltip of the sidebar's reload button."))
+    /// The edge sidebar's way back to the full browser, in the traffic lights' corner. The window's sidebar hides it.
+    let expandButton = SidebarView.chromeButton("arrow.up.left.and.arrow.down.right", toolTip: String(localized: "Open in Browser", comment: "Tooltip of the edge sidebar's corner expand button: puts the page back in the browser window."))
+    var showsExpandButton = false {
+        didSet {
+            guard showsExpandButton != oldValue else { return }
+            expandButton.isHidden = !showsExpandButton
+            needsLayout = true
+        }
+    }
+    var onExpand: (() -> Void)?
     /// Stand-in for the traffic lights while the sidebar slides.
     private let trafficLightsPicture = NSImageView()
     let sidebarButton = SidebarView.chromeButton(SidebarView.toggleSymbol(onRight: false), toolTip: String(localized: "Hide Sidebar", comment: "Tooltip of the sidebar button while the sidebar shows."))
@@ -960,8 +970,7 @@ final class SidebarView: NSView {
         }
     }
     /// The window's sidebar lends its back, forward, reload and address to the bar above the page. A mirror at the
-    /// screen's edge has no bar to lend them to, so with the address above the page it hides its own instead of
-    /// leaving them at the frames they last had.
+    /// screen's edge has no bar to lend them to, so it always keeps its own address and controls.
     var hasTopBar = true { didSet { refreshAddressButtons() } }
     /// Whether everything in it keeps its hover states while Zigzag is inactive and its panel isn't key: the sidebar
     /// at the screen's edge, which shows over another app.
@@ -986,7 +995,9 @@ final class SidebarView: NSView {
         wantsLayer = true
         layer?.masksToBounds = true
 
-        for button in [sidebarButton, backButton, forwardButton, reloadButton] { addSubview(button) }
+        for button in [sidebarButton, backButton, forwardButton, reloadButton, expandButton] { addSubview(button) }
+        expandButton.isHidden = true
+        expandButton.onClick = { [weak self] _ in self?.onExpand?() }
         trafficLightsPicture.imageScaling = .scaleNone
         trafficLightsPicture.isHidden = true
         addSubview(trafficLightsPicture)
@@ -1198,6 +1209,12 @@ final class SidebarView: NSView {
         func onLine(_ rect: NSRect) -> NSRect { NSRect(x: rect.minX, y: rowCenter - button / 2, width: button, height: button) }
         for (b, rect) in zip([backButton, forwardButton, reloadButton], row.buttons) where holdsAddress { b.frame = onLine(rect) }
         sidebarButton.frame = onLine(row.toggle)
+        if showsExpandButton {
+            // The traffic lights' column and line, on the card itself. The row starts after it, as it does after
+            // real lights, so the button and the navigation controls never overlap.
+            let side = Self.toolbarButton
+            expandButton.frame = NSRect(x: Self.trafficLightsX, y: rowCenter - side / 2, width: side, height: side)
+        }
         if holdsAddress {
             address.frame = NSRect(x: pad, y: Tokens.Sidebar.addressTop, width: width - pad * 2, height: Tokens.Sidebar.addressHeight)
         }

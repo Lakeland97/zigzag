@@ -110,6 +110,101 @@ struct MiniWindowTests {
         #expect(!MiniWindowController.needsLinksNote(in: defaults))
     }
 
+    // MARK: Docked in the page
+
+    @Test func aDockedMiniOpensAtTheOldPeeksSize() {
+        let pane = NSRect(x: 100, y: 50, width: 1000, height: 700)
+        let frame = MiniDockLayout.frame(in: pane)
+        let dx = max(Tokens.Space.x8, Tokens.Space.snap(pane.width * Tokens.Metric.miniPeekInsetRatio))
+        let dy = max(Tokens.Space.x6, Tokens.Space.snap(pane.height * Tokens.Metric.miniPeekInsetRatio * 0.6))
+        // The old Peek's 8% inset of the page card: 84% across, 90.4% high. With the sidebar counted that reads
+        // as about three quarters of the window.
+        #expect(frame == pane.insetBy(dx: dx, dy: dy))
+        #expect(frame.width == 840)
+        #expect(frame.height == 636)
+    }
+
+    @Test func aDockedMiniStaysOnlyWhileItIsFullyInsideThePane() {
+        let pane = NSRect(x: 0, y: 0, width: 1000, height: 700)
+        let inside = NSRect(x: 80, y: 32, width: 840, height: 636)
+        #expect(MiniDockLayout.staysDocked(inside, in: pane))
+        // Touching the pane's edge is still inside it.
+        #expect(MiniDockLayout.staysDocked(NSRect(x: 0, y: 0, width: 840, height: 636), in: pane))
+        // Any part outside turns it into a full Mini.
+        #expect(!MiniDockLayout.staysDocked(NSRect(x: -1, y: 32, width: 840, height: 636), in: pane))
+        #expect(!MiniDockLayout.staysDocked(NSRect(x: 80, y: 32, width: 921, height: 636), in: pane))
+    }
+
+    @Test func aDockedMiniResizesWithThePaneAndKeepsItsPlace() {
+        let oldPane = NSRect(x: 0, y: 0, width: 1000, height: 700)
+        let frame = NSRect(x: 80, y: 32, width: 840, height: 636)
+        let newPane = NSRect(x: 0, y: 0, width: 1500, height: 1050)
+        let resized = MiniDockLayout.resized(frame, from: oldPane, to: newPane)
+        #expect(resized.width == 1260)
+        #expect(resized.height == 954)
+        #expect(resized.midX == newPane.midX)
+        #expect(resized.midY == newPane.midY)
+        #expect(newPane.contains(resized))
+    }
+
+    @Test func aMovedDockedMiniKeepsItsRelativePlaceWhenThePaneResizes() {
+        let oldPane = NSRect(x: 0, y: 0, width: 1000, height: 700)
+        let frame = NSRect(x: 100, y: 100, width: 400, height: 300)
+        let newPane = NSRect(x: 200, y: 100, width: 2000, height: 1400)
+        let resized = MiniDockLayout.resized(frame, from: oldPane, to: newPane)
+        #expect(resized.minX == 400)
+        #expect(resized.minY == 300)
+        #expect(resized.width == 800)
+        #expect(resized.height == 600)
+    }
+
+    @Test func aDockedMiniNeverOutgrowsASmallerPane() {
+        let oldPane = NSRect(x: 0, y: 0, width: 1000, height: 700)
+        let frame = NSRect(x: 80, y: 32, width: 840, height: 636)
+        let small = NSRect(x: 0, y: 0, width: 200, height: 120)
+        let resized = MiniDockLayout.resized(frame, from: oldPane, to: small)
+        #expect(resized.width <= small.width)
+        #expect(resized.height <= small.height)
+        #expect(small.contains(resized))
+    }
+
+    @Test func aDockedMiniStillFitsAnExtremelyNarrowPane() {
+        let pane = NSRect(x: 0, y: 0, width: 120, height: 90)
+        let frame = MiniDockLayout.frame(in: pane)
+        #expect(frame.width > 0 && frame.height > 0)
+        #expect(pane.contains(frame))
+    }
+
+    @Test func aBorrowedPageTakesTheSelectionBackOnlyWhenItIsStillThere() {
+        #expect(MiniBorrowedReturn.reselects(wasSelected: true, selectedIsTab: true, bringingForward: false))
+        // A tab picked while the Mini was open is the person's choice, not a detour to undo.
+        #expect(!MiniBorrowedReturn.reselects(wasSelected: true, selectedIsTab: false, bringingForward: false))
+        // Return always brings its page forward.
+        #expect(MiniBorrowedReturn.reselects(wasSelected: false, selectedIsTab: false, bringingForward: true))
+    }
+
+    // MARK: Its chrome
+
+    @Test func onlyAMiniFromAnotherAppKeepsItsFullChrome() {
+        #expect(MiniChromePolicy.usesFullChrome(fromAnotherApp: true))
+        #expect(!MiniChromePolicy.usesFullChrome(fromAnotherApp: false))
+    }
+
+    @Test func withoutFullChromeThePageTakesTheWholeMini() {
+        let bounds = NSRect(x: 0, y: 0, width: 900, height: 640)
+        #expect(MiniChromeLayout.cardFrame(in: bounds, stripHeight: 36, overlays: true) == bounds)
+        #expect(MiniChromeLayout.cardFrame(in: bounds, stripHeight: 36, overlays: false)
+                == NSRect(x: 0, y: 36, width: 900, height: 604))
+    }
+
+    @Test func theHiddenChromeComesOutAtTheTopEdge() {
+        let bounds = NSRect(x: 0, y: 0, width: 900, height: 640)
+        // The view is flipped: y = 0 is its top.
+        #expect(MiniChromeLayout.revealsChrome(at: NSPoint(x: 450, y: 2), in: bounds, stripHeight: 36))
+        #expect(MiniChromeLayout.revealsChrome(at: NSPoint(x: 450, y: 40), in: bounds, stripHeight: 36))
+        #expect(!MiniChromeLayout.revealsChrome(at: NSPoint(x: 450, y: 80), in: bounds, stripHeight: 36))
+    }
+
     // MARK: Open in
 
     @Test func openInPrefersAWindowOnThisDesktop() {

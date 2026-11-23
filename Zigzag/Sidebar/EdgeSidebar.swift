@@ -10,6 +10,13 @@ enum EdgeSidebarLayout {
         return NSRect(x: onRight ? visible.maxX - width : visible.minX, y: visible.minY, width: width, height: visible.height)
     }
 
+    /// The bounds the panel and its pointer zone use. In a full-screen Space on a display without a notch, the app in
+    /// front covers the menu bar's row, so the panel fills the display rather than stopping below it. A notch keeps
+    /// the menu bar, and anywhere else the visible frame is the one to use.
+    static func edgeBounds(visible: NSRect, screen: NSRect, fullScreen: Bool, hasNotch: Bool) -> NSRect {
+        fullScreen && !hasNotch ? screen : visible
+    }
+
     /// The visible frame stretched to the screen's physical side edge, over a Dock that is always showing there.
     static func edgeFrame(visible: NSRect, screen: NSRect, onRight: Bool) -> NSRect {
         var frame = visible
@@ -116,9 +123,11 @@ enum EdgeSidebarLayout {
         !appIsActive && !browserHere
     }
 
-    /// The panel stays while the page is attached beside it: the popout taking the keyboard is the panel working,
-    /// not the browser coming forward.
-    static func keepsPanelOnActivation(holdsForPeek: Bool) -> Bool { holdsForPeek }
+    /// The panel stays while the page is attached beside it, and while it has the keyboard with the pointer on it:
+    /// in both cases the panel taking focus is the panel working, not the browser coming forward.
+    static func keepsPanelOnActivation(holdsForPeek: Bool, panelFocused: Bool = false, pointerOnPanel: Bool = false) -> Bool {
+        holdsForPeek || (panelFocused && pointerOnPanel)
+    }
 }
 
 /// What ends the panel's popout, and how a non-activating panel joins another app's Space rather than bringing
@@ -242,8 +251,13 @@ final class EdgeSidebar {
             MainActor.assumeIsolated {
                 DispatchQueue.main.async {
                     guard let self, self.isBrowserInFront else { return }
-                    // The popout taking key is the panel working, not the browser coming forward.
-                    guard !EdgeSidebarLayout.keepsPanelOnActivation(holdsForPeek: self.isPageShowing || self.isNoticeShowing) else { return }
+                    // The popout taking key is the panel working, not the browser coming forward; so is the panel
+                    // itself taking key with the pointer still on it.
+                    guard !EdgeSidebarLayout.keepsPanelOnActivation(
+                        holdsForPeek: self.isPageShowing || self.isNoticeShowing,
+                        panelFocused: self.panel?.isKeyWindow == true,
+                        pointerOnPanel: self.isPointerOverPanel
+                    ) else { return }
                     self.hide(animated: false)
                 }
             }
@@ -297,7 +311,7 @@ final class EdgeSidebar {
     /// The live page beside the sidebar, inside the same panel: hovering a row brings it, and the panel widens.
     private(set) var pageTab: Tab?
     var isPageShowing: Bool { pageTab != nil }
-    var pageArea: NSView? { host?.pageArea }
+    var pageArea: EdgePageArea? { host?.pageArea }
     /// The page area's size once the panel has widened: the tab's page is laid out at this from the first frame, so
     /// the panel's widening reveals it rather than resizing it through the animation.
     var pageTargetSize: NSSize? {
@@ -606,6 +620,12 @@ final class EdgeSidebar {
         target?.openEdgeLens(for: tab)
     }
 
+    /// The corner control with no peeked page: the browser the panel mirrors comes forward on its own tab.
+    func bringTargetForward() {
+        guard let target, target.window != nil else { return }
+        target.bringForwardForEdge()
+    }
+
     /// The panel's window, so the Peek can tell a click on the sidebar from a click outside.
     var panelWindow: NSWindow? { panel }
 
@@ -662,6 +682,27 @@ final class EdgeSidebar {
 
     private var sideIsRight: Bool { target?.edgeSidebarOnRight ?? false }
 
+    /// The pointer is on the panel, or on a window that belongs to it: a popup, a sheet, the tab preview card. That's
+    /// the panel at work, not the pointer leaving it.
+    private var isPointerOverPanel: Bool {
+        guard let panel else { return false }
+        let point = NSEvent.mouseLocation
+        let slack = Tokens.Space.x2
+        if panel.isVisible, panel.frame.insetBy(dx: -slack, dy: -slack).contains(point) { return true }
+        let preview = EdgePeekPreview.shared
+        if preview.isVisible, let frame = preview.currentFrame,
+           frame.insetBy(dx: -slack, dy: -slack).contains(point) { return true }
+        for window in NSApp.windows where window.isVisible && window.frame.insetBy(dx: -slack, dy: -slack).contains(point) {
+            if window === commandBarPopup { return true }
+            var parent = window.parent ?? window.sheetParent
+            while let current = parent {
+                if current === panel { return true }
+                parent = current.parent ?? current.sheetParent
+            }
+        }
+        return false
+    }
+
     private func moved(_ event: NSEvent) {
         let elapsed = event.timestamp - lastMoveTime
         lastMoveSpeed = elapsed > 0 && elapsed < 0.1 ? (sideIsRight ? event.deltaX : -event.deltaX) / max(elapsed, 1.0 / 240) : 0
@@ -685,6 +726,34 @@ final class EdgeSidebar {
         let visible = EdgeSidebarLayout.edgeFrame(visible: screen.visibleFrame, screen: screen.frame,
                                                    onRight: target.edgeSidebarOnRight)
         return (zone(in: visible)!, EdgeSidebarLayout.point(point, in: visible), visible)
+    }
+
+    /// The screen's edge in the Space the pointer is in. A full-screen Space on a display without a notch has no
+    /// menu bar row to leave out, so the panel fills the display there, as the app behind it does.
+    private func edgeBounds(on screen: NSScreen) -> NSRect? {
+        guard let target else { return nil }
+        let fullScreen = target.window?.styleMask.contains(.fullScreen) == true || frontmostWindowFills(screen)
+        let bounds = EdgeSidebarLayout.edgeBounds(visible: screen.visibleFrame, screen: screen.frame,
+                                                  fullScreen: fullScreen,
+                                                  hasNotch: screen.safeAreaInsets.top > 0)
+        return EdgeSidebarLayout.edgeFrame(visible: bounds, screen: screen.frame, onRight: target.edgeSidebarOnRight)
+    }
+
+    /// Another app's full-screen Space leaves no menu bar row: its front window covers the display. The panel joins
+    /// that Space too, so it takes the same height. Zigzag's own full-screen window is checked before this.
+    private func frontmostWindowFills(_ screen: NSScreen) -> Bool {
+        guard let front = NSWorkspace.shared.frontmostApplication,
+              let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
+        let display = CGDisplayBounds(number.uint32Value)
+        let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        return windows.contains { info in
+            guard let pid = info[kCGWindowOwnerPID as String] as? pid_t, pid == front.processIdentifier,
+                  let layer = info[kCGWindowLayer as String] as? Int, layer == 0,
+                  let dict = info[kCGWindowBounds as String] as? [String: Any],
+                  let bounds = CGRect(dictionaryRepresentation: dict as CFDictionary) else { return false }
+            return bounds.minX <= display.minX && bounds.minY <= display.minY
+                && bounds.maxX >= display.maxX && bounds.maxY >= display.maxY
+        }
     }
 
     private func zone(in visible: NSRect) -> SidebarEdgeZone? {
@@ -753,11 +822,10 @@ final class EdgeSidebar {
         // A pressed button holds it out, as a drag from the panel does. So does a menu opened from it, whose tracking
         // (system menus) or open panel (MenuPanel) runs while the pointer is over it.
         // So does a surface of the panel's own that moved the pointer elsewhere for a moment: the command bar in the
-        // middle of the screen, a save or permission sheet, the space editor. And the panel's own actual frame counts
-        // as being over it, whatever the edge strip's arithmetic says while the page widens or narrows it.
-        let overPanel = panel.map {
-            $0.isVisible && $0.frame.insetBy(dx: -Tokens.Space.x2, dy: -Tokens.Space.x2).contains(NSEvent.mouseLocation)
-        } ?? false
+        // middle of the screen, a save or permission sheet, the space editor, the tab preview beside a row. And the
+        // panel's own actual frame counts as being over it, whatever the edge strip's arithmetic says while the page
+        // widens or narrows it.
+        let overPanel = isPointerOverPanel
         let ownedKey = NSApp.keyWindow.map { $0 !== panel && $0 !== commandBarPopup && $0 !== target.window } ?? false
         let held = NSEvent.pressedMouseButtons != 0
             || RunLoop.current.currentMode == .eventTracking
@@ -766,6 +834,7 @@ final class EdgeSidebar {
             || isSpaceEditorOpen
             || now < heldUntil
             || overPanel
+            || EdgePeekPreview.shared.isVisible
             || ownedKey
             || NSApp.modalWindow != nil
             || panel?.attachedSheet != nil
@@ -858,15 +927,28 @@ final class EdgeSidebar {
         return popup
     }
 
-    private func show(on visible: NSRect) {
-        guard let target, EdgeSidebarLayout.canShow(appIsActive: isBrowserInFront, browserHere: browserIsHere) else { return }
+    #if DEBUG
+    /// DebugBridge's `edgeforce`: bring the panel out now, even while the browser is on this desktop.
+    func debugShow() {
+        if target == nil { target = WindowManager.shared.keyController }
+        guard let target, let screen = target.window?.screen ?? NSScreen.main else { return }
+        show(on: screen.visibleFrame, force: true)
+    }
+    #endif
+
+    private func show(on visible: NSRect, force: Bool = false) {
+        guard let target, force || EdgeSidebarLayout.canShow(appIsActive: isBrowserInFront, browserHere: browserIsHere) else { return }
         let (sidebar, container) = target.edgeSidebarForDisplay()
         target.prepareEdgeSidebar()
         let onRight = target.edgeSidebarOnRight
         lastPanelWasOnRight = onRight
+        // A full-screen Space on a display without a notch has no menu bar row: the panel fills the display, as the
+        // app behind it does. The pointer zone stays on the visible frame; only the panel takes the full height.
+        let screen = NSScreen.screens.first { $0.frame.intersects(visible) } ?? target.window?.screen
+        let bounds = screen.flatMap { edgeBounds(on: $0) } ?? visible
         // The card keeps the window's sidebar's width; the panel is that and the gutter it stands off the edge by.
         let width = EdgeSidebarLayout.width(sidebar: target.edgeSidebarWidth, page: false,
-                                            inset: Tokens.Metric.cardInset, in: visible)
+                                            inset: Tokens.Metric.cardInset, in: bounds)
         let panel = panel ?? makePanel()
         guard let host else { return }
         sidebar.isOnRight = onRight
@@ -888,10 +970,10 @@ final class EdgeSidebar {
         host.set(container)
 
         generation += 1
-        panel.setFrame(EdgeSidebarLayout.frame(in: visible, width: width, onRight: onRight), display: true)
+        panel.setFrame(EdgeSidebarLayout.frame(in: bounds, width: width, onRight: onRight), display: true)
         host.frame = NSRect(origin: .zero, size: panel.frame.size)
         host.placeCard()
-        shownScreen = visible
+        shownScreen = bounds
         isShowing = true
         panel.orderFrontRegardless()
         // The panel has the keyboard while it's out: ⌘T and typing work there, over the app in front.
@@ -1204,16 +1286,11 @@ final class EdgeSidebarHost: NSView {
     /// menu or the command bar is the first responder while either is up, so it closes itself first instead.
     override func cancelOperation(_ sender: Any?) { EdgeSidebar.shared.hide() }
 
-    /// A click outside the card, in the panel's gutter, puts it away; clicks on the card belong to the sidebar in it
-    /// (its own blank space does the same). The page and the editor are the panel's too, and take their own clicks;
-    /// while either is out, a click in the gutter between them is not a dismissal.
+    /// A click in the panel's gutter stays with the panel: the panel goes when the pointer leaves it or Esc. Clicks on
+    /// the card belong to the sidebar in it; the page and the editor take their own.
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if container?.frame.contains(point) != true, !sideFrame.contains(point) {
-            if pageShowing || noticeShowing || editorShowing { return }
-            EdgeSidebar.shared.hide()
-            return
-        }
+        if container?.frame.contains(point) != true, !sideFrame.contains(point) { return }
         super.mouseDown(with: event)
     }
 }

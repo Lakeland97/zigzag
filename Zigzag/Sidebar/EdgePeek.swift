@@ -146,6 +146,16 @@ final class EdgePeek {
         DispatchQueue.main.asyncAfter(deadline: .now() + EdgePeekHoverPolicy.check, execute: work)
     }
 
+    /// A menu is opening over the rows: a preview still waiting must not arrive under it, and the small hover card
+    /// goes. The page already in the panel stays where it is.
+    func menuWillOpen() {
+        hoverWork?.cancel()
+        hoverWork = nil
+        leaveWork?.cancel()
+        leaveWork = nil
+        EdgePeekPreview.shared.hide()
+    }
+
     /// The pointer has left the rows for the rest of the panel (the page, the spaces, a menu): once a tab has been
     /// picked, the page goes back to it. Before a pick there is no selected tab, so the preview stays.
     func rowsLeft(from controller: BrowserWindowController) {
@@ -240,6 +250,24 @@ final class EdgePeek {
         guard let noticeTab, !noticeTab.isClosed, let controller else { return }
         controller.tabManager.select(noticeTab)
         controller.bringForwardForEdge()
+    }
+
+    /// The sidebar card's corner button: the page goes back to its tab in the browser, the panel puts itself away,
+    /// and the full window comes forward on it. With no page peeked, it still restores the browser the panel mirrors.
+    /// No second window, no Mini.
+    func expandToBrowser() {
+        let page = tab
+        let browser = controller
+        // Hide first: that puts a peeked page back in its own tab, then the window can show it selected.
+        EdgeSidebar.shared.hide(animated: true)
+        if let page, let browser, browser.window != nil, !page.isClosed {
+            browser.tabManager.select(page)
+            browser.bringForwardForEdge()
+        } else if let browser, browser.window != nil {
+            browser.bringForwardForEdge()
+        } else {
+            EdgeSidebar.shared.bringTargetForward()
+        }
     }
 
     private func attach(_ tab: Tab, from controller: BrowserWindowController, swapping: Bool,

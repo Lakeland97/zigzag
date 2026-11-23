@@ -33,16 +33,22 @@ struct TopBarTests {
         #expect(controller.sidebar.holdsAddress)
     }
 
-    /// Zigzag's own pages have nothing to pin and no site to control: neither the star nor Site Controls is offered.
-    @Test func systemPagesHideTheStarAndSiteControls() {
-        let sidebar = SidebarView(frame: NSRect(x: 0, y: 0, width: 240, height: 600))
+    /// Zigzag's own pages have nothing to pin and no site to control: the panel's mirror offers neither. The window's
+    /// own sidebar keeps main's behavior and leaves Site Controls in place.
+    @Test func systemPagesHideTheStarAndSiteControlsInTheMirror() {
+        let mirror = SidebarView(frame: NSRect(x: 0, y: 0, width: 240, height: 600))
+        mirror.hidesSystemPageControls = true
         let space = UUID()
-        sidebar.update(tab: Tab(url: URL(string: "https://example.com")!, title: "Example", spaceID: space))
-        #expect(!sidebar.address.saveButton.isHidden)
-        #expect(!sidebar.address.siteControlsButton.isHidden)
-        sidebar.update(tab: Tab(url: SettingsPage.url, title: "Settings", spaceID: space))
-        #expect(sidebar.address.saveButton.isHidden)
-        #expect(sidebar.address.siteControlsButton.isHidden)
+        mirror.update(tab: Tab(url: URL(string: "https://example.com")!, title: "Example", spaceID: space))
+        #expect(!mirror.address.saveButton.isHidden)
+        #expect(!mirror.address.siteControlsButton.isHidden)
+        mirror.update(tab: Tab(url: SettingsPage.url, title: "Settings", spaceID: space))
+        #expect(mirror.address.saveButton.isHidden)
+        #expect(mirror.address.siteControlsButton.isHidden)
+
+        let windowSidebar = SidebarView(frame: NSRect(x: 0, y: 0, width: 240, height: 600))
+        windowSidebar.update(tab: Tab(url: SettingsPage.url, title: "Settings", spaceID: space))
+        #expect(!windowSidebar.address.siteControlsButton.isHidden)
     }
 
     @Test func barSitsOnTheTrafficLightsLine() {

@@ -592,6 +592,15 @@ final class BrowserRootView: SpaceFrameView {
     private var attentionToken: SignalToken?
     /// Floating surfaces (command bar, previews) live here, above everything.
     let overlay = PassthroughView()
+    /// The dim under a Mini docked in the page, kept in step with the page it covers.
+    weak var miniPeekDim: NSView?
+
+    /// Puts the dim over the page but below the sidebar and the bar, so both stay live while the Mini is out.
+    func showMiniPeekDim(_ dim: NSView) {
+        miniPeekDim = dim
+        dim.frame = cardFrame
+        addSubview(dim, positioned: .below, relativeTo: sidebarContainer)
+    }
     /// An extension's side panel, docked right of the page while open.
     let sidePanel = ExtensionSidePanelView()
     var showsSidePanel = false {
@@ -1357,6 +1366,9 @@ final class BrowserRootView: SpaceFrameView {
         attentionEdge.waiting = waiting.count
         attentionEdge.isHidden = sidebarVisible || waiting.isEmpty
         overlay.frame = bounds
+        // The dim under a docked Mini covers exactly the page, and follows the page through a resize, a sidebar
+        // slide, or a split.
+        miniPeekDim?.frame = cardFrame
         onLayoutChange?()
     }
 

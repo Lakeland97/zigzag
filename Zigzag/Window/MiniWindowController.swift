@@ -1,6 +1,76 @@
 import AppKit
 import WebKit
 
+/// Where a Mini sits while it is docked in a page, and the exact rule that lets it out: the old Peek's 8% inset,
+/// scaled with the page, and a full Mini the moment any part of it crosses the page's edge.
+enum MiniDockLayout {
+    /// The frame the old Peek used: 8% of the page card in from each side, 4.8% above and below.
+    static func frame(in pane: NSRect) -> NSRect {
+        let dx = min(max(Tokens.Space.x8, Tokens.Space.snap(pane.width * Tokens.Metric.miniPeekInsetRatio)),
+                     max(0, (pane.width - 1) / 2))
+        let dy = min(max(Tokens.Space.x6, Tokens.Space.snap(pane.height * Tokens.Metric.miniPeekInsetRatio * 0.6)),
+                     max(0, (pane.height - 1) / 2))
+        return pane.insetBy(dx: dx, dy: dy).integral
+    }
+
+    /// Inside means wholly inside: a Mini touching the page's edge is still docked, one crossing it is not.
+    static func staysDocked(_ frame: NSRect, in pane: NSRect) -> Bool {
+        pane.contains(frame)
+    }
+
+    /// The page changed size: the Mini keeps its share of the page and its relative place in it, and never grows
+    /// past the page.
+    static func resized(_ frame: NSRect, from oldPane: NSRect, to newPane: NSRect) -> NSRect {
+        guard oldPane.width > 0, oldPane.height > 0, newPane.width > 0, newPane.height > 0 else {
+            return self.frame(in: newPane)
+        }
+        let relativeX = (frame.midX - oldPane.minX) / oldPane.width
+        let relativeY = (frame.midY - oldPane.minY) / oldPane.height
+        let width = min(newPane.width, max(1, (frame.width / oldPane.width * newPane.width).rounded()))
+        let height = min(newPane.height, max(1, (frame.height / oldPane.height * newPane.height).rounded()))
+        let center = NSPoint(x: newPane.minX + relativeX * newPane.width,
+                             y: newPane.minY + relativeY * newPane.height)
+        var resized = NSRect(x: (center.x - width / 2).rounded(),
+                             y: (center.y - height / 2).rounded(),
+                             width: width, height: height)
+        resized.origin.x = min(max(newPane.minX, resized.minX), newPane.maxX - width)
+        resized.origin.y = min(max(newPane.minY, resized.minY), newPane.maxY - height)
+        return resized
+    }
+}
+
+/// Which Minis keep a full strip: only the ones another app opened. Everything else wears the page, and its chrome
+/// drops down at the top edge when it's needed.
+enum MiniChromePolicy {
+    static func usesFullChrome(fromAnotherApp: Bool) -> Bool { fromAnotherApp }
+}
+
+/// Whether a borrowed page's return takes the browser's selection back: only when it is still the selected tab, or
+/// the person asked to return to it. A tab clicked while the Mini was open is a choice, not a detour to undo.
+enum MiniBorrowedReturn {
+    static func reselects(wasSelected: Bool, selectedIsTab: Bool, bringingForward: Bool) -> Bool {
+        bringingForward || (wasSelected && selectedIsTab)
+    }
+}
+
+/// The Mini's two layouts: with full chrome the page starts below the strip; without it the page takes the whole
+/// window and the strip drops over it.
+enum MiniChromeLayout {
+    static func cardFrame(in bounds: NSRect, stripHeight: CGFloat, overlays: Bool) -> NSRect {
+        guard !overlays else { return bounds }
+        return NSRect(x: bounds.minX, y: bounds.minY + stripHeight, width: bounds.width,
+                      height: max(0, bounds.height - stripHeight))
+    }
+
+    /// The pointer's place in the window's top edge where the hidden chrome comes down. `point` is in the flipped
+    /// view's coordinates, so zero is the top.
+    static func revealsChrome(at point: NSPoint, in bounds: NSRect, stripHeight: CGFloat) -> Bool {
+        let reach = stripHeight + Tokens.Space.x2
+        return point.x >= bounds.minX && point.x <= bounds.maxX
+            && point.y >= bounds.minY && point.y <= bounds.minY + reach
+    }
+}
+
 /// The edge sidebar's floating Mini: a panel, not a browser window, so it can sit over other apps and full-screen
 /// Spaces without switching desktops. The browser window's own Mini keeps its traffic lights and title bar.
 final class MiniPanel: NSPanel {
@@ -13,6 +83,16 @@ final class MiniPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+}
+
+/// The dim under a Mini docked in a page. Clicking it puts the Mini away, as the old Peek's dim did, and the click
+/// never reaches the page behind it.
+final class MiniPeekDimView: ColorView {
+    var onClick: (() -> Void)?
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) { onClick?() }
 }
 
 /// Zigzag Mini: one page in a small, quiet window of its own, with no sidebar, for a link from another app or a
@@ -40,6 +120,15 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// The floating popout the edge sidebar borrows a tab into: it closes with the panel and when the person clicks
     /// away, and it joins another app's Space without bringing Zigzag forward.
     let isEdgePopout: Bool
+    /// The Mini is presented in the page, the old Peek's place: dimmed page, click-out and Esc, no chrome until the
+    /// pointer reaches the top. It stays one Mini; only its presentation changed.
+    private(set) var isDockedPeek = false
+    /// It began as the edge sidebar's pick. Even after it is dragged out, its page is a tab already, so an update's
+    /// restart must not make a second Mini for it.
+    let isPeekPresentation: Bool
+    /// Only a link another app opened keeps the full strip. Every other Mini wears the page and drops its chrome in
+    /// at the top edge when it's needed.
+    let usesFullChrome: Bool
     private let root = MiniRootView()
     private var strip: MiniStripView { root.strip }
     /// Where floating things go over the page: the link under the pointer, a site's question, a toast.
@@ -75,8 +164,26 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private var outsideSpace: NSObjectProtocol?
     private var outsideApp: NSObjectProtocol?
     private var outsideBrowser: NSObjectProtocol?
+    /// A Mini presented in the page: the browser it belongs to, the dim under it, and the watchers that end it.
+    private struct Dock {
+        weak var browser: BrowserWindowController?
+        var paneScreen: NSRect
+        var dim: MiniPeekDimView?
+        var resizeToken: NSObjectProtocol?
+        var closeToken: NSObjectProtocol?
+        var clickGlobal: Any?
+        var clickLocal: Any?
+        var appToken: NSObjectProtocol?
+        var spaceToken: NSObjectProtocol?
+        var resignToken: NSObjectProtocol?
+    }
+    private var dock: Dock?
+    /// The pointer watcher that brings the overlay chrome down.
+    private var chromePointerToken: Any?
     /// Whether this Mini is showing a tab borrowed from a browser, not a page it owns.
     private var isBorrowed: Bool { borrowedOrigin != nil }
+    /// It is fading away: a new pick should make a new Mini rather than bring this one back.
+    var isGoingAway: Bool { isLeaving || isClosing }
     /// Sent once the page has left (into a browser window, or closed with the window), so questions over it go too.
     private let pageGone = Signal<Void>()
     /// Sent when the window becomes or stops being key, which shows or holds its page's queued question.
@@ -206,7 +313,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         tab.isSearchTab = isSearch
         // Before the window is created, since it loads during setup.
         tab.firstLoad.httpFallback = httpFallback
-        let controller = MiniWindowController(tab: tab, frame: frame, overFullScreen: overFullScreen ?? (NSApp.keyWindow?.styleMask.contains(.fullScreen) == true))
+        let controller = MiniWindowController(tab: tab, frame: frame,
+                                             overFullScreen: overFullScreen ?? (NSApp.keyWindow?.styleMask.contains(.fullScreen) == true),
+                                             fromAnotherApp: fromAnotherApp)
         all.append(controller)
         Diagnostics.note("Zigzag Mini opened", site: url.host())
         controller.appear(from: origin)
@@ -253,7 +362,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     @discardableResult
     static func open(borrowing tab: Tab, from browser: BrowserWindowController, origin: NSRect? = nil,
                      frame: NSRect? = nil, overFullScreen: Bool? = nil,
-                     floating: Bool = false) -> MiniWindowController {
+                     floating: Bool = false, dockedIn: BrowserWindowController? = nil) -> MiniWindowController {
+        if tab.pageHolder == nil { _ = tab.ensureWebView() }
         let screen = origin.flatMap { rect in NSScreen.screens.first { $0.frame.intersects(rect) } }
             ?? browser.window?.screen ?? NSScreen.main
         let area = screen?.visibleFrame ?? NSRect(origin: .zero, size: Tokens.Metric.windowDefaultSize)
@@ -269,9 +379,15 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         tab.pageHolder?.removeFromSuperview()
         let controller = MiniWindowController(tab: tab, frame: targetFrame,
                                               overFullScreen: overFullScreen ?? (browser.window?.styleMask.contains(.fullScreen) == true),
-                                              borrowedOrigin: borrowed, floating: floating)
+                                              borrowedOrigin: borrowed, floating: floating, dockedIn: dockedIn)
         all.append(controller)
         Diagnostics.note("Zigzag Mini borrowed a tab", site: tab.url?.host())
+        if dockedIn != nil {
+            controller.attachDocked()
+            if let webView = controller.tab.webView { controller.window?.makeFirstResponder(webView) }
+            if #available(macOS 15.4, *) { ExtensionCenter.miniOpened(controller) }
+            return controller
+        }
         // The page has the keyboard before the window comes forward, as when a tab moves into Mini.
         if let webView = controller.tab.webView { controller.window?.makeFirstResponder(webView) }
         // The edge sidebar's Mini swells out of the sidebar card and over to the page's side.
@@ -289,6 +405,19 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         }
         if #available(macOS 15.4, *) { ExtensionCenter.miniOpened(controller) }
         return controller
+    }
+
+    /// The edge sidebar's pick as a Mini in the page: the old Peek's size and dim, over the page the person is in.
+    /// It stays borrowed, so closing returns the live page to its tab.
+    @discardableResult
+    static func open(dockedIn browser: BrowserWindowController, borrowing tab: Tab) -> MiniWindowController? {
+        guard let window = browser.window else { return nil }
+        let pane = window.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        guard pane.width > 1, pane.height > 1 else { return nil }
+        _ = tab.ensureWebView()
+        guard tab.pageHolder != nil else { return nil }
+        return open(borrowing: tab, from: browser, frame: MiniDockLayout.frame(in: pane),
+                    floating: false, dockedIn: browser)
     }
 
     /// Opens one for a link on a page (⇧-click, Open Link in Zigzag Mini), over the middle of that window's page, in the
@@ -360,16 +489,31 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private var keepOnTopToken: NSObjectProtocol?
 
     private init(tab: Tab, frame: NSRect, overFullScreen: Bool, borrowedOrigin: BorrowedOrigin? = nil,
-                 floating: Bool = false) {
+                 floating: Bool = false, dockedIn: BrowserWindowController? = nil, fromAnotherApp: Bool = false) {
         self.tab = tab
         self.isEdgePopout = floating
+        self.isPeekPresentation = dockedIn != nil
+        self.usesFullChrome = MiniChromePolicy.usesFullChrome(fromAnotherApp: fromAnotherApp)
         self.borrowedOrigin = borrowedOrigin
         // A borrowed tab is already a real tab in the sidebar; it must stay one. A page opened here is shown outside a
         // tab list, and becomes a full tab once it moves into a browser window.
         if borrowedOrigin == nil { tab.isOutsideTabList = true }
 
         let window: NSWindow
-        if floating {
+        if dockedIn != nil {
+            let panel = MiniPanel(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
+            panel.level = .normal
+            panel.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.hasShadow = true
+            panel.isMovableByWindowBackground = true
+            panel.hidesOnDeactivate = false
+            panel.isReleasedWhenClosed = false
+            panel.animationBehavior = .none
+            panel.becomesKeyOnlyIfNeeded = false
+            window = panel
+        } else if floating {
             let panel = MiniPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel],
                                   backing: .buffered, defer: false)
             panel.level = .statusBar
@@ -390,11 +534,17 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             if overFullScreen { browserWindow.collectionBehavior.insert(.fullScreenAuxiliary) }
             window = browserWindow
         }
-        window.minSize = Tokens.Metric.miniWindowMinSize
+        // A docked Mini is smaller than a standalone one when the page is small; it must not grow on the way in.
+        window.minSize = dockedIn == nil ? Tokens.Metric.miniWindowMinSize : .zero
         window.setFrame(frame, display: false)
         super.init(window: window)
         window.delegate = self
         window.contentView = root
+        // A borderless panel has no window frame to round its page: the Mini's own layer does.
+        if window is MiniPanel {
+            root.layer?.cornerRadius = Tokens.Radius.large
+            root.layer?.masksToBounds = true
+        }
         let eventInterceptor: (NSEvent) -> Bool = { [weak self] event in
             guard let self else { return false }
             if self.linksNote?.takes(event) == true { return true }
@@ -472,6 +622,11 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             strip.trafficLightsWidth = browserWindow.trafficLightsWidth
         } else {
             strip.trafficLightsWidth = 0
+        }
+        root.chromeOverlay = !usesFullChrome
+        if root.chromeOverlay {
+            root.setChromeRevealed(false, animated: false)
+            installChromePointerMonitor()
         }
     }
 
@@ -589,6 +744,180 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         layer.add(grow, forKey: "appear")
     }
 
+    // MARK: In the page
+
+    /// The Mini came in over the page, the old Peek's presentation: a child of the browser, so it moves and resizes
+    /// with it, over a dimmed page, and one click away or one Esc from gone.
+    private func attachDocked() {
+        guard let browser = borrowedOrigin?.browser, let browserWindow = browser.window, let window else { return }
+        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        dock = Dock(browser: browser, paneScreen: pane)
+        isDockedPeek = true
+        if !NSApp.isActive { NSApp.activate() }
+        if browserWindow.isMiniaturized { browserWindow.deminiaturize(nil) }
+        browserWindow.makeKeyAndOrderFront(nil)
+
+        let dim = MiniPeekDimView(color: Tokens.Color.peekScrim)
+        dim.frame = browser.root.cardFrame
+        dim.alphaValue = 0
+        dim.onClick = { [weak self] in self?.closeBorrowed() }
+        browser.root.showMiniPeekDim(dim)
+        dock?.dim = dim
+
+        window.alphaValue = 0
+        browserWindow.addChildWindow(window, ordered: .above)
+        window.makeKey()
+        Tokens.Motion.fadeBackdrop(dim, entering: true)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Tokens.Motion.enter * Tokens.Motion.debugSlowdown
+            context.timingFunction = Tokens.Motion.easeOut
+            window.animator().alphaValue = 1
+        }
+
+        dock?.resizeToken = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification,
+                                                                    object: browserWindow, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.paneResized() }
+        }
+        dock?.closeToken = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification,
+                                                                   object: browserWindow, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.window?.close() }
+        }
+        watchDockedOutside()
+    }
+
+    /// The browser's page changed size: the Mini keeps its share and place in it, and never grows past it. During a
+    /// live resize this runs every frame, so the two move together rather than the Mini lagging behind.
+    private func paneResized() {
+        guard isDockedPeek, let window, let browser = dock?.browser, let browserWindow = browser.window else { return }
+        // The page's new size is read now, not after the next layout pass, so the two track each other during a live
+        // resize instead of the Mini lagging a frame behind.
+        browserWindow.contentView?.layoutSubtreeIfNeeded()
+        let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        let old = dock?.paneScreen ?? pane
+        dock?.paneScreen = pane
+        dock?.dim?.frame = browser.root.cardFrame
+        guard old.width > 1, old.height > 1, pane.width > 1, pane.height > 1 else { return }
+        let resized = MiniDockLayout.resized(window.frame, from: old, to: pane)
+        if resized != window.frame { window.setFrame(resized, display: true) }
+    }
+
+    /// The page's bounds on screen, read live: the browser may have moved or changed size under the stored frame.
+    private func dockedPaneScreen() -> NSRect? {
+        guard let browser = dock?.browser, let window = browser.window else { return nil }
+        return window.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+    }
+
+    /// The drag crossed the page's edge: it is a full Mini now, at exactly the frame it had. Nothing moves, resizes,
+    /// or fades in the hand-off; the dim goes and the window simply stays where the pointer left it.
+    private func detachFromPane() {
+        guard isDockedPeek, let window else { return }
+        isDockedPeek = false
+        let browserWindow = dock?.browser?.window
+        browserWindow?.removeChildWindow(window)
+        let size = window.frame.size
+        window.minSize = NSSize(width: min(size.width, Tokens.Metric.miniWindowMinSize.width),
+                                height: min(size.height, Tokens.Metric.miniWindowMinSize.height))
+        window.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
+        window.level = .normal
+        hideDockDim(animated: true)
+        removeDockObservers()
+        dock = nil
+        window.orderFront(nil)
+    }
+
+    /// The dim under the page goes as the Mini does; the page behind is never left dimmed.
+    private func hideDockDim(animated: Bool) {
+        guard let dim = dock?.dim else { return }
+        dock?.dim = nil
+        dim.onClick = nil
+        if let root = dock?.browser?.root, root.miniPeekDim === dim { root.miniPeekDim = nil }
+        guard animated, !Tokens.Motion.reduceMotion else { dim.removeFromSuperview(); return }
+        Tokens.Motion.fadeBackdrop(dim, entering: false) { dim.removeFromSuperview() }
+    }
+
+    /// A click anywhere but the Mini puts it back, as the old Peek's dim did. The keyboard going elsewhere and a
+    /// change of app or Space are the same leaving.
+    private func watchDockedOutside() {
+        guard let browser = dock?.browser, let browserWindow = browser.window else { return }
+        dock?.clickGlobal = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.isDockedPeek, !self.isLeaving else { return }
+                guard MenuPanel.current == nil else { return }
+                self.closeBorrowed()
+            }
+        }
+        dock?.clickLocal = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self, self.isDockedPeek, !self.isLeaving, let window = self.window else { return event }
+            if event.window === window { return event }
+            if MenuPanel.current != nil || RunLoop.current.currentMode == .eventTracking { return event }
+            if event.window is EdgeCommandBarPopup || event.window is NSSavePanel || event.window?.sheetParent != nil { return event }
+            guard event.window === browserWindow else { return event }
+            // The dimmed page is the click that puts it away, and the click does not reach the page behind it.
+            let point = browser.root.convert(event.locationInWindow, from: nil)
+            // The sidebar, docked or just slid out, is still live: the click picks its tab and the Mini goes.
+            if (browser.root.sidebarVisible || browser.root.sidebarRevealed),
+               browser.root.sidebarFrame.contains(point) {
+                self.closeBorrowed()
+                return event
+            }
+            if browser.root.cardFrame.contains(point) {
+                self.closeBorrowed()
+                return nil
+            }
+            // The bar above the page is live too: the click does what it would, and the Mini goes.
+            self.closeBorrowed()
+            return event
+        }
+        dock?.appToken = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification,
+                                                                           object: nil, queue: .main) { [weak self] note in
+            let pid = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
+            MainActor.assumeIsolated {
+                guard let self, self.isDockedPeek, !self.isLeaving else { return }
+                if pid != NSRunningApplication.current.processIdentifier { self.closeBorrowed() }
+            }
+        }
+        dock?.spaceToken = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,
+                                                                             object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.closeBorrowed() }
+        }
+        dock?.resignToken = NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification,
+                                                                    object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.closeBorrowed() }
+        }
+    }
+
+    private func removeDockObservers() {
+        if let token = dock?.resizeToken { NotificationCenter.default.removeObserver(token) }
+        dock?.resizeToken = nil
+        if let token = dock?.closeToken { NotificationCenter.default.removeObserver(token) }
+        dock?.closeToken = nil
+        if let token = dock?.clickGlobal { NSEvent.removeMonitor(token) }
+        dock?.clickGlobal = nil
+        if let token = dock?.clickLocal { NSEvent.removeMonitor(token) }
+        dock?.clickLocal = nil
+        if let token = dock?.appToken { NSWorkspace.shared.notificationCenter.removeObserver(token) }
+        dock?.appToken = nil
+        if let token = dock?.spaceToken { NSWorkspace.shared.notificationCenter.removeObserver(token) }
+        dock?.spaceToken = nil
+        if let token = dock?.resignToken { NotificationCenter.default.removeObserver(token) }
+        dock?.resignToken = nil
+    }
+
+    /// The pointer over the window: near the top the strip comes down; away from it, it goes back up. The page never
+    /// moves for either.
+    private func installChromePointerMonitor() {
+        guard chromePointerToken == nil else { return }
+        chromePointerToken = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved]) { [weak self] event in
+            guard let self, !self.isLeaving, let window = self.window, event.window === window else { return event }
+            if self.strip.isEditing {
+                self.root.setChromeRevealed(true, animated: false)
+            } else {
+                self.root.pointerMoved(to: self.root.convert(event.locationInWindow, from: nil))
+            }
+            return event
+        }
+    }
+
     /// The edge popout closes when a click lands outside it and the panel, or the keyboard goes somewhere that is
     /// not the panel that opened it, as the Peek does. Picking another page in the sidebar is not outside.
     func watchOutside() {
@@ -653,6 +982,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private func fadeAway(then done: @escaping @MainActor () -> Void) {
         guard let window else { done(); return }
         isLeaving = true
+        hideDockDim(animated: true)
         if !Tokens.Motion.reduceMotion, let layer = root.layer {
             let shrink = CABasicAnimation(keyPath: "transform")
             shrink.fromValue = NSValue(caTransform3D: layer.presentation()?.transform ?? CATransform3DIdentity)
@@ -731,6 +1061,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// ⌘L: the command bar over the page's site, the address in it to change; again, it goes.
     @objc func openLocation(_ sender: Any?) {
         guard !isLeaving else { return }
+        if root.chromeOverlay { root.setChromeRevealed(true, animated: false) }
         if commandBar.isVisible { commandBar.dismiss(); return }
         commandBar.show(mode: .editCurrent)
     }
@@ -804,6 +1135,13 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// what the page looked like before its own Esc handler ran.
     private func noteEscape(_ event: NSEvent) -> Bool {
         guard event.type == .keyDown, event.keyCode == 53, !event.isARepeat else { return false }
+        // The docked Mini is the old Peek: one Esc puts it back, before the page's own rules. The page keeps its
+        // typed text and place while it is away, so leaving is never lost work.
+        if isDockedPeek, !isLeaving, !commandBar.isVisible,
+           !overlay.subviews.contains(where: { $0 is PermissionPrompt || $0 is SavePasswordPrompt }) {
+            closeWindow()
+            return true
+        }
         // Zigzag's own pages (Settings, History, Archive) have no field or dialog of a site's to back out of
         // first: one Esc closes the popout, as it closes a page in the browser.
         if EdgePopoutPolicy.closesOnFirstEscape(isInternalPage: HistoryPage.isInternal(tab.url),
@@ -881,6 +1219,8 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
 
     var debugState: [String: Any] {
         ["editing": commandBar.isVisible, "private": isPrivate, "fromPage": fromPage,
+         "docked": isDockedPeek, "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
+         "fullChrome": usesFullChrome,
          "sourceWindow": source?.window?.windowNumber ?? 0, "titleShown": !strip.title.isHidden, "title": strip.title.text,
          "space": space.name, "profile": Library.shared.directory.profile(tab.profile.id)?.name ?? "",
          "store": tab.webView?.configuration.websiteDataStore.identifier?.uuidString ?? (tab.webView == nil ? "no page" : "default"),
@@ -989,7 +1329,11 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         }
         borrowedOrigin = nil
         if let browser = origin.browser, browser.window != nil {
-            if bringForward || origin.wasSelected {
+            // Only take the selection back if it is still the tab the page came from: a click on another tab while
+            // the Mini was open is the person choosing that tab, and closing must not undo it.
+            if MiniBorrowedReturn.reselects(wasSelected: origin.wasSelected,
+                                             selectedIsTab: browser.tabManager.selectedTab === tab,
+                                             bringingForward: bringForward) {
                 browser.tabManager.select(tab)
             }
             if bringForward {
@@ -1192,6 +1536,15 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         pageGone.send()
         linkStatus.hide()
         Autofill.shared.forget(windowOf: window)
+        if let chromePointerToken { NSEvent.removeMonitor(chromePointerToken) }
+        chromePointerToken = nil
+        if isDockedPeek {
+            isDockedPeek = false
+            if let browserWindow = dock?.browser?.window, let window { browserWindow.removeChildWindow(window) }
+        }
+        hideDockDim(animated: false)
+        removeDockObservers()
+        dock = nil
         if !movedOut {
             tokens.removeAll()
             if let origin = borrowedOrigin {
@@ -1221,8 +1574,19 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         // No longer key: the question waits and the edge glows.
         promptFrontChanged.send()
+        if root.chromeOverlay, !isLeaving, MenuPanel.current == nil {
+            root.setChromeRevealed(false, animated: true)
+        }
         guard isEdgePopout, !isLeaving else { return }
         DispatchQueue.main.async { MainActor.assumeIsolated { self.edgePopoutLostKey() } }
+    }
+
+    /// A docked Mini dragged past the page's edge becomes a full Mini. The check is the page itself, so a window
+    /// moved because the browser moved stays docked, and only the hand that leaves the page takes it out.
+    func windowDidMove(_ notification: Notification) {
+        guard isDockedPeek, let window, let pane = dockedPaneScreen() else { return }
+        guard !MiniDockLayout.staysDocked(window.frame, in: pane) else { return }
+        detachFromPane()
     }
 
     /// The popout lost the keyboard: the panel that opened it and our own menus keep it out; anything else closes
@@ -1268,9 +1632,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
 extension MiniWindowController {
     /// This window as an update's restart brings it back: its page, back/forward list, space, place and Keep on Top.
     var savedForRelaunch: UpdateRelaunch.Mini? {
-        // The edge popout is a page borrowed from a tab that the session already keeps: it must not come back as
-        // a second window for the same page. A private Mini is not restored, as before.
-        guard !isEdgePopout, !isLeaving, !isPrivate, let window, let url = tab.url else { return nil }
+        // The edge popout and the in-page pick are pages borrowed from tabs that the session already keeps: they must
+        // not come back as a second window for the same page. A private Mini is not restored, as before.
+        guard !isEdgePopout, !isPeekPresentation, !isLeaving, !isPrivate, let window, let url = tab.url else { return nil }
         let frame = window.frame
         return UpdateRelaunch.Mini(url: url, title: tab.title, spaceID: tab.spaceID,
                                    frame: [frame.origin.x, frame.origin.y, frame.width, frame.height],
@@ -1434,7 +1798,10 @@ extension MiniWindowController: TabHost {
         // and the menu's own items leave you here, a plain click takes you there.
         let background = pending != nil || (action.modifierFlags.contains(.command) && !action.modifierFlags.contains(.shift))
         let target = browserTarget
-        let newTab = target.tabManager.newTab(url: nil, select: !background, configuration: configuration, site: action.request.url)
+        // `opener` is the Mini's page: an unsized window.open still needs window.opener, as a sized sign-in popup
+        // does, or the flow cannot hand its result back.
+        let newTab = target.tabManager.newTab(url: nil, select: !background, configuration: configuration,
+                                              opener: tab, site: action.request.url)
         if !background { target.window?.makeKeyAndOrderFront(nil) }
         return newTab.ensureWebView()
     }
@@ -1470,13 +1837,23 @@ final class MiniRootView: SpaceFrameView {
     var attentionWaiting: (() -> Int)?
     /// Clicking the glow focuses the window so the question shows.
     var attentionClicked: (() -> Void)?
+    /// The strip is chrome: full for a Mini another app opened, a dropdown at the top edge for every other.
+    var chromeOverlay = false { didSet { needsLayout = true } }
+    /// Whether the overlay strip is down. The page never moves for it.
+    private(set) var chromeRevealed = true
 
+    /// The strip and its bar, moved as one: hidden above the page until the pointer reaches the top edge.
+    private let chrome = NSView()
+    private var chromeHideWork: DispatchWorkItem?
     private var tokens: [SignalToken] = []
     private var keyTokens: [NSObjectProtocol] = []
 
     init() {
         super.init(color: SpaceColor.sky.background)
-        [bar, strip, card, overlay].forEach(addSubview)
+        chrome.wantsLayer = true
+        [card, chrome, overlay].forEach(addSubview)
+        chrome.addSubview(bar)
+        chrome.addSubview(strip)
         addSubview(attentionEdge)
         addSubview(barLayer)
         attentionEdge.isHidden = true
@@ -1489,8 +1866,62 @@ final class MiniRootView: SpaceFrameView {
     required init?(coder: NSCoder) { fatalError() }
 
     var cardFrame: NSRect {
-        let top = Tokens.Metric.miniStripHeight
-        return NSRect(x: 0, y: top, width: bounds.width, height: max(0, bounds.height - top))
+        MiniChromeLayout.cardFrame(in: bounds, stripHeight: Tokens.Metric.miniStripHeight, overlays: chromeOverlay)
+    }
+
+    /// The pointer's place in the window: the chrome comes down at the top edge, and goes once the pointer has
+    /// stayed away from it for a moment. Nothing about this moves the page.
+    func pointerMoved(to point: NSPoint) {
+        guard chromeOverlay else { return }
+        if MiniChromeLayout.revealsChrome(at: point, in: bounds, stripHeight: Tokens.Metric.miniStripHeight) {
+            chromeHideWork?.cancel()
+            chromeHideWork = nil
+            if !chromeRevealed { setChromeRevealed(true, animated: true) }
+        } else {
+            scheduleChromeHide()
+        }
+    }
+
+    /// Drops the strip down, or takes it back above the page. In full chrome it is always down.
+    func setChromeRevealed(_ revealed: Bool, animated: Bool) {
+        chromeHideWork?.cancel()
+        chromeHideWork = nil
+        guard chromeOverlay else {
+            chromeRevealed = true
+            chrome.isHidden = false
+            chrome.alphaValue = 1
+            chrome.frame = NSRect(x: bounds.minX, y: 0, width: bounds.width, height: Tokens.Metric.miniStripHeight)
+            return
+        }
+        chromeRevealed = revealed
+        let height = Tokens.Metric.miniStripHeight
+        let target = NSRect(x: bounds.minX, y: revealed ? 0 : -height, width: bounds.width, height: height)
+        chrome.isHidden = false
+        let duration = animated && !Tokens.Motion.reduceMotion ? Tokens.Motion.state : 0
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = duration * Tokens.Motion.debugSlowdown
+            context.timingFunction = Tokens.Motion.easeOut
+            chrome.animator().frame = target
+            chrome.animator().alphaValue = revealed ? 1 : 0
+        }, completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, !self.chromeRevealed else { return }
+                self.chrome.isHidden = true
+            }
+        })
+    }
+
+    private func scheduleChromeHide() {
+        guard chromeOverlay, chromeRevealed else { return }
+        chromeHideWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.chromeOverlay, self.chromeRevealed else { return }
+                self.setChromeRevealed(false, animated: true)
+            }
+        }
+        chromeHideWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
 
     /// The bar and the page cover it all: a see-through space's glass has nothing to show through.
@@ -1513,8 +1944,11 @@ final class MiniRootView: SpaceFrameView {
 
     override func layout() {
         super.layout()
-        strip.frame = NSRect(x: 0, y: 0, width: bounds.width, height: Tokens.Metric.miniStripHeight)
-        bar.frame = strip.frame
+        let height = Tokens.Metric.miniStripHeight
+        let y = chromeOverlay && !chromeRevealed ? -height : 0
+        chrome.frame = NSRect(x: bounds.minX, y: y, width: bounds.width, height: height)
+        bar.frame = chrome.bounds
+        strip.frame = chrome.bounds
         card.frame = cardFrame
         overlay.frame = card.frame
         attentionEdge.frame = AttentionEdge.frame(forPage: card.frame, sidebarOnRight: BrowserRootView.sidebarOnRight)
