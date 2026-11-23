@@ -356,6 +356,13 @@ struct MiniFromPageTests {
         try await body(controller, source)
     }
 
+    /// A URL Peek in `controller`'s page, at the old Peek's geometry: the direct seam under the entry points.
+    private func dockedPeek(in controller: BrowserWindowController, opener: Tab,
+                            focus: MiniPeekFocus = .takesKeyboard) -> MiniWindowController {
+        MiniWindowController.open(fromPage: URL(string: "https://example.com/"), configuration: nil, opener: opener,
+                                  in: controller, dockedIn: controller, focus: focus)
+    }
+
     @Test func itOpensOverTheWindowsPage() async throws {
         try await inWindow { controller, source in
             let mini = MiniWindowController.open(fromPage: nil, configuration: nil, opener: source, in: controller)
@@ -515,6 +522,81 @@ struct MiniFromPageTests {
             #expect(mini.debugState["forwardEnabled"] as? Bool == true)
             // The tab it came from stays where it was.
             #expect(controller.tabManager.selectedTab === source)
+        }
+    }
+
+    // MARK: Docked in the page
+
+    @Test func dockedURLPeekIsAChildPanelAtTheOldGeometry() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            defer { mini.closePeek(focusBack: false, animated: false) }
+            let window = try #require(controller.window)
+            let pane = window.convertToScreen(controller.root.convert(controller.root.cardFrame, to: nil))
+            #expect(mini.window is MiniPanel)
+            #expect(window.childWindows?.contains { $0 === mini.window } == true)
+            #expect(mini.window?.frame == MiniDockLayout.frame(in: pane))
+            #expect(controller.root.miniPeekDim != nil)
+            #expect(mini.fromPage && mini.source === controller)
+            #expect(mini.isDockedPeek && !mini.isEdgePopout)
+        }
+    }
+
+    @Test func privateWindowPeekUsesThePrivateStore() async throws {
+        try await inWindow(isPrivate: true) { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            defer { mini.closePeek(focusBack: false, animated: false) }
+            let store = try #require(mini.tab.webView?.configuration.websiteDataStore)
+            #expect(store === controller.tabManager.privateStore)
+            #expect(!store.isPersistent)
+        }
+    }
+
+    @Test func openTakesKeyboard() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            defer { mini.closePeek(focusBack: false, animated: false) }
+            // The test host runs behind another app, so it cannot make a window key. Everything the Peek controls is
+            // checked: the page is first responder, the panel can take key, and it is in front.
+            #expect(mini.window?.canBecomeKey == true)
+            #expect(mini.window?.firstResponder === mini.tab.webView)
+            #expect(mini.window?.isVisible == true)
+            #expect(mini.debugState["focus"] as? String == "takesKeyboard")
+            #expect(mini.window?.firstResponder === mini.tab.webView)
+        }
+    }
+
+    @Test func leavesKeyboardDoesNot() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source, focus: .leavesKeyboard)
+            defer { mini.closePeek(focusBack: false, animated: false) }
+            // The tab switch's focus stays in the browser; the Peek is visible but does not take it.
+            #expect(mini.window?.isVisible == true)
+            #expect(mini.debugState["focus"] as? String == "leavesKeyboard")
+        }
+    }
+
+    @Test func closePeekClosesTheURLPageAndTheDim() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            let page = mini.tab
+            let child = try #require(mini.window)
+            mini.closePeek(focusBack: false, animated: false)
+            #expect(page.isClosed)
+            #expect(controller.root.miniPeekDim == nil)
+            #expect(controller.window?.childWindows?.contains { $0 === child } != true)
+            #expect(!MiniWindowController.all.contains { $0 === mini })
+        }
+    }
+
+    @Test func escapeClosesADockedPeek() async throws {
+        try await inWindow { controller, source in
+            let mini = dockedPeek(in: controller, opener: source)
+            let page = mini.tab
+            mini.debugEscape()
+            for _ in 0..<200 where !page.isClosed { try await Task.sleep(for: .milliseconds(10)) }
+            #expect(page.isClosed)
+            #expect(controller.root.miniPeekDim == nil)
         }
     }
 

@@ -123,9 +123,13 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// The Mini is presented in the page, the old Peek's place: dimmed page, click-out and Esc, no chrome until the
     /// pointer reaches the top. It stays one Mini; only its presentation changed.
     private(set) var isDockedPeek = false
-    /// It began as the edge sidebar's pick. Even after it is dragged out, its page is a tab already, so an update's
-    /// restart must not make a second Mini for it.
-    let isPeekPresentation: Bool
+    /// The docked presentation is on screen now. A `keep` Peek hides without ending; its record stays.
+    private(set) var isDockShown = false
+    /// What the docked presentation did with the keyboard: the first open takes it, a tab switch back leaves it.
+    private(set) var peekFocus: MiniPeekFocus = .takesKeyboard
+    /// It began as a docked Peek. Even after it is dragged out, its page is a tab already, so an update's restart must
+    /// not make a second Mini for it.
+    private(set) var isPeekPresentation: Bool
     /// Only a link another app opened keeps the full strip. Every other Mini wears the page and drops its chrome in
     /// at the top edge when it's needed.
     let usesFullChrome: Bool
@@ -148,6 +152,12 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private var tokens: [SignalToken] = []
     /// The page went into a browser window: closing this one must leave it alone.
     private var movedOut = false
+    /// The browser whose page this Peek is docked in, while it is; a borrowed page's browser is its origin.
+    private weak var dockedBrowser: BrowserWindowController?
+    /// The host takes the record away when the Peek closes or detaches. The controller closes its page and window
+    /// first, then tells the host, so it never drops a live docked controller.
+    var onPeekClosed: (() -> Void)?
+    var onPeekDetached: (() -> Void)?
     /// A tab borrowed from a browser window: it stays in the sidebar, and Return puts its page back where it was.
     private struct BorrowedOrigin {
         weak var browser: BrowserWindowController?
@@ -422,28 +432,44 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
 
     /// Opens one for a link on a page (⇧-click, Open Link in Zigzag Mini), over the middle of that window's page, in the
     /// page's profile and space, private from a private window. With a configuration (from WebKit), the page keeps its
-    /// opener and the returned controller's web view is the one WebKit asked for.
+    /// opener and the returned controller's web view is the one WebKit asked for. `dockedIn`: the same Mini, presented
+    /// in that window's page as the Peek, at the old Peek's geometry.
     @discardableResult
     static func open(fromPage url: URL?, configuration: WKWebViewConfiguration?, opener: Tab?, in browser: BrowserWindowController,
-                     by sender: Tab.LoadSender = .page) -> MiniWindowController {
+                     by sender: Tab.LoadSender = .page, dockedIn: BrowserWindowController? = nil,
+                     focus: MiniPeekFocus = .takesKeyboard) -> MiniWindowController {
         let window = browser.window
         let root = browser.root
         let page = window.map { $0.convertToScreen(root.convert(root.cardFrame, to: nil)) }
         let screen = page.flatMap { p in NSScreen.screens.first { $0.frame.contains(NSPoint(x: p.midX, y: p.midY)) } } ?? window?.screen ?? NSScreen.main
         let area = screen?.visibleFrame ?? NSRect(origin: .zero, size: Tokens.Metric.windowDefaultSize)
-        let frame = Self.frame(size: openingSize, in: area, taken: all.compactMap { $0.window?.frame }, around: page.map { NSPoint(x: $0.midX, y: $0.midY) })
+        // The docked presentation takes the page's geometry; a page too small to hold one opens standalone instead.
+        let docked: (browser: BrowserWindowController, frame: NSRect)? = {
+            guard let dockedIn, let window = dockedIn.window else { return nil }
+            let pane = window.convertToScreen(dockedIn.root.convert(dockedIn.root.cardFrame, to: nil))
+            guard pane.width > 1, pane.height > 1 else { return nil }
+            return (dockedIn, MiniDockLayout.frame(in: pane))
+        }()
+        let frame = docked?.frame
+            ?? Self.frame(size: openingSize, in: area, taken: all.compactMap { $0.window?.frame }, around: page.map { NSPoint(x: $0.midX, y: $0.midY) })
         // With a configuration from the page that opened it, it's in that page's profile, so in its space.
         let spaceID = (configuration != nil ? opener?.spaceID : nil) ?? browser.tabManager.currentSpaceID
         let tab = Tab(url: url, spaceID: spaceID, configuration: configuration)
         tab.privateStore = browser.tabManager.privateStore
         tab.opener = opener
         tab.firstLoad.sender = sender
-        let controller = MiniWindowController(tab: tab, frame: frame, overFullScreen: window?.styleMask.contains(.fullScreen) == true)
+        let controller = MiniWindowController(tab: tab, frame: frame, overFullScreen: window?.styleMask.contains(.fullScreen) == true,
+                                              dockedIn: docked?.browser)
         controller.fromPage = true
         controller.source = browser
         controller.sourceTab = opener
         all.append(controller)
         Diagnostics.note("Zigzag Mini opened", site: url?.host(), "from a page", isPrivate: tab.isPrivate)
+        if docked != nil {
+            controller.attachDocked(focus: focus)
+            if #available(macOS 15.4, *) { ExtensionCenter.miniOpened(controller) }
+            return controller
+        }
         if let webView = controller.tab.webView { controller.window?.makeFirstResponder(webView) }
         controller.appear(from: nil)
         if #available(macOS 15.4, *) { ExtensionCenter.miniOpened(controller) }
@@ -495,6 +521,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         self.isPeekPresentation = dockedIn != nil
         self.usesFullChrome = MiniChromePolicy.usesFullChrome(fromAnotherApp: fromAnotherApp)
         self.borrowedOrigin = borrowedOrigin
+        self.dockedBrowser = dockedIn
         // A borrowed tab is already a real tab in the sidebar; it must stay one. A page opened here is shown outside a
         // tab list, and becomes a full tab once it moves into a browser window.
         if borrowedOrigin == nil { tab.isOutsideTabList = true }
@@ -540,8 +567,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         super.init(window: window)
         window.delegate = self
         window.contentView = root
-        // A borderless panel has no window frame to round its page: the Mini's own layer does.
-        if window is MiniPanel {
+        // A docked panel has no window frame to round its page: the Mini's own layer does. A standalone panel keeps
+        // the edge popout's square page.
+        if dockedIn != nil {
             root.layer?.cornerRadius = Tokens.Radius.large
             root.layer?.masksToBounds = true
         }
@@ -747,31 +775,44 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     // MARK: In the page
 
     /// The Mini came in over the page, the old Peek's presentation: a child of the browser, so it moves and resizes
-    /// with it, over a dimmed page, and one click away or one Esc from gone.
-    private func attachDocked() {
-        guard let browser = borrowedOrigin?.browser, let browserWindow = browser.window, let window else { return }
+    /// with it, over a dimmed page, and one click away or one Esc from gone. The first open takes the keyboard; a
+    /// tab switch back leaves it where the switch put it.
+    private func attachDocked(focus: MiniPeekFocus = .takesKeyboard) {
+        guard let browser = dockedBrowser ?? borrowedOrigin?.browser, let browserWindow = browser.window, let window else { return }
         let pane = browserWindow.convertToScreen(browser.root.convert(browser.root.cardFrame, to: nil))
+        guard pane.width > 1, pane.height > 1 else { return }
         dock = Dock(browser: browser, paneScreen: pane)
         isDockedPeek = true
+        isDockShown = true
+        peekFocus = focus
         if !NSApp.isActive { NSApp.activate() }
         if browserWindow.isMiniaturized { browserWindow.deminiaturize(nil) }
-        browserWindow.makeKeyAndOrderFront(nil)
 
         let dim = MiniPeekDimView(color: Tokens.Color.peekScrim)
         dim.frame = browser.root.cardFrame
-        dim.alphaValue = 0
-        dim.onClick = { [weak self] in self?.closeBorrowed() }
+        dim.onClick = { [weak self] in self?.closePeek() }
         browser.root.showMiniPeekDim(dim)
         dock?.dim = dim
-
-        window.alphaValue = 0
         browserWindow.addChildWindow(window, ordered: .above)
-        window.makeKey()
-        Tokens.Motion.fadeBackdrop(dim, entering: true)
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = Tokens.Motion.enter * Tokens.Motion.debugSlowdown
-            context.timingFunction = Tokens.Motion.easeOut
-            window.animator().alphaValue = 1
+
+        switch focus {
+        case .takesKeyboard:
+            browserWindow.makeKeyAndOrderFront(nil)
+            dim.alphaValue = 0
+            window.alphaValue = 0
+            window.makeKeyAndOrderFront(nil)
+            if let webView = tab.webView { window.makeFirstResponder(webView) }
+            Tokens.Motion.fadeBackdrop(dim, entering: true)
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = Tokens.Motion.enter * Tokens.Motion.debugSlowdown
+                context.timingFunction = Tokens.Motion.easeOut
+                window.animator().alphaValue = 1
+            }
+        case .leavesKeyboard:
+            // Back from a tab switch: same frame, same live page, no refade, and the browser keeps the keyboard.
+            dim.alphaValue = 1
+            window.alphaValue = 1
+            window.orderFront(nil)
         }
 
         dock?.resizeToken = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification,
@@ -812,6 +853,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private func detachFromPane() {
         guard isDockedPeek, let window else { return }
         isDockedPeek = false
+        isDockShown = false
         let browserWindow = dock?.browser?.window
         browserWindow?.removeChildWindow(window)
         let size = window.frame.size
@@ -819,10 +861,14 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
                                 height: min(size.height, Tokens.Metric.miniWindowMinSize.height))
         window.collectionBehavior = [.fullScreenAuxiliary, .ignoresCycle]
         window.level = .normal
-        hideDockDim(animated: true)
+        hideDockDim(animated: false)
         removeDockObservers()
         dock = nil
+        // The detached Mini keeps the keyboard and stays above its browser, at exactly the frame it had.
+        window.makeKey()
         window.orderFront(nil)
+        onPeekDetached?()
+        onPeekDetached = nil
     }
 
     /// The dim under the page goes as the Mini does; the page behind is never left dimmed.
@@ -843,7 +889,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             MainActor.assumeIsolated {
                 guard let self, self.isDockedPeek, !self.isLeaving else { return }
                 guard MenuPanel.current == nil else { return }
-                self.closeBorrowed()
+                self.closePeek()
             }
         }
         dock?.clickLocal = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
@@ -857,15 +903,15 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             // The sidebar, docked or just slid out, is still live: the click picks its tab and the Mini goes.
             if (browser.root.sidebarVisible || browser.root.sidebarRevealed),
                browser.root.sidebarFrame.contains(point) {
-                self.closeBorrowed()
+                self.closePeek()
                 return event
             }
             if browser.root.cardFrame.contains(point) {
-                self.closeBorrowed()
+                self.closePeek()
                 return nil
             }
             // The bar above the page is live too: the click does what it would, and the Mini goes.
-            self.closeBorrowed()
+            self.closePeek()
             return event
         }
         dock?.appToken = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification,
@@ -873,16 +919,16 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             let pid = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
             MainActor.assumeIsolated {
                 guard let self, self.isDockedPeek, !self.isLeaving else { return }
-                if pid != NSRunningApplication.current.processIdentifier { self.closeBorrowed() }
+                if pid != NSRunningApplication.current.processIdentifier { self.closePeek(focusBack: false) }
             }
         }
         dock?.spaceToken = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification,
                                                                              object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.closeBorrowed() }
+            MainActor.assumeIsolated { self?.closePeek(focusBack: false) }
         }
         dock?.resignToken = NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification,
                                                                     object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.closeBorrowed() }
+            MainActor.assumeIsolated { self?.closePeek(focusBack: false) }
         }
     }
 
@@ -1084,7 +1130,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     private func escape() {
         guard !isLeaving, !commandBar.isVisible, !overlay.subviews.contains(where: { $0 is PermissionPrompt || $0 is SavePasswordPrompt }) else { return }
         guard let webView = tab.webView, let focused = window?.firstResponder as? NSView, focused.isDescendant(of: webView) else {
-            window?.performClose(nil)
+            closeWindow()
             return
         }
         // What the page was doing as Esc arrived (noted before the page saw it, in `noteEscape`), since by now its
@@ -1105,7 +1151,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         webView.evaluateJavaScript(decide, in: nil, in: .defaultClient) { [weak self] result in
             MainActor.assumeIsolated {
                 guard (try? result.get()) as? String == "" else { return }
-                self?.window?.performClose(nil)
+                self?.closeWindow()
             }
         }
     }
@@ -1214,13 +1260,15 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     func debugHoverStrip(_ name: String) { strip.debugHover(name) }
 
     func debugEscape() {
-        if commandBar.isVisible { commandBar.debugEscape() } else { cancelOperation(nil) }
+        if commandBar.isVisible { commandBar.debugEscape() }
+        else if isDockedPeek { closePeek() }
+        else { cancelOperation(nil) }
     }
 
     var debugState: [String: Any] {
         ["editing": commandBar.isVisible, "private": isPrivate, "fromPage": fromPage,
-         "docked": isDockedPeek, "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
-         "fullChrome": usesFullChrome,
+         "docked": isDockedPeek, "dockShown": isDockShown, "chromeOverlay": root.chromeOverlay, "chromeRevealed": root.chromeRevealed,
+         "fullChrome": usesFullChrome, "focus": peekFocus == .takesKeyboard ? "takesKeyboard" : "leavesKeyboard",
          "sourceWindow": source?.window?.windowNumber ?? 0, "titleShown": !strip.title.isHidden, "title": strip.title.text,
          "space": space.name, "profile": Library.shared.directory.profile(tab.profile.id)?.name ?? "",
          "store": tab.webView?.configuration.websiteDataStore.identifier?.uuidString ?? (tab.webView == nil ? "no page" : "default"),
@@ -1312,9 +1360,31 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         fadeAway { [weak self] in self?.window?.close() }
     }
 
-    /// Esc and ⌘W in a borrowed Mini take the same path as its close button would.
+    /// Puts a docked Peek away: Esc, ⌘W, the dim, a click outside, or its tab going. The page goes with it, as the
+    /// old Peek's did. `animated: false` is for a tab switch, where the dim must be gone before the new page draws.
+    func closePeek(focusBack: Bool = true, animated: Bool = true) {
+        guard isDockedPeek, !isLeaving else { return }
+        let browserWindow = dock?.browser?.window
+        hideDockDim(animated: animated)
+        if animated {
+            fadeAway { [weak self] in self?.window?.close() }
+        } else {
+            isDockedPeek = false
+            isDockShown = false
+            if let window { browserWindow?.removeChildWindow(window) }
+            removeDockObservers()
+            window?.close()
+        }
+        if focusBack, let browserWindow, browserWindow.isVisible, NSApp.isActive {
+            browserWindow.makeKey()
+        }
+    }
+
+    /// Esc and ⌘W in a borrowed or docked Mini take the same path as its close button would.
     private func closeWindow() {
-        if isBorrowed { closeBorrowed() } else { window?.performClose(nil) }
+        if isDockedPeek { closePeek() }
+        else if isBorrowed { closeBorrowed() }
+        else { window?.performClose(nil) }
     }
 
     /// Puts the page back in its own pane. `bringForward` also selects the tab and brings its browser window forward;
@@ -1528,6 +1598,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        let wasPeek = isPeekPresentation
         returnTo = nil
         isClosing = true
         settleLinksNote()
@@ -1542,6 +1613,7 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             isDockedPeek = false
             if let browserWindow = dock?.browser?.window, let window { browserWindow.removeChildWindow(window) }
         }
+        isDockShown = false
         hideDockDim(animated: false)
         removeDockObservers()
         dock = nil
@@ -1558,6 +1630,10 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         stopWatchingOutside()
         onBorrowedClose?()
         onBorrowedClose = nil
+        if wasPeek {
+            onPeekClosed?()
+            onPeekClosed = nil
+        }
         // Getting started's ⇧-click step is done once a Mini from a page closes or moves into a tab.
         if fromPage { Tutorial.complete("peek") }
         keepOnTopToken.map(NotificationCenter.default.removeObserver)
