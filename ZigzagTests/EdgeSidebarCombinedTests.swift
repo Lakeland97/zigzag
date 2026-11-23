@@ -131,20 +131,6 @@ struct EdgeSidebarCombinedTests {
         #expect(host.subviews.last === host.overlay)
     }
 
-    /// The edge card's way back is a chrome button in the traffic lights' corner, not an overlay: it hides with the
-    /// window's own sidebar and sits before the navigation row.
-    @Test @MainActor func theEdgeCardKeepsItsWayBackInTheTrafficLightsCorner() {
-        let sidebar = SidebarView(frame: NSRect(x: 0, y: 0, width: 280, height: 800))
-        #expect(sidebar.expandButton.isHidden)
-        sidebar.trafficLightsWidth = SidebarView.toolbarButton
-        sidebar.showsExpandButton = true
-        sidebar.layoutSubtreeIfNeeded()
-        #expect(!sidebar.expandButton.isHidden)
-        #expect(abs(sidebar.expandButton.frame.minX - Tokens.Sidebar.lightsX) < 0.5)
-        #expect(abs(sidebar.expandButton.frame.midY - sidebar.trafficLightCenterY) < 0.5)
-        #expect(sidebar.expandButton.frame.maxX <= sidebar.sidebarButton.frame.minX)
-    }
-
     /// The edge panel comes and goes through the same host, re-adding its sidebar card each time. The card's inner
     /// edge must still take the pointer: the resize handle has to stay above the card, not only above the page.
     @Test @MainActor func theSidebarEdgeTakesThePointerWhenThePanelIsShownAgain() {

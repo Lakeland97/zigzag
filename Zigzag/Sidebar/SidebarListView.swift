@@ -218,8 +218,6 @@ final class SidebarListView: NSView {
     var onNewTab: (() -> Void)?
     /// The pointer entered or left a row, with its frame on screen: the edge sidebar shows a still preview there.
     var onHoverTab: ((Tab?, NSRect?) -> Void)?
-    /// A row menu is about to open: the edge sidebar drops any preview still arriving under it.
-    var onMenuWillOpen: (() -> Void)?
     /// Whether rows can be dragged out. The edge sidebar's list can't: a drag would leave the panel.
     var allowsDragging = true
     /// Rows picked with ⌘-click or ⇧-click, in list order, to drag or act on together.
@@ -1430,7 +1428,6 @@ final class SidebarListView: NSView {
     }
 
     private func menu(for item: SidebarItem, row: TabRowView? = nil, event: NSEvent? = nil) -> NSMenu? {
-        onMenuWillOpen?()
         if marked.count > 1, marked.contains(item) { return delegate?.listMenu(forMarked: marked) }
         clearMarks()
         // In a row of several pages, the part right-clicked.

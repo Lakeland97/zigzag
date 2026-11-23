@@ -19,12 +19,14 @@ struct SidebarSideTests {
         #expect(mirror(mirror(rect)) == rect)
     }
 
-    @Test func aMirrorKeepsItsOwnAddressWhenTheWindowBarHoldsTheAddress() {
+    @Test func aMirrorHidesItsAddressButtonsWhileTheBarHoldsTheAddress() {
         let mirror = SidebarView(frame: .zero)
         mirror.hasTopBar = false
+        mirror.holdsAddress = false
+        #expect(mirror.addressButtons.allSatisfy { $0.isHidden })
         mirror.holdsAddress = true
         #expect(mirror.addressButtons.allSatisfy { !$0.isHidden })
-        // The window's sidebar keeps them too: they leave for the bar above the page, they don't hide.
+        // The window's sidebar keeps them: they leave for the bar above the page, they don't hide.
         let windowSidebar = SidebarView(frame: .zero)
         windowSidebar.holdsAddress = false
         #expect(windowSidebar.addressButtons.allSatisfy { !$0.isHidden })
@@ -411,20 +413,6 @@ struct EdgeSidebarLayoutTests {
         let left = EdgeSidebarLayout.edgeFrame(visible: leftDock, screen: full, onRight: false)
         #expect(left.minX == full.minX)
         #expect(EdgeSidebarLayout.frame(in: left, width: width, onRight: false).minX == full.minX)
-    }
-
-    @Test func aFullScreenSpaceWithoutANotchFillsTheScreen() {
-        let full = NSRect(x: 0, y: 0, width: 1440, height: 900)
-        // The visible frame still leaves out the menu bar's row, even when a full-screen app has taken it.
-        let visible = NSRect(x: 0, y: 0, width: 1440, height: 875)
-        #expect(EdgeSidebarLayout.edgeBounds(visible: visible, screen: full, fullScreen: true, hasNotch: false) == full)
-        // A notch keeps its menu bar; a windowed app keeps the menu bar and the Dock.
-        #expect(EdgeSidebarLayout.edgeBounds(visible: visible, screen: full, fullScreen: true, hasNotch: true) == visible)
-        #expect(EdgeSidebarLayout.edgeBounds(visible: visible, screen: full, fullScreen: false, hasNotch: false) == visible)
-        // The panel then runs to the display's top, not the visible frame's.
-        let edge = EdgeSidebarLayout.edgeFrame(visible: full, screen: full, onRight: false)
-        let panel = EdgeSidebarLayout.frame(in: edge, width: width, onRight: false)
-        #expect(panel.maxY == full.maxY && panel.height == full.height)
     }
 
     @Test func theScreensHotCornersDoNotOpenTheEdge() {

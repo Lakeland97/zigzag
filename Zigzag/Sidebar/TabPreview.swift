@@ -135,10 +135,6 @@ final class TabPreviewView: FloatingPanelView, NSTextFieldDelegate {
         refreshCaptionVisibility()
         placeholder.image = tab?.displayIcon ?? bookmark?.displayIcon
         setImages([tab?.snapshot] + partners.map(\.snapshot))
-        // Declare the caption before the first layout. A pinned or tiled page often arrives with a "not loaded" note;
-        // if the footer were measured after the card appeared, the note would shrink the picture under the entrance.
-        // Every preview surface goes through show, so this covers the browser card and the edge card alike.
-        if bounds.width > 1 { declareFooter(width: bounds.width) }
         needsLayout = true
     }
 

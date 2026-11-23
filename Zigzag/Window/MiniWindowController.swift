@@ -1798,10 +1798,7 @@ extension MiniWindowController: TabHost {
         // and the menu's own items leave you here, a plain click takes you there.
         let background = pending != nil || (action.modifierFlags.contains(.command) && !action.modifierFlags.contains(.shift))
         let target = browserTarget
-        // `opener` is the Mini's page: an unsized window.open still needs window.opener, as a sized sign-in popup
-        // does, or the flow cannot hand its result back.
-        let newTab = target.tabManager.newTab(url: nil, select: !background, configuration: configuration,
-                                              opener: tab, site: action.request.url)
+        let newTab = target.tabManager.newTab(url: nil, select: !background, configuration: configuration, site: action.request.url)
         if !background { target.window?.makeKeyAndOrderFront(nil) }
         return newTab.ensureWebView()
     }
