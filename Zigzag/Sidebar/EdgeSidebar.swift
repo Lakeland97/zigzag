@@ -181,6 +181,9 @@ final class EdgeSidebar {
     private var hoverQuietUntil: TimeInterval = 0
     /// Where the pointer was at the switch, to tell a hover it already had from one it asks for by moving.
     private var pointerAtSwitch: NSPoint?
+    /// The space the preview is showing, so a switch can tell which way through the list it went: the change itself
+    /// carries no direction, and by the time it arrives the window's space is already the new one.
+    private var previewSpaceID: UUID?
     /// The panel's frame while a page is out.
     private var previewPanelFrame: NSRect = .zero
     /// A menu from the panel is open: the page, a window above the panel, is ordered out so it can't cover it.
@@ -474,6 +477,8 @@ final class EdgeSidebar {
     private func showPreview(_ tab: Tab, in controller: BrowserWindowController) {
         guard isShowing, !menuCoversPage, let panel, let host, !tab.isPrivate, EdgeLensPolicy.previews(url: tab.url),
               Self.isInShownSpace(tab, of: controller), preview?.tab !== tab else { return }
+        // Which space the page belongs to, so a later switch knows which way through the list it moved.
+        previewSpaceID = controller.tabManager.currentSpaceID
         let live = EdgeLensPolicy.showsLivePage(isLoaded: tab.isLoaded, isAsleep: tab.isAsleep)
         let previous = preview
         // The panel takes its full width first, so the page is laid out once at its final size.
@@ -696,6 +701,18 @@ final class EdgeSidebar {
     ///
     /// Without a page out there is nothing to hand over, and the panel keeps its narrow frame: the next hover in the
     /// new space's list brings a page out as it always would.
+    /// Whether the switch moved to a later space in the window's list, which is the side its blank folds in from.
+    /// A space that is new to the list, or one whose predecessor is unknown (the panel was just put out), has no
+    /// direction to show; the sidebar's own side is used then, as a row's page uses it.
+    private func spaceSwitchCameFromRight(to window: BrowserWindowController?, was previous: UUID?) -> Bool {
+        let fromRight = shownOnRight
+        guard let window, let previous, previous != window.tabManager.currentSpaceID else { return fromRight }
+        let spaces = window.tabManager.listedSpaces
+        guard let now = spaces.firstIndex(where: { $0.id == window.tabManager.currentSpaceID }),
+              let then = spaces.firstIndex(where: { $0.id == previous }) else { return fromRight }
+        return now > then
+    }
+
     private func handOverToBlank() {
         guard isShowing, let host, let mini = preview, let panel else { return }
         previewWork?.cancel()
@@ -716,9 +733,14 @@ final class EdgeSidebar {
             return ViewportPage.blankURL(for: window.tabManager.currentSpaceID, isPrivate: isPrivate,
                                          picture: EmptyPage.picture(for: space, isPrivate: isPrivate))
         }
+        // Which way the list was walked, so the blank arrives from the side the switch came from: the row swap's
+        // fixed "out from the sidebar" would say the wrong thing here, because a space change has a direction of its
+        // own. `fromRight` is how the fold is anchored, so a move to a later space comes from the right.
+        let fromRight = spaceSwitchCameFromRight(to: target, was: previewSpaceID)
         // The window is held weakly and can be gone by the time its last change arrives. With no window there is no
         // space to name, and the plain blank is the only page that can't draw another space's ground.
-        mini.showPage(switched ?? ViewportPage.blank)
+        mini.showPage(switched ?? ViewportPage.blank, revealingFromRight: fromRight)
+        previewSpaceID = target?.tabManager.currentSpaceID
         mini.onInPageMiniClosed = { [weak self, weak mini] in self?.previewClosed(mini) }
         mini.onInPageMiniDetached = { [weak self, weak mini] in self?.previewDetached(mini) }
         previewTab = nil
@@ -770,6 +792,8 @@ final class EdgeSidebar {
 
     /// Puts the panel away; without the slide when Zigzag is coming forward.
     func hide(animated: Bool = true) {
+        // No page is out, so there is no space for the next switch to measure from.
+        previewSpaceID = nil
         followTimer?.invalidate()
         followTimer = nil
         activationWork?.cancel()

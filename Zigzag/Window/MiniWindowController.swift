@@ -1262,7 +1262,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// Points the preview at a `zigzag:` page instead of a row's site: the blank a space switch lands on. It is shown
     /// in the same card, in the same window, so the panel keeps one preview and one frame; nothing is closed or folded
     /// away, and the page the Mini was lending goes back to its tab first.
-    func showPage(_ url: URL) {
+    /// - Parameter revealingFromRight: which side the page folds in from, or nil to show it at once. A space switch
+    ///   has a direction of its own, so it passes the side it moved towards; the row swap does not, and shows at once.
+    func showPage(_ url: URL, revealingFromRight: Bool? = nil) {
         guard !isLeaving, !isClosing else { return }
         releaseBorrowedPage()
         asleepCard?.removeFromSuperview()
@@ -1288,6 +1290,47 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         view.autoresizingMask = [.width, .height]
         if view.url != url { view.load(URLRequest(url: url)) }
         refreshStrip()
+        if let revealingFromRight { revealOwnPage(fromRight: revealingFromRight) }
+    }
+
+    /// Uncovers the Zigzag page the same way a row's page is uncovered, so a space switch reads as a move rather than
+    /// a cut. The fold waits on the page itself, not on a tab's: this page belongs to no tab, and after the redirect
+    /// the tab's own page has gone back to the window.
+    private func revealOwnPage(fromRight: Bool) {
+        lastRevealFromRight = fromRight
+        guard dockedHost?.dockSlidesPage == true, !Tokens.Motion.reduceMotion,
+              let rootLayer = root.layer, root.bounds.width > 1 else { return }
+        pageSlideGeneration += 1
+        let generation = pageSlideGeneration
+        let size = root.bounds.size
+        let mask = pageSlideMask(fromRight: fromRight, size: size, width: 0)
+        rootLayer.mask = mask
+        window?.hasShadow = false
+        // The page has just been loaded at this size. Its first frame is the one that can be uncovered without the
+        // card showing through, so the fold opens after a frame rather than at once.
+        whenOwnPageHasDrawn { [weak self] in
+            guard let self, self.pageSlideGeneration == generation else { return }
+            self.slidePageIn(mask: mask, size: size, duration: Tokens.Motion.Role.drawer.duration(entering: true),
+                             generation: generation, done: nil)
+        }
+    }
+
+    /// Runs `done` once the Zigzag page has painted a frame, or after a moment if it has not.
+    private func whenOwnPageHasDrawn(_ done: @escaping @MainActor () -> Void) {
+        guard let view = ownPage else { return done() }
+        var drawn = false
+        let once = {
+            guard !drawn else { return }
+            drawn = true
+            done()
+        }
+        let script = "await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));"
+        view.callAsyncJavaScript(script, arguments: [:], in: nil, in: .defaultClient) { _ in
+            MainActor.assumeIsolated { once() }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            MainActor.assumeIsolated { once() }
+        }
     }
 
     /// Lets go of the row's page without closing the preview: the tab keeps its page where it is, and the window
