@@ -492,7 +492,7 @@ final class EdgeSidebar {
         // The blank a space switch left in the panel is not a row's page: the row's own takes its place in the same
         // window, so the switch keeps one preview rather than folding a blank away and building another.
         if let previous, previous.ownPageURL != nil, previous.retarget(to: tab, deferPage: !live) {
-            if !live { installAsleepClick(on: previous, tab: tab, controller: controller) }
+            if !live { installAsleepClick(on: previous) }
             previewTab = tab
             return
         }
@@ -501,7 +501,7 @@ final class EdgeSidebar {
             if previous == nil { narrowPanel() }
             return
         }
-        if !live { installAsleepClick(on: mini, tab: tab, controller: controller) }
+        if !live { installAsleepClick(on: mini) }
         mini.onInPageMiniClosed = { [weak self, weak mini] in self?.previewClosed(mini) }
         mini.onInPageMiniDetached = { [weak self, weak mini] in self?.previewDetached(mini) }
         preview = mini
@@ -516,15 +516,11 @@ final class EdgeSidebar {
         }
     }
 
-    /// A click on a sleeping row's card wakes its page in the same pill. Choosing the tab through the window's list
-    /// would bring the browser forward and take the panel away, which is the opposite of what the click asks for, so
-    /// the tab is selected here and its page is built in the preview where it already is.
-    private func installAsleepClick(on mini: MiniWindowController, tab: Tab, controller: BrowserWindowController) {
-        mini.showAsleepCard { [weak self, weak controller, weak tab, weak mini] in
-            guard let self, let controller, let tab, let mini, self.isShowing else { return }
-            controller.tabManager.select(tab)
-            mini.wakeInPlace()
-        }
+    /// A click on a sleeping row's card asks the preview for the keyboard. The panel is shown without it, so the click
+    /// is the user's first word to the page: taking focus is what wakes it, and it wakes where it is shown rather than
+    /// in the window behind the panel. The tab is not selected; its page already belongs to the preview.
+    private func installAsleepClick(on mini: MiniWindowController) {
+        mini.showAsleepCard { [weak mini] in mini?.takeFocusForPage() }
     }
 
     /// The page folds back after a moment unless the pointer is on it, or still among the rows: a crossing from one row

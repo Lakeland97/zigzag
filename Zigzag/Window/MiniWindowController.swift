@@ -1348,13 +1348,22 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
         ownPageURL = nil
     }
 
-    /// A sleeping row's page woken by a click on its card: the page is built in the same place, and the card goes once
-    /// it is there, so waking never shows an empty preview and nothing closes.
+    /// A sleeping row's page woken where it is shown: the page is built in the same window, and the card goes once it
+    /// is there, so waking never shows an empty preview and nothing closes. The page takes the keyboard it was woken
+    /// for, so the click that woke it is also the click that can type into it.
     func wakeInPlace() {
         showPage()
-        asleepCard?.removeFromSuperview()
-        asleepCard = nil
+        window?.makeFirstResponder(tab.webView)
         if isDockedInPage { layoutInDock(force: true) }
+    }
+
+    /// The user has asked the preview for the keyboard: it takes it, and a page asleep in the place it is shown wakes
+    /// there. The edge preview is ordered in without the keyboard, so this is never a side effect of hovering. A page
+    /// of the preview's own — the blank a space switch leaves — has nothing to wake, and the tab it lent is not what is
+    /// on screen, so focus must not bring that tab back over it.
+    func takeFocusForPage() {
+        window?.makeKeyAndOrderFront(nil)
+        if isDockedInPage, ownPageURL == nil, tab.isAsleep { wakeInPlace() }
     }
 
     /// Points this preview at another row's tab without building a second window (#556): the page it was lending goes
@@ -1418,12 +1427,15 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             // A new web view (the page crashed and came back, or crossed into an extension's page) takes the old one's place.
             // A card preview stays a card: the page, if it wakes, is the browser window's.
             if change == .webView, tab.webView != nil, !movedOut, !startedWithoutPage, ownPageURL == nil { showPage() }
-            // Put to sleep while out here anyway: its card, never an empty room. A click on it does what the row's
-            // would for a preview, and wakes the page here for a Mini of its own.
+            // Put to sleep while out here anyway: its card, never an empty room. A click on it is the user asking the
+            // preview for the keyboard, and a docked preview wakes the page where it is; a Mini on its own does the
+            // same, and only a floating preview lending the browser's page has nowhere to wake it but the window.
             if change == .webView, tab.webView == nil, tab.isAsleep, !movedOut, asleepCard == nil, ownPageURL == nil {
                 showAsleepCard { [weak self] in
                     guard let self else { return }
-                    if self.isBorrowingPage, let browser = self.source {
+                    if self.isDockedInPage {
+                        self.takeFocusForPage()
+                    } else if self.isBorrowingPage, let browser = self.source {
                         let tab = self.tab
                         DispatchQueue.main.async { browser.listSelect(tab) }
                     } else {
@@ -1965,6 +1977,10 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
+        // The preview is ordered in without the keyboard, so a key window here is the user's doing, by a click or the
+        // keyboard: a sleeping page wakes where it is shown. The blank of a space switch is the preview's own page,
+        // and the tab it lent is not on screen, so focus must not wake that tab back over the blank.
+        if isDockedInPage, ownPageURL == nil, tab.isAsleep { wakeInPlace() }
         // A borrowed page is the browser's tab, not a Mini the extensions know: only a Mini of its own tells them.
         if #available(macOS 15.4, *), !isBorrowingPage { ExtensionCenter.miniFocused(self) }
         // Became key: show a held question.

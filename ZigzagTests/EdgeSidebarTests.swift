@@ -372,7 +372,7 @@ struct EdgeSidebarTests {
 
     /// A click on a sleeping row's card wakes its page in the panel: the panel keeps its place and the page is built
     /// there, rather than the click going through to the browser window and taking the panel away (#556).
-    @Test func clickingAnAsleepCardWakesItInThePanel() async throws {
+    @Test func takingFocusWakesTheAsleepPageInThePanel() async throws {
         let (controller, manager, tabs, done) = panelWithTabs(["https://example.test/first", "https://example.test/second"])
         defer { done() }
         tabs[1].ensureWebView()
@@ -386,7 +386,7 @@ struct EdgeSidebarTests {
         let window = try #require(mini.window)
         let content = try #require(window.contentView)
         window.layoutIfNeeded()
-        // The window behind another app, as the panel's page is: the click is its first.
+        // The preview is ordered in without the keyboard: the click is the first thing it is asked, so it takes focus.
         let center = NSPoint(x: content.bounds.midX, y: content.bounds.midY)
         for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
             window.sendEvent(try #require(NSEvent.mouseEvent(with: type, location: center, modifierFlags: [], timestamp: 0,
@@ -394,14 +394,37 @@ struct EdgeSidebarTests {
                                                              clickCount: 1, pressure: 1)))
         }
         // Woken where it stands: the panel is still out, the preview is the same window, and its page is shown here.
-        // Selecting the tab rehosts it to the browser, so what proves the pane is that its page was built, not that
-        // the row stayed in the panel's window.
         #expect(await until(3) { !tabs[1].isAsleep && tabs[1].isLoaded })
         #expect(EdgeSidebar.shared.isShowing)
         #expect(EdgeSidebar.shared.pagePreview === mini)
         #expect(mini.asleepCardTitle == nil)
         #expect(mini.isBorrowingPage)
-        #expect(manager.selectedTab === tabs[1])
+        // Focus alone did it: the row was not selected in the window behind the panel.
+        #expect(manager.selectedTab === tabs[0])
+    }
+
+    /// The blank a space switch leaves is the preview's own page. Taking focus on it has nothing to wake, and must not
+    /// bring the space it was switched from back by waking the tab the preview lent.
+    @Test func takingFocusOnTheBlankLeavesTheOldSpaceAsleep() async throws {
+        let (controller, manager, tabs, done) = panelWithTabs(["https://example.test/a", "https://example.test/b"])
+        defer { done() }
+        tabs[1].ensureWebView()
+        tabs[1].suspend(because: "test", chosen: true)
+        #expect(await until { tabs[1].isAsleep && !tabs[1].isLoaded })
+        EdgeSidebar.shared.previewNow(tabs[1], in: controller)
+        let mini = try #require(EdgeSidebar.shared.pagePreview)
+        #expect(mini.asleepCardTitle == tabs[1].displayTitle)
+        let added = Library.shared.addSpace(name: "Blank focus test")
+        defer { Library.shared.removeSpace(added.id) }
+        manager.showSpaceKeepingPage(added.id)
+        #expect(await until(3) { mini.ownPageURL != nil })
+        // The user asks the preview for the keyboard, as a click on it does.
+        mini.takeFocusForPage()
+        // Still the blank, and the tab the preview lent is still asleep and still the browser's.
+        #expect(mini.ownPageURL != nil)
+        #expect(tabs[1].isAsleep)
+        #expect(tabs[1].host === controller)
+        #expect(EdgeSidebar.shared.isShowing)
     }
 
     /// Expand in the preview's strip takes the page out of the row into a Mini of its own; the panel goes.
@@ -513,7 +536,9 @@ struct EdgeSidebarTests {
         let added = Library.shared.addSpace(name: "Space switch back test")
         defer { Library.shared.removeSpace(added.id) }
         manager.showSpaceKeepingPage(added.id)
-        EdgeSidebar.shared.previewNow(tabs[0], in: controller)
+        // A row of the space being shown: a tab of the space left is no row of this one, and cannot be previewed here.
+        let there = manager.newTab(url: URL(string: "https://example.test/there"), spaceID: added.id, select: false)
+        EdgeSidebar.shared.previewNow(there, in: controller)
         let mini = try #require(EdgeSidebar.shared.pagePreview)
         // Back to the space it came from, which is earlier in the list.
         manager.showSpaceKeepingPage(tabs[0].spaceID)
