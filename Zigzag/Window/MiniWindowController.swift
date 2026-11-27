@@ -144,7 +144,9 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     /// What the feature is called wherever Zigzag names it.
     static var name: String { String(localized: "Zigzag Mini", comment: "The name of Zigzag's small window for one page, without the sidebar (Arc called it Little Arc). Kept in Latin letters, like the app's name.") }
 
-    let tab: Tab
+    /// The tab this preview is showing. Assigned at init and by `retarget(to:deferPage:)`, which gives the page it was
+    /// lending back first; nothing else changes it.
+    private(set) var tab: Tab
     /// A preview of a tab whose page isn't running: it shows the tab's card and never takes its page.
     private let startedWithoutPage: Bool
     let root = MiniRootView()
@@ -1236,17 +1238,119 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
 
     /// Puts the card over the previewed page; the page is never loaded for it. `onClick`: a click on the card.
     func showAsleepCard(onClick: (() -> Void)? = nil) {
-        let card = asleepCard ?? EdgeAsleepPageView(frame: root.overlay.bounds)
+        let card = asleepCard ?? EdgeAsleepPageView(frame: root.bounds)
         card.autoresizingMask = [.width, .height]
-        card.frame = root.overlay.bounds
+        card.frame = root.bounds
         card.onClick = onClick
         card.show(tab: tab)
-        if card.superview !== root.overlay { root.overlay.addSubview(card) }
+        // Over the page's card, not in the overlay under it: the overlay sits below the page, so a card there is under
+        // the page it covers and no click on it arrives.
+        if card.superview !== root { root.addSubview(card, positioned: .above, relativeTo: root.card) }
         asleepCard = card
     }
 
     /// Test seam: the card's title while it is out.
     var asleepCardTitle: String? { asleepCard?.shownTitle }
+
+    /// The page the preview shows when it is not showing a row's site (#556): a `zigzag:` page, which belongs to no
+    /// tab. One view, kept here, so pointing the preview at another page never builds a window or a web view.
+    private var ownPage: WKWebView?
+
+    /// The `zigzag:` page this Mini is showing instead of a row's site, if it is. Tests and the debug bridge read it.
+    private(set) var ownPageURL: URL?
+
+    /// Points the preview at a `zigzag:` page instead of a row's site: the blank a space switch lands on. It is shown
+    /// in the same card, in the same window, so the panel keeps one preview and one frame; nothing is closed or folded
+    /// away, and the page the Mini was lending goes back to its tab first.
+    func showPage(_ url: URL) {
+        guard !isLeaving, !isClosing else { return }
+        releaseBorrowedPage()
+        asleepCard?.removeFromSuperview()
+        asleepCard = nil
+        if ownPage == nil {
+            let configuration = WebKitSetup.makeConfiguration(for: tab.homeProfile)
+            // Zigzag's own pages are served by its scheme handler; without it attached the load fails outright.
+            HistoryPage.attach(to: configuration)
+            let view = WKWebView(frame: root.card.bounds, configuration: configuration)
+            // The card's ground is the page's own, so WebKit's white is never seen before the page draws.
+            view.setValue(false, forKey: "drawsBackground")
+            view.allowsBackForwardNavigationGestures = false
+            view.underPageBackgroundColor = Tokens.Color.cardBackground
+            ownPage = view
+        }
+        guard let view = ownPage else { return }
+        ownPageURL = url
+        // The card shows a tab's page through its own holder; this page has no tab, so it goes on the card's face
+        // itself, inside the card's rounded shape, where a page of the window's would sit.
+        root.card.show(nil)
+        if view.superview != nil { view.removeFromSuperview() }
+        root.card.setBlankPage(view)
+        view.autoresizingMask = [.width, .height]
+        if view.url != url { view.load(URLRequest(url: url)) }
+        refreshStrip()
+    }
+
+    /// Lets go of the row's page without closing the preview: the tab keeps its page where it is, and the window
+    /// stays. Used when a space switch ends the preview, because the page belongs to the space that was left.
+    func releaseBorrowedPage() {
+        guard isBorrowingPage else { return }
+        giveBackBorrowedPage()
+        sourceTab = nil
+        borrowed = nil
+    }
+
+    /// Forgets the Zigzag page a switch left in the preview: the window is closing or another page is taking the card.
+    func clearOwnPage() {
+        ownPage?.removeFromSuperview()
+        ownPageURL = nil
+    }
+
+    /// A sleeping row's page woken by a click on its card: the page is built in the same place, and the card goes once
+    /// it is there, so waking never shows an empty preview and nothing closes.
+    func wakeInPlace() {
+        showPage()
+        asleepCard?.removeFromSuperview()
+        asleepCard = nil
+        if isDockedInPage { layoutInDock(force: true) }
+    }
+
+    /// Points this preview at another row's tab without building a second window (#556): the page it was lending goes
+    /// back to its tab, the new row's page comes in, and the change happens inside the one window. A run of rows, and a
+    /// row hovered after a space switch, are one preview whose contents follow the pointer.
+    ///
+    /// Only for a preview lending the browser's pages: a Mini opened for a page of its own keeps it.
+    @discardableResult
+    func retarget(to next: Tab, deferPage: Bool = false) -> Bool {
+        guard !isLeaving, !isClosing, next !== tab, let browser = source else { return false }
+        if isBorrowingPage { giveBackBorrowedPage() }
+        // The row's page must not still belong to this preview when it is borrowed again.
+        if let old = next.host as? MiniWindowController, old !== self { old.endBorrowingNow() }
+        let holder = next.pageHolder
+        borrowed = BorrowedPage(host: next.host, wasOutsideTabList: next.isOutsideTabList,
+                                origin: holder?.superview, originFrame: holder?.frame ?? .zero,
+                                card: Self.card(holding: holder), browser: browser)
+        sourceTab = next
+        // The page shown above the card, if one was, goes: the row's own page or card takes the card again.
+        ownPage?.removeFromSuperview()
+        ownPageURL = nil
+        asleepCard?.removeFromSuperview()
+        asleepCard = nil
+        tab = next
+        tab.host = self
+        tab.isOutsideTabList = true
+        observeTab()
+        root.card.showLoading(of: tab)
+        paint(animated: false)
+        refreshStrip()
+        refreshBar(animated: false)
+        if deferPage || !EdgeLensPolicy.showsLivePage(isLoaded: tab.isLoaded, isAsleep: tab.isAsleep) {
+            showAsleepCard()
+        } else {
+            showPage()
+        }
+        if isDockedInPage { layoutInDock(force: true) }
+        return true
+    }
 
     /// Its page's changes.
     private func observeTab() {
@@ -1270,10 +1374,10 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
             window?.title = tab.displayTitle
             // A new web view (the page crashed and came back, or crossed into an extension's page) takes the old one's place.
             // A card preview stays a card: the page, if it wakes, is the browser window's.
-            if change == .webView, tab.webView != nil, !movedOut, !startedWithoutPage { showPage() }
+            if change == .webView, tab.webView != nil, !movedOut, !startedWithoutPage, ownPageURL == nil { showPage() }
             // Put to sleep while out here anyway: its card, never an empty room. A click on it does what the row's
             // would for a preview, and wakes the page here for a Mini of its own.
-            if change == .webView, tab.webView == nil, tab.isAsleep, !movedOut, asleepCard == nil {
+            if change == .webView, tab.webView == nil, tab.isAsleep, !movedOut, asleepCard == nil, ownPageURL == nil {
                 showAsleepCard { [weak self] in
                     guard let self else { return }
                     if self.isBorrowingPage, let browser = self.source {
@@ -1309,7 +1413,14 @@ final class MiniWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func refreshStrip() {
-        strip.title.show(tab)
+        if let ownPageURL {
+            // A Zigzag page of its own, after a space switch: named for itself, with nothing to go back to.
+            strip.title.showOwnPage(ownPageURL)
+            strip.showNavigation(canGoBack: false, canGoForward: false, isLoading: false)
+        } else {
+            strip.title.show(tab)
+            strip.showNavigation(canGoBack: tab.canGoBack, canGoForward: tab.canGoForward, isLoading: tab.isLoading)
+        }
         strip.spaceChip.show(space, name: isPrivate ? placeName : nil)
         // A borrowed tab keeps its place in the browser's list: moving it from the preview would move it there
         // without that list knowing.
@@ -2163,6 +2274,10 @@ final class MiniRootView: SpaceFrameView {
     private func orderChrome() {
         if chromeOverlay {
             addSubview(card, positioned: .below, relativeTo: bar)
+            // The waking card stays over the page it covers, whichever order the chrome is put in.
+            for asleep in subviews.compactMap({ $0 as? EdgeAsleepPageView }) {
+                addSubview(asleep, positioned: .above, relativeTo: card)
+            }
         } else {
             addSubview(bar, positioned: .below, relativeTo: card)
             addSubview(strip, positioned: .below, relativeTo: card)
@@ -2548,6 +2663,18 @@ final class MiniTitleView: InteractiveView {
         let spoken = fullAddress?.whole ?? label.stringValue
         setAccessibilityLabel(mark.isHidden ? spoken
                               : String(localized: "\(spoken), \(SitePanel.notSecure)", comment: "Accessibility label of the address in the sidebar on a plain http page: the site, then that it's not secure."))
+        needsLayout = true
+    }
+
+    /// A Zigzag page the Mini shows of its own, after a space switch (#556): named the way the app names its pages,
+    /// with no site mark, since there is no site.
+    func showOwnPage(_ url: URL) {
+        let name = AddressView.name(of: url)
+        label.stringValue = name.isEmpty ? url.absoluteString : name
+        label.lineBreakMode = .byTruncatingTail
+        fullAddress = nil
+        mark.isHidden = true
+        setAccessibilityLabel(label.stringValue)
         needsLayout = true
     }
 

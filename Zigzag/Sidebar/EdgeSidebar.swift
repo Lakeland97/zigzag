@@ -166,6 +166,13 @@ final class EdgeSidebar {
     private var hoverCheck = 0
     /// The window's list while the panel is out: a closed page or a space switch puts the preview away.
     private var managerToken: SignalToken?
+    /// When Zigzag last switched space with the panel out: its own switch also reads as a macOS Space change.
+    private var spaceSwitchAt: TimeInterval = 0
+    /// Until this passes, rows report the hover they had before the switch and it is not taken as asking for a page.
+    /// A pointer that moves ends the wait at once: only a pointer still where the switch found it is held off.
+    private var hoverQuietUntil: TimeInterval = 0
+    /// Where the pointer was at the switch, to tell a hover it already had from one it asks for by moving.
+    private var pointerAtSwitch: NSPoint?
     /// The panel's frame while a page is out.
     private var previewPanelFrame: NSRect = .zero
     /// A menu from the panel is open: the page, a window above the panel, is ordered out so it can't cover it.
@@ -209,7 +216,12 @@ final class EdgeSidebar {
             MainActor.assumeIsolated { self?.activationChanged() }
         })
         workspaceObservers.append(workspace.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.systemPutsAway() }
+            MainActor.assumeIsolated {
+                // Zigzag's own space switch also reads as a macOS Space change, and the panel has just kept its page.
+                // A person's switch still puts it away.
+                guard let self, ProcessInfo.processInfo.systemUptime > self.spaceSwitchAt + 1.0 else { return }
+                self.systemPutsAway()
+            }
         })
         if let key = WindowManager.shared.keyController, Self.comesOut(for: key) { target = key }
     }
@@ -363,6 +375,12 @@ final class EdgeSidebar {
         closeWork?.cancel()
         closeWork = nil
         hoverCheck += 1
+        // Right after a space switch the rows report where the pointer already was, and that would bring a page out
+        // over the blank the switch just landed on. Only a pointer that has really moved counts as asking for one.
+        guard hoverQuietUntil <= ProcessInfo.processInfo.systemUptime || pointerMovedSinceSwitch() else {
+            if tab == nil { schedulePreviewClose() }
+            return
+        }
         // Rows report leaving and arriving in either order: the row under the pointer counts. A row of the space just
         // left, still sliding out, is no row.
         let shown = { (tab: Tab?) in tab.flatMap { Self.isInShownSpace($0, of: controller) ? $0 : nil } }
@@ -377,6 +395,17 @@ final class EdgeSidebar {
         }
         scheduleHoverCheck(tab: tab, in: controller, pointer: pointer,
                            since: ProcessInfo.processInfo.systemUptime, token: hoverCheck)
+    }
+
+    /// Whether the pointer has moved since the switch: the quiet window ends at the first real movement, and a hover
+    /// that arrives without one is the pointer still resting where the switch found it.
+    private func pointerMovedSinceSwitch() -> Bool {
+        let now = pointer
+        guard let last = pointerAtSwitch else { return true }
+        let moved = abs(now.x - last.x) > EdgePreviewHoverPolicy.movement
+            || abs(now.y - last.y) > EdgePreviewHoverPolicy.movement
+        if moved { hoverQuietUntil = 0 }
+        return moved
     }
 
     /// A sidebar row's own hover report, from the real mouse's tracking areas.
@@ -447,18 +476,19 @@ final class EdgeSidebar {
         host.pageShowing = true
         panel.setFrame(previewPanelFrame, display: true)
         host.layoutSubtreeIfNeeded()
+        // The blank a space switch left in the panel is not a row's page: the row's own takes its place in the same
+        // window, so the switch keeps one preview rather than folding a blank away and building another.
+        if let previous, previous.ownPageURL != nil, previous.retarget(to: tab, deferPage: !live) {
+            if !live { installAsleepClick(on: previous, tab: tab, controller: controller) }
+            previewTab = tab
+            return
+        }
         guard let mini = MiniWindowController.openPreview(of: tab, from: controller, dockedIn: self,
                                                            reveal: false, deferPage: !live) else {
             if previous == nil { narrowPanel() }
             return
         }
-        if !live {
-            // A click on the card is a click on its row.
-            mini.showAsleepCard { [weak controller, weak tab] in
-                guard let controller, let tab else { return }
-                DispatchQueue.main.async { controller.listSelect(tab) }
-            }
-        }
+        if !live { installAsleepClick(on: mini, tab: tab, controller: controller) }
         mini.onInPageMiniClosed = { [weak self, weak mini] in self?.previewClosed(mini) }
         mini.onInPageMiniDetached = { [weak self, weak mini] in self?.previewDetached(mini) }
         preview = mini
@@ -473,6 +503,17 @@ final class EdgeSidebar {
         }
     }
 
+    /// A click on a sleeping row's card wakes its page in the same pill. Choosing the tab through the window's list
+    /// would bring the browser forward and take the panel away, which is the opposite of what the click asks for, so
+    /// the tab is selected here and its page is built in the preview where it already is.
+    private func installAsleepClick(on mini: MiniWindowController, tab: Tab, controller: BrowserWindowController) {
+        mini.showAsleepCard { [weak self, weak controller, weak tab, weak mini] in
+            guard let self, let controller, let tab, let mini, self.isShowing else { return }
+            controller.tabManager.select(tab)
+            mini.wakeInPlace()
+        }
+    }
+
     /// The page folds back after a moment unless the pointer is on it, or still among the rows: a crossing from one row
     /// to the next is not leaving them. `evenOnRows`: the row under the pointer has no page to show, so the pointer
     /// being on a row is not a reason to keep one out.
@@ -480,6 +521,9 @@ final class EdgeSidebar {
         closeWork?.cancel()
         closeWork = nil
         guard preview != nil else { return }
+        // After a space switch the panel holds the blank page: there is no row's page to close, and closing would
+        // narrow the panel and undo what the switch just put in place.
+        guard preview?.ownPageURL == nil else { return }
         let start = pointer
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
@@ -507,6 +551,8 @@ final class EdgeSidebar {
         #endif
         guard preview != nil, closeWork == nil, previewWork == nil, MenuPanel.current == nil,
               NSEvent.pressedMouseButtons == 0, let panel else { return }
+        // The blank a space switch landed on is not a page to leave: it stays until a row asks for its own.
+        guard preview?.ownPageURL == nil else { return }
         let point = pointer
         guard panel.frame.contains(point), !pointerIsOnPage(point), rowNear(point) == nil else { return }
         schedulePreviewClose()
@@ -561,6 +607,8 @@ final class EdgeSidebar {
         guard let mini = preview, !mini.isLeavingDock else { return }
         preview = nil
         previewTab = nil
+        // The page a switch left is this window's alone, and it goes with the window: nothing to keep for next time.
+        mini.clearOwnPage()
         let focusBack = panelStays && pageHasKeyboard(mini)
         if animated {
             mini.closeInPage(focusBack: focusBack, animated: true)
@@ -606,16 +654,73 @@ final class EdgeSidebar {
 
     private func managerChanged(_ change: TabManager.Change) {
         if change == .space {
-            // The row it came from is no longer on screen: its page goes back to its tab at once, and a rest begun on
-            // a row of the space left never brings that row's page out. The sidebar stays.
+            // The row it came from is no longer on screen: a rest begun on a row of the space left never brings that
+            // row's page out. The sidebar stays either way.
             hoverCheck += 1
-            closePreview(animated: false)
             // A page still folding back goes home now too, rather than showing through the switch.
             for mini in MiniWindowController.all where mini.isLeavingDock && mini.isDocked(in: self) { mini.endBorrowingNow() }
-            if preview == nil { narrowPanel() }
+            if isShowing {
+                spaceSwitchAt = ProcessInfo.processInfo.systemUptime
+                pointerAtSwitch = pointer
+                hoverQuietUntil = spaceSwitchAt + 0.6
+                // The preview itself stays: the page it borrowed goes home and it shows the new space's blank.
+                handOverToBlank()
+            } else if preview == nil {
+                narrowPanel()
+            }
             return
         }
+        guard preview != nil else { return }
+        switch change {
+        case .space:
+            break
+        case .structure:
+            if previewTab?.isClosed == true { closePreview(animated: false) }
+        case .selection, .content:
+            break
+        }
         if change == .structure, preview != nil, previewTab?.isClosed == true { closePreview(animated: false) }
+    }
+
+    /// A space switch with the panel out: the page belongs to the space that was left, so the preview stops showing
+    /// it, but the preview itself stays. The same docked Mini is pointed at the blank page, in the same wide frame,
+    /// so nothing closes, folds or narrows on the way: the panel is a list and a page, and only the list changed.
+    ///
+    /// Without a page out there is nothing to hand over, and the panel keeps its narrow frame: the next hover in the
+    /// new space's list brings a page out as it always would.
+    private func handOverToBlank() {
+        guard isShowing, let host, let mini = preview, let panel else { return }
+        previewWork?.cancel()
+        previewWork = nil
+        closeWork?.cancel()
+        closeWork = nil
+        // Its page goes back to the tab it belongs to, in the space that was left. The Mini stays, docked, showing
+        // Zigzag's blank page: a real page, so the panel keeps a page rather than an empty room.
+        mini.onInPageMiniClosed = nil
+        mini.onInPageMiniDetached = nil
+        // The page names the space being switched to, not the one being left. It is asked of the panel's own window,
+        // never the key one: the Mini is a child window, so a page that looked the space up itself would be served the
+        // wrong space's ground whenever another window holds the keyboard. The space's picture is named too, so the
+        // page the Mini shows is the same empty page the window would show for that space.
+        let switched = target.map { window -> URL in
+            let isPrivate = window.tabManager.isPrivate
+            let space = Library.shared.space(window.tabManager.currentSpaceID)
+            return ViewportPage.blankURL(for: window.tabManager.currentSpaceID, isPrivate: isPrivate,
+                                         picture: EmptyPage.picture(for: space, isPrivate: isPrivate))
+        }
+        // The window is held weakly and can be gone by the time its last change arrives. With no window there is no
+        // space to name, and the plain blank is the only page that can't draw another space's ground.
+        mini.showPage(switched ?? ViewportPage.blank)
+        mini.onInPageMiniClosed = { [weak self, weak mini] in self?.previewClosed(mini) }
+        mini.onInPageMiniDetached = { [weak self, weak mini] in self?.previewDetached(mini) }
+        previewTab = nil
+        let sidebar = host.cardWidth
+        let wide = EdgeSidebarLayout.width(sidebar: sidebar, page: true, inset: host.inset, in: shownVisible)
+        previewPanelFrame = EdgeSidebarLayout.frame(in: shownVisible, width: wide, onRight: shownOnRight)
+        host.pageShowing = true
+        panel.setFrame(previewPanelFrame, display: true)
+        host.placeCard()
+        host.layoutSubtreeIfNeeded()
     }
 
     // MARK: The panel

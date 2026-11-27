@@ -367,9 +367,9 @@ struct EdgeSidebarTests {
         #expect(await until { mini.asleepCardTitle == tabs[1].displayTitle })
     }
 
-    /// A click on a sleeping row's card does what a click on its row does: the panel goes and the window comes forward
-    /// with that tab, its page woken there.
-    @Test func clickingAnAsleepCardOpensItsTabInTheWindow() async throws {
+    /// A click on a sleeping row's card wakes its page in the panel: the panel keeps its place and the page is built
+    /// there, rather than the click going through to the browser window and taking the panel away (#556).
+    @Test func clickingAnAsleepCardWakesItInThePanel() async throws {
         let (controller, manager, tabs, done) = panelWithTabs(["https://example.test/first", "https://example.test/second"])
         defer { done() }
         tabs[1].ensureWebView()
@@ -377,6 +377,9 @@ struct EdgeSidebarTests {
         #expect(await until { tabs[1].isAsleep && !tabs[1].isLoaded })
         EdgeSidebar.shared.previewNow(tabs[1], in: controller)
         let mini = try #require(EdgeSidebar.shared.pagePreview)
+        #expect(mini.asleepCardTitle == tabs[1].displayTitle)
+        // The page belongs to the panel while it is shown here: the row keeps it awake and out of the browser's card.
+        #expect(tabs[1].host === mini)
         let window = try #require(mini.window)
         let content = try #require(window.contentView)
         window.layoutIfNeeded()
@@ -387,9 +390,15 @@ struct EdgeSidebarTests {
                                                              windowNumber: window.windowNumber, context: nil, eventNumber: 0,
                                                              clickCount: 1, pressure: 1)))
         }
-        #expect(await until(3) { !EdgeSidebar.shared.isShowing })
+        // Woken where it stands: the panel is still out, the preview is the same window, and its page is shown here.
+        // Selecting the tab rehosts it to the browser, so what proves the pane is that its page was built, not that
+        // the row stayed in the panel's window.
+        #expect(await until(3) { !tabs[1].isAsleep && tabs[1].isLoaded })
+        #expect(EdgeSidebar.shared.isShowing)
+        #expect(EdgeSidebar.shared.pagePreview === mini)
+        #expect(mini.asleepCardTitle == nil)
+        #expect(mini.isBorrowingPage)
         #expect(manager.selectedTab === tabs[1])
-        #expect(await until(3) { tabs[1].host === controller && !tabs[1].isAsleep })
     }
 
     /// Expand in the preview's strip takes the page out of the row into a Mini of its own; the panel goes.
@@ -460,6 +469,55 @@ struct EdgeSidebarTests {
         #expect(EdgeSidebar.shared.isShowing)
     }
 
+    /// A space switch with a page out keeps the preview: the same docked Mini stops lending the old space's page and
+    /// points at Zigzag's blank page, the panel stays out at its full width, and nothing is closed or narrowed (#556).
+    @Test func aSpaceSwitchLeavesTheSamePreviewOnTheBlankPage() async throws {
+        let (controller, manager, tabs, done) = panelWithTabs(["https://example.test/a", "https://example.test/b"])
+        defer { done() }
+        let (panel, host) = try panelParts()
+        EdgeSidebar.shared.previewNow(tabs[1], in: controller)
+        let mini = try #require(EdgeSidebar.shared.pagePreview)
+        let wide = panel.frame
+        #expect(mini.isBorrowingPage)
+        // A space of the window's own to go to, as picking one from the list does.
+        let added = Library.shared.addSpace(name: "Space switch test")
+        defer { Library.shared.removeSpace(added.id) }
+        manager.showSpaceKeepingPage(added.id)
+        #expect(await until(3) { mini.ownPageURL != nil })
+        // The same window, still the preview, still the panel's full width: no close, no narrow, no second Mini.
+        #expect(EdgeSidebar.shared.pagePreview === mini)
+        #expect(panel.frame == wide)
+        #expect(host.pageShowing)
+        #expect(mini.ownPageURL == ViewportPage.blankURL(for: added.id, isPrivate: false))
+        #expect(!mini.isBorrowingPage)
+        // It is the new space's blank, not just any blank: the address says which space it draws.
+        let shown = try #require(mini.ownPageURL.flatMap { ViewportPage.blankRequest(in: $0) })
+        #expect(shown.space == added.id)
+        #expect(!shown.isPrivate)
+        // The page it was lending is the browser's again, in the space it came from.
+        #expect(tabs[1].host === controller)
+        #expect(!tabs[1].isOutsideTabList)
+        // It moved to a later space, so the blank folded in from the right, the side it moved towards.
+        #expect(mini.lastRevealFromRight == true)
+    }
+
+    /// A space switch folds the blank in from the side it moved towards, not always from the sidebar's side: going
+    /// back a space folds from the left.
+    @Test func aSwitchBackFoldsTheBlankInFromTheLeft() async throws {
+        let (controller, manager, tabs, done) = panelWithTabs(["https://example.test/a"])
+        defer { done() }
+        // A space after the one the window is in, so the window can move to it and then back.
+        let added = Library.shared.addSpace(name: "Space switch back test")
+        defer { Library.shared.removeSpace(added.id) }
+        manager.showSpaceKeepingPage(added.id)
+        EdgeSidebar.shared.previewNow(tabs[0], in: controller)
+        let mini = try #require(EdgeSidebar.shared.pagePreview)
+        // Back to the space it came from, which is earlier in the list.
+        manager.showSpaceKeepingPage(tabs[0].spaceID)
+        #expect(await until(3) { mini.ownPageURL != nil })
+        #expect(mini.lastRevealFromRight == false)
+    }
+
     /// On its way from the page to a row the pointer crosses the gap and the sidebar's empty part: the page stays
     /// out while it moves, and folds back once it stops off the rows.
     @Test func aPointerOnItsWayToARowKeepsThePage() async throws {
@@ -499,34 +557,6 @@ struct EdgeSidebarTests {
     }
 
     // MARK: Switching spaces
-
-    /// A space switch while a page is out: the page goes back to its tab at once and the sidebar stays out with the
-    /// new space's list. A row of the space left, reported late or still under the pointer, brings nothing out; the
-    /// next rest on one of the new space's rows brings its page out as before.
-    @Test func aSpaceSwitchPutsThePageAwayAndNeverShowsTheOldSpace() async throws {
-        let (controller, manager, tabs, done) = panelWithTabs(["https://example.test/a", "https://example.test/b"])
-        defer { done() }
-        let other = Library.shared.addSpace(name: "Edge switch").id
-        let there = manager.newTab(url: URL(string: "https://example.test/there"), spaceID: other, select: false)
-        EdgeSidebar.shared.previewNow(tabs[1], in: controller)
-        #expect(EdgeSidebar.shared.pagePreview?.tab === tabs[1])
-        // A rest begun on the other row of this space, not done yet.
-        EdgeSidebar.shared.hover(tabs[0], in: controller)
-
-        manager.switchToSpace(other)
-        #expect(EdgeSidebar.shared.isShowing)
-        #expect(EdgeSidebar.shared.pagePreview == nil)
-        #expect(tabs[1].host === controller)
-        #expect(MiniWindowController.all.allSatisfy { $0.tab !== tabs[1] })
-        // An old row's report, as the list slides away under the pointer.
-        EdgeSidebar.shared.hover(tabs[1], in: controller)
-        try? await Task.sleep(for: .milliseconds(600))
-        #expect(EdgeSidebar.shared.pagePreview == nil)
-        #expect(tabs[0].host === controller && tabs[1].host === controller)
-
-        EdgeSidebar.shared.hover(there, in: controller)
-        #expect(await until(3) { EdgeSidebar.shared.pagePreview?.tab === there })
-    }
 
     /// With no page out, a rest begun on a row just before a space switch brings nothing out after it.
     @Test func aRestBegunBeforeASpaceSwitchShowsNothing() async throws {
