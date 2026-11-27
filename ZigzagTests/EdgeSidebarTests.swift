@@ -149,6 +149,9 @@ struct EdgeSidebarTests {
         EdgeSidebar.debugHoldsOpen = true
         EdgeSidebar.debugPointer = offScreen
         EdgeSidebar.shared.show(on: visible, for: controller)
+        // A space switch leaves the rows quiet until the pointer has really moved, so a test's hover is the one it
+        // means rather than one the moment swallowed. A real pointer moves; this stands in for that, at once.
+        EdgeSidebar.shared.debugPointerMoved()
         return (controller, manager, tabs, {
             EdgeSidebar.debugHoldsOpen = false
             EdgeSidebar.debugPointer = nil

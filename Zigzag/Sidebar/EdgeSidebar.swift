@@ -114,6 +114,14 @@ final class EdgeSidebar {
     /// Where tests put the pointer, on screen. While set, rows' own hover reports, which follow the real mouse, are
     /// left out.
     static var debugPointer: NSPoint?
+
+    /// Tells the panel the pointer has moved since the space switch, which a test cannot do by moving a real mouse.
+    /// A space switch leaves the rows quiet until the pointer moves, so without this a test's hover would be taken for
+    /// the one the switch already had and ignored.
+    func debugPointerMoved() {
+        hoverQuietUntil = 0
+        pointerAtSwitch = nil
+    }
     /// Whether tests count the page as having the keyboard, which a test host behind other apps can't give it.
     static var debugPageHasKeyboard: Bool?
     #endif
