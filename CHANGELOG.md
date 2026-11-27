@@ -5,6 +5,9 @@ Every release of Zigzag, newest first. The app shows the notes for the version y
 
 ## [Unreleased]
 
+### New
+- The address bar shows a button for each device the page is using, the camera and the microphone, and a click mutes that device or picks it back up without ending the call; it shows a slash while muted. A tab whose page holds a device shows an orange dot after its title, so a call running in another tab is not invisible.
+
 ## [0.10.0] - 2026-11-25
 
 Sync with iCloud keeps your spaces, pinned tabs, favorites and settings the same on every Mac, and the sidebar from the screen edge previews pages beside it. Zigzag is also in eleven more languages, Compatibility mode turns off what might break a site with one switch, and download rules can hand off the saved file.

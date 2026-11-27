@@ -50542,7 +50542,7 @@
       }
     },
     "Camera" : {
-      "comment" : "Row in the site panel's This Site group.",
+      "comment" : "Row in the site panel's This Site group.\nTooltip of the address bar's camera button, which shows while a page uses the camera; clicking mutes it.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -102455,7 +102455,7 @@
       }
     },
     "Microphone" : {
-      "comment" : "Row in the site panel's This Site group.",
+      "comment" : "Row in the site panel's This Site group.\nTooltip of the address bar's microphone button, which shows while a page uses the microphone; clicking mutes it.",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -212267,6 +212267,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "權杖：{link}、{encoded_link}、{host}、{path}、{query}、{referrer}、{cookies}、{cookie_header}、{filename}、{mime}、{space}、{file}、{file_url}、{file_raw}。{file}、{file_url} 和 {file_raw} 需要選擇「檔案」轉交；{file_raw} 是檔案的內容，用在服務的引數裡。"
+          }
+        }
+      }
+    },
+    "Camera Muted" : {
+      "comment" : "Tooltip of the address bar's camera button while the page's camera is muted: clicking turns it back on.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera Muted"
+          }
+        }
+      }
+    },
+    "Microphone Muted" : {
+      "comment" : "Tooltip of the address bar's microphone button while the page's microphone is muted: clicking turns it back on.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microphone Muted"
           }
         }
       }
